@@ -6,7 +6,6 @@ from openff.interchange.exceptions import UnsupportedImportError
 
 _SUPPORTED_VIRTUAL_SITE_TYPES: set[type] = {
     openmm.ThreeParticleAverageSite,
-    openmm.LocalCoordinatesSite,
 }
 
 

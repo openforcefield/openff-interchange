@@ -77,6 +77,10 @@ For more, see [issue #1005](https://github.com/openforcefield/openff-interchange
 
 Keywords: OpenMM, GROMACS, constraints, bond constraints, rigid water
 
+### Only `ThreeParticleAverageSite` virtual sites are supported
+
+Other virtual site types will raise an error.
+
 ### Virtual site exclusions re-created with "parents" virtual site exclusion policy
 
 Non-bonded exclusions involving virtual sites (between virtual sites and heavy atoms or between
@@ -84,7 +88,7 @@ virtual sites and virtual sites) are not processed. Instead, they are later re-g
 
 ### Virtual sites from multiple sources cannot be mixed
 
-Combining systems with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
+Combining interchanges with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
 
 ### Virtual sites must be listed after heavy atoms each molecule
 

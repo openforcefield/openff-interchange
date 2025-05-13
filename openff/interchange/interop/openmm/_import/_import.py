@@ -73,8 +73,12 @@ def from_openmm(
 
     interchange = Interchange(topology=openff_topology)
 
-    interchange.topology._molecule_virtual_site_map = openff_topology._molecule_virtual_site_map
-    interchange.topology._particle_map = openff_topology._particle_map
+    try:
+        interchange.topology._molecule_virtual_site_map = openff_topology._molecule_virtual_site_map
+        interchange.topology._particle_map = openff_topology._particle_map
+    except AttributeError:
+        topology._molecule_virtual_site_map = defaultdict(list)
+        topology._particle_map = {index: index for index in range(topology.n_atoms)}
 
     # TODO: Actually build up the VirtualSiteCollection, maybe using _molecule_virtual_site_map
 
