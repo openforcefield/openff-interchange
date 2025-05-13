@@ -4,7 +4,8 @@ from openff.toolkit import Quantity, Topology
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.components._packmol import solvate_topology
-from openff.interchange.drivers.openmm import _get_openmm_energies, get_openmm_energies
+from openff.interchange.constants import kj_mol
+from openff.interchange.drivers.openmm import _get_openmm_energies, _process, get_openmm_energies
 
 
 class TestTIP4PVirtualSites:
@@ -34,7 +35,7 @@ class TestTIP4PVirtualSites:
             nonbondedCutoff=1.0 * openmm.unit.nanometers,
             constraints=openmm.app.HBonds,
             rigidWater=True,
-            ewaldErrorTolerance=0.0005,
+            ewaldErrorTolerance=0.0001,  # match Interchange.to_openmm_system default
         )
 
         imported = Interchange.from_openmm(
@@ -44,7 +45,26 @@ class TestTIP4PVirtualSites:
             box_vectors=modeller.getTopology().getPeriodicBoxVectors(),
         )
 
-        get_openmm_energies(imported)
+        get_openmm_energies(
+            imported,
+            combine_nonbonded_forces=True,
+        ).compare(
+            _process(
+                raw_energies=_get_openmm_energies(
+                    system=system,
+                    positions=modeller.getPositions(),
+                    box_vectors=modeller.getTopology().getPeriodicBoxVectors(),
+                    round_positions=None,
+                    platform="Reference",
+                ),
+                combine_nonbonded_forces=True,
+                detailed=False,
+                system=system,
+            ),
+            tolerances={
+                "Nonbonded": 1e-5 * kj_mol,
+            },
+        )
 
     @pytest.mark.skip(
         reason="Rewrite to use OpenMM or update from_openmm to support `LocalCoordinatesSite`s",

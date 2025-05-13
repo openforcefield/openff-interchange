@@ -168,9 +168,11 @@ class EnergyReport(_BaseModel):
 
         for key in self.energies:
             if key in ("Bond", "Angle", "Torsion"):
-                energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
+                try:
+                    energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
-                continue
+                except KeyError:
+                    continue
 
             if key in ("Nonbonded", "vdW", "Electrostatics"):
                 if nonbondeds_processed:
