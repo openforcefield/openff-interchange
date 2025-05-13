@@ -325,9 +325,16 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         return self._charges
 
+    def _get_charge_array(self, include_virtual_sites: bool = False) -> numpy.ndarray:
+        """Return a (unitless) one-dimensional array-like of atomic charges, ordered topologically."""
+        if include_virtual_sites:
+            raise NotImplementedError("Not yet implemented with virtual sites")
+
+        return numpy.asarray([q.m for _, q in sorted(self.charges.items(), key=lambda x: x[0].atom_indices)])
+
     def _get_charges(
         self,
-        include_virtual_sites=True,
+        include_virtual_sites: bool = True,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
