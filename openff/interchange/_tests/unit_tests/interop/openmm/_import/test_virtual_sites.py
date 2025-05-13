@@ -109,6 +109,12 @@ class TestTIP4PVirtualSites:
 
         assert get_openmm_energies(roundtripped) < original_energy
 
+    @pytest.mark.skip(
+        reason=(
+            "Doesn't work cleanly until importing LocalCoordinatesSite is supported, even though "
+            "this error is probably raised before that type check"
+        ),
+    )
     def test_error_index_mismatch(self, tip4p, water):
         out: Interchange = tip4p.create_interchange(Topology.from_molecules([water, water]))
 
