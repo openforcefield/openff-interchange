@@ -74,7 +74,7 @@ def test_virtualsitekey_hash_uniqueness():
 
 
 def test_central_atom_improper():
-    key = ImproperTorsionKey(id="foo", atom_indices=(2, 0, 1, 3))
+    key = ImproperTorsionKey(id="foo", atom_indices=(0, 2, 1, 3))
 
     assert key.get_central_atom_index() == 0
 
