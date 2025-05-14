@@ -27,6 +27,7 @@ from openff.interchange.common._valence import (
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import Collection, _AnnotatedCollections
 from openff.interchange.exceptions import (
+    InvalidPositionsError,
     MissingParameterHandlerError,
     MissingPositionsError,
     UnsupportedExportError,
@@ -914,7 +915,7 @@ class Interchange(_BaseModel):
         coordinates = _read_coordinates(gro_file).to(unit.nanometer)
 
         if coordinates.shape != (self.topology.n_atoms, 3):
-            raise ValueError(
+            raise InvalidPositionsError(
                 f"Coordinates in {gro_file} do not match the number of atoms in the topology. ",
                 f"Parsed coordinates have shape {coordinates.shape} but topology has {self.topology.n_atoms} atoms.",
             )
