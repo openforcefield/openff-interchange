@@ -32,8 +32,9 @@ class _VirtualSiteCollection(Collection):
 def _convert_virtual_sites(
     system: openmm.System,
     topology: Topology,
+    particle_map: dict,
 ) -> _VirtualSiteCollection | None:
-    if topology._particle_map is None:
+    if particle_map is None:
         return None
 
     collection = _VirtualSiteCollection()
@@ -54,7 +55,7 @@ def _convert_virtual_sites(
         for _, list_of_virtual_sites in topology._molecule_virtual_site_map.items():
             for virtual_site_key in list_of_virtual_sites:
                 if virtual_site_key.orientation_atom_indices == tuple(
-                    topology._particle_map[i] for i in openmm_particle_indices
+                    particle_map[i] for i in openmm_particle_indices
                 ):
                     # TODO: Not the cleanest way to de-duplicate virtual site parameters,
                     #       but other info (i.e. atom name) is insufficient

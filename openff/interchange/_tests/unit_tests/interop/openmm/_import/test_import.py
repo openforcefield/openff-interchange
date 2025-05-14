@@ -268,6 +268,12 @@ class TestFromOpenMM:
 
         assert interchange2.topology.n_bonds == interchange.topology.n_bonds
 
+    def test_use_openmm_topology(self, sage, basic_top):
+        Interchange.from_openmm(
+            system=sage.create_openmm_system(basic_top),
+            topology=basic_top,
+        )
+
 
 @skip_if_missing("openmm")
 class TestProcessTopology:
