@@ -7,6 +7,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
 )
+from openff.utilities import temporary_cd
 from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
@@ -17,9 +18,10 @@ from openff.interchange._tests import (
     needs_gmx,
     needs_lmp,
 )
-from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
+    InvalidPositionsError,
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingParametersError,
@@ -124,9 +126,7 @@ class TestInterchange:
 
         from openff.interchange import Interchange
         from openff.interchange.drivers import (
-            get_gromacs_energies,
             get_lammps_energies,
-            get_openmm_energies,
         )
 
         oplsaa = foyer.forcefields.load_OPLSAA()
@@ -441,6 +441,75 @@ class TestWrappedCalls:
             topology_file="tmp_.top",
             gro_file="tmp_.gro",
         )
+
+    @needs_gmx
+    def test_set_positions_from_gro_same_coordinates(self, simple_interchange):
+        """Write and read back the same coordinates, make sure energies match."""
+        with temporary_cd():
+            simple_interchange.positions = simple_interchange.positions.round(3)
+            simple_interchange.to_gromacs(prefix="test12")
+
+            original_energies = get_gromacs_energies(simple_interchange)
+
+            simple_interchange.set_positions_from_gro(gro_file="test12.gro")
+
+            new_energies = get_gromacs_energies(simple_interchange)
+
+            # if energies match, positions must also match
+            assert original_energies.energies.keys() == new_energies.energies.keys()
+
+            for key in original_energies.energies:
+                assert numpy.allclose(
+                    original_energies[key].m,
+                    new_energies[key].m,
+                )
+
+    @needs_gmx
+    def test_set_positions_from_gro_minimize(self, simple_interchange):
+        """Write, minimize, and read new coordinates, make sure energy descreased."""
+        with temporary_cd():
+            simple_interchange.positions = simple_interchange.positions.round(3)
+
+            # with 0.001 nm precision, not guaranteed a difference between conformer-generation
+            # coordinates and MM-minimized coordinates, so just perturb a little bit
+            simple_interchange.positions[-1] += Quantity([0.03, 0.03, 0.03], "nanometer")
+            simple_interchange.to_gromacs(prefix="test13")
+
+            original_energies = get_gromacs_energies(simple_interchange)
+
+            mdp = get_test_file_path("mdp/em.mdp")
+
+            for cmd in [
+                f"gmx grompp -f {mdp} -c test13.gro -p test13.top -o test13.tpr",
+                "gmx mdrun -s test13.tpr -c final_coords.gro",
+                "echo 0 | gmx trjconv -f final_coords.gro -s test13.tpr -o final_coords_wrapped.gro -pbc whole",
+            ]:
+                subprocess.check_output(cmd, shell=True)
+
+            simple_interchange.set_positions_from_gro(gro_file="final_coords_wrapped.gro")
+
+            new_energies = get_gromacs_energies(simple_interchange)
+
+            assert new_energies.total_energy < original_energies.total_energy
+
+    @needs_gmx
+    def test_set_positions_from_gro_wrong_coordinates(self, sage):
+        with temporary_cd():
+            eth = sage.create_interchange(MoleculeWithConformer.from_smiles("CCO").to_topology())
+            eth.box = Quantity([4, 4, 4], unit.nanometer)
+            eth.to_gromacs(prefix="ethanol")
+            benzene = sage.create_interchange(MoleculeWithConformer.from_smiles("c1ccccc1").to_topology())
+            benzene.box = Quantity([4, 4, 4], unit.nanometer)
+            benzene.to_gromacs(prefix="benzene")
+
+            with pytest.raises(InvalidPositionsError, match="12.*9"):
+                eth.set_positions_from_gro(gro_file="benzene.gro")
+
+            with pytest.raises(
+                InvalidPositionsError,
+                match="9.*12",
+            ):
+                benzene.set_positions_from_gro(gro_file="ethanol.gro")
 
     @skip_if_missing("openmm")
     def test_minimize(self, simple_interchange):
