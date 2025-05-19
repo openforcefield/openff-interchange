@@ -7,7 +7,6 @@ from openff.interchange.drivers import get_openmm_energies
 
 
 def test_combine_after_from_openmm_with_mainline_openmm_force_field(
-    monkeypatch,
     popc,
     sage,
 ):
@@ -16,8 +15,6 @@ def test_combine_after_from_openmm_with_mainline_openmm_force_field(
 
     import openmm.app
     import openmm.unit
-
-    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
     ligand = MoleculeWithConformer.from_smiles("c1ccccc1")
     ligand._conformers[0] += Quantity([3, 3, 3], "angstrom")

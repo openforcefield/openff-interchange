@@ -226,3 +226,40 @@ class TestLammps:
         expected_mol_ids = {i + 1 for i in range(interchange.topology.n_molecules)}
 
         assert expected_mol_ids == written_mol_ids
+
+    @pytest.mark.parametrize(
+        "mol",
+        [
+            "C=O",  # Simplest molecule with any improper torsion
+            "OC=O",  # Simplest molecule with a multi-term torsion
+        ],
+    )
+    def test_to_lammps_with_type_labels(
+        self,
+        mol: str,
+        sage_unconstrained: ForceField,
+        tmp_path,
+    ) -> None:
+        import lammps
+
+        from openff.interchange.exceptions import LAMMPSRunError
+
+        mol = MoleculeWithConformer.from_smiles(mol)
+        mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
+        top = Topology.from_molecules([mol])
+
+        top.box_vectors = 5.0 * numpy.eye(3) * unit.nanometer
+        positions = mol.conformers[0]
+
+        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
+        interchange.positions = positions
+        interchange.box = top.box_vectors
+
+        interchange.to_lammps(tmp_path / "out", include_type_labels=True)
+
+        runner = lammps.lammps(cmdargs=["-screen", "none", "-nocite"])
+
+        try:
+            runner.file("out_pointenergy.in")
+        except Exception as error:
+            raise LAMMPSRunError from error

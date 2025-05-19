@@ -479,32 +479,33 @@ class Interchange(_BaseModel):
             gro_file=file_path,
         ).to_gro(decimal=decimal)
 
-    def to_lammps(self, prefix: str):
+    def to_lammps(self, prefix: str, include_type_labels: bool = False):
         """
         Export this ``Interchange`` to LAMMPS data and run input files.
 
         Parameters
         ----------
-
-        prefix
+        prefix: str
             The prefix to use for the LAMMPS data and run input files. For
             example, "foo" will produce files named "foo.lmp" and
             "foo_pointenergy.in".
-
+        include_type_labels: bool
+            If True, this will include the SMIRKS strings as LAMMPS type labels
+            in the LAMMPS data file.
         """
         prefix = str(prefix)
         datafile_path = prefix + ".lmp"
-        self.to_lammps_datafile(datafile_path)
+        self.to_lammps_datafile(datafile_path, include_type_labels)
         self.to_lammps_input(
             prefix + "_pointenergy.in",
             datafile_path,
         )
 
-    def to_lammps_datafile(self, file_path: Path | str):
+    def to_lammps_datafile(self, file_path: Path | str, include_type_labels: bool = False):
         """Export this Interchange to a LAMMPS data file."""
         from openff.interchange.interop.lammps import to_lammps
 
-        to_lammps(self, file_path)
+        to_lammps(self, file_path, include_type_labels)
 
     def to_lammps_input(
         self,
@@ -923,6 +924,8 @@ class Interchange(_BaseModel):
         stiff harmonic bond, and angle parameters of 104.5 degrees and 1.0 kcal/mol/rad^2,
         representing an arbitrarily harmonic angle. It is expected that these values will be
         overwritten by runtime MD options.
+
+        See more limitations and sharp edges in the user guide: https://docs.openforcefield.org/projects/interchange/en/latest/using/edges.html#quirks-of-from-openmm
 
         Parameters
         ----------
