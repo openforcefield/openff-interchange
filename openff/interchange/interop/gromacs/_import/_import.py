@@ -4,6 +4,7 @@ import numpy
 from openff.toolkit import Quantity, unit
 
 from openff.interchange._experimental import experimental
+from openff.interchange.exceptions import GROMACSParseError
 from openff.interchange.interop.gromacs._import.combine import make_monolithic
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
@@ -30,6 +31,7 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
 
     https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py
     """
+    current_directive = "UNDEFINED"
     for line in make_monolithic(top_file):
         stripped = line.split(";")[0].strip()
 
@@ -41,7 +43,7 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
 
         if stripped.startswith("["):
             if not len(stripped.split()) == 3 and stripped.endswith("]"):
-                raise ValueError("Invalid GROMACS topology file")
+                raise GROMACSParseError("Invalid GROMACS topology file")
 
             current_directive = stripped[1:-1].strip()
 
@@ -117,8 +119,16 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
 
             system.molecules.append((molecule_name, number_of_copies))
 
+        elif current_directive == "UNDEFINED":
+            raise GROMACSParseError(
+                "Failed to begin parsing GROMACS topology file. Error processing line:"
+                f"\n\n{line}\n"
+                "If you think this topology file is "
+                "valid, please open an issue on GitHub.",
+            )
+
         else:
-            raise ValueError(f"Invalid directive {current_directive}")
+            raise GROMACSParseError(f"Invalid directive {current_directive}")
 
     for molecule_type in system.molecule_types.values():
         this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule_type.atoms)

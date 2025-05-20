@@ -1,5 +1,8 @@
+import pytest
+
 from openff.interchange._tests import get_test_file_path
-from openff.interchange.interop.gromacs._import._import import GROMACSSystem
+from openff.interchange.exceptions import GROMACSParseError
+from openff.interchange.interop.gromacs._import._import import GROMACSSystem, from_files
 from openff.interchange.interop.gromacs._import._topology import (
     _create_topology_from_system,
 )
@@ -27,3 +30,19 @@ def test_complex(monkeypatch):
     assert topology.molecule(2).n_bonds == 0
     assert topology.molecule(15).n_bonds == 2
     assert topology.molecule(-1).n_bonds == 2
+
+
+def test_parse_bad_characters(monkeypatch):
+    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+    with pytest.raises(
+        GROMACSParseError,
+        match="garbage.*FLAG 8EE0CCA23E",
+    ):
+        # gro file doesn't need to have contents, crash should happen on the
+        # topology file which happens to be parsed first
+
+        from_files(
+            get_test_file_path("invalid.top"),
+            get_test_file_path("invalid.gro"),
+        )
