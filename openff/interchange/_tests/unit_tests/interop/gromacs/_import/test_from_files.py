@@ -49,3 +49,16 @@ def test_asterisks_are_comments(monkeypatch):
     assert imported.vdw_14 == 0.5
     assert imported.molecule_types["MOL0"].atoms[0].charge.m == -0.834
     assert numpy.allclose(imported.box.m_as("nanometer"), 3 * numpy.eye(3))
+
+
+def test_parse_invalid_directive_partway_through(monkeypatch):
+    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+    with pytest.raises(
+        GROMACSParseError,
+        match="directive.*flag",
+    ):
+        from_files(
+            get_test_file_path("invalid_partway_through.top"),
+            get_test_file_path("invalid.gro"),
+        )
