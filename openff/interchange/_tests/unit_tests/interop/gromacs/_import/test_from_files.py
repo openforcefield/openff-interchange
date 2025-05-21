@@ -1,3 +1,4 @@
+import numpy
 import pytest
 
 from openff.interchange._tests import get_test_file_path
@@ -34,6 +35,24 @@ def test_parse_bad_characters(monkeypatch):
             get_test_file_path("invalid.top"),
             get_test_file_path("invalid.gro"),
         )
+
+
+def test_asterisks_are_comments(monkeypatch):
+    monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
+
+    imported = from_files(
+        get_test_file_path("asterisk.top"),
+        get_test_file_path("asterisk.gro"),
+    )
+
+    # make sure asterisk in atom type is not lost
+    assert imported.molecule_types["MOL0"].atoms[1].atom_type.endswith("*")
+    assert imported.molecule_types["MOL0"].atoms[2].atom_type.endswith("*")
+
+    # just check a few details, non-exhaustive
+    assert imported.vdw_14 == 0.5
+    assert imported.molecule_types["MOL0"].atoms[0].charge.m == -0.834
+    assert numpy.allclose(imported.box.m_as("nanometer"), 3 * numpy.eye(3))
 
 
 def test_parse_invalid_directive_partway_through(monkeypatch):

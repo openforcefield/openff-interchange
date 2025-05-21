@@ -41,6 +41,9 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
         if stripped.startswith(";"):
             continue
 
+        if stripped.startswith("*"):
+            continue
+
         if stripped.startswith("["):
             if not len(stripped.split()) == 3 and stripped.endswith("]"):
                 raise GROMACSParseError("Invalid GROMACS topology file")
