@@ -929,7 +929,7 @@ class Interchange(_BaseModel):
         system : openmm.System
             The OpenMM system.
         topology : openmm.app.Topology
-            The OpenMM topology
+            The OpenMM topology.
         positions : openmm.unit.Quantity or openff.units.Quantity, optional
             The positions of particles in this system and/or topology.
         box_vectors : openmm.unit.Quantity or openff.units.Quantity, optional
