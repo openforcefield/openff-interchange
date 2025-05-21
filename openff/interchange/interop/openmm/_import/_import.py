@@ -68,9 +68,6 @@ def from_openmm(
 
         particle_map = {index: index for index in range(topology.n_atoms)}
 
-    elif topology is None:
-        raise ValueError("A topology must be provided.")
-
     else:
         raise ValueError(
             f"Could not process `topology` argument of type {type(topology)=}.",
