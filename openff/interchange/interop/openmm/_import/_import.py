@@ -64,9 +64,6 @@ def from_openmm(
         openff_topology = topology
         positions = openff_topology.get_positions()
 
-    elif topology is None:
-        raise ValueError("A topology must be provided.")
-
     else:
         raise ValueError(
             f"Could not process `topology` argument of type {type(topology)=}.",
