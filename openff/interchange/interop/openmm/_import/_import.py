@@ -60,12 +60,13 @@ def from_openmm(
 
         # OpenMM topologies do not store positions
 
+        particle_map = openff_topology._particle_map
+
     elif isinstance(topology, Topology):
         openff_topology = topology
         positions = openff_topology.get_positions()
 
-    elif topology is None:
-        raise ValueError("A topology must be provided.")
+        particle_map = {index: index for index in range(topology.n_atoms)}
 
     else:
         raise ValueError(
@@ -76,26 +77,24 @@ def from_openmm(
 
     try:
         interchange.topology._molecule_virtual_site_map = openff_topology._molecule_virtual_site_map
-        interchange.topology._particle_map = openff_topology._particle_map
     except AttributeError:
-        topology._molecule_virtual_site_map = defaultdict(list)
-        topology._particle_map = {index: index for index in range(topology.n_atoms)}
+        interchange.topology._molecule_virtual_site_map = defaultdict(list)
 
     # TODO: Actually build up the VirtualSiteCollection, maybe using _molecule_virtual_site_map
 
-    constraints = _convert_constraints(system, openff_topology._particle_map)
+    constraints = _convert_constraints(system, particle_map)
 
     if constraints is not None:
         interchange.collections["Constraints"] = constraints
 
-    virtual_sites = _convert_virtual_sites(system, openff_topology)
+    virtual_sites = _convert_virtual_sites(system, openff_topology, particle_map)
 
     if virtual_sites is not None:
         interchange.collections["VirtualSites"] = virtual_sites
 
     for force in system.getForces():
         if isinstance(force, openmm.NonbondedForce):
-            vdw, coul = _convert_nonbonded_force(force, openff_topology._particle_map)
+            vdw, coul = _convert_nonbonded_force(force, particle_map)
             interchange.collections["vdW"] = vdw
             interchange.collections["Electrostatics"] = coul
         elif isinstance(force, openmm.HarmonicBondForce):
@@ -121,10 +120,10 @@ def from_openmm(
         )
 
     else:
-        assert len(positions) == len(interchange.topology._particle_map)
+        assert len(positions) == len(particle_map)
 
-        interchange.positions = ensure_quantity(positions, "openff")[
-            [key for key, val in interchange.topology._particle_map.items() if isinstance(val, int)]
+        interchange.positions = ensure_quantity(positions, "openff")[  # type: ignore[index]
+            [key for key, val in particle_map.items() if isinstance(val, int)]
         ]
 
     if box_vectors is not None:
