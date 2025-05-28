@@ -44,8 +44,8 @@ def get_openmm_energies(
     platform : str, default="Reference"
         The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
     detailed : bool, default=False
-        Attempt to report energies with more granularity. Not guaranteed to be compatible with all values
-        of other arguments. Useful for debugging.
+        Attempt to report energies with more granularity. Requires `combine_nonbonded_forces=False`.
+        Not guaranteed to be compatible with all values of other arguments. Useful for debugging.
 
     Returns
     -------
@@ -53,6 +53,12 @@ def get_openmm_energies(
         An `EnergyReport` object containing the single-point energies.
 
     """
+    if detailed and combine_nonbonded_forces:
+        raise ValueError(
+            "A detailed energy report (`detailed=True`) requires non-bonded interactions be "
+            "split out into different forces (`combine_nonbonded_forces=False`).",
+        )
+
     if "VirtualSites" in interchange.collections:
         if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:
