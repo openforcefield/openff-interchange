@@ -301,6 +301,7 @@ def ff14sb() -> ForceField:
 
 @pytest.fixture
 def ligand():
+    pytest.importorskip("openeye")
     return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O", allow_undefined_stereo=True)
 
 
