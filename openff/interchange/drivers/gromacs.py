@@ -258,7 +258,7 @@ def _process(
 ) -> EnergyReport:
     """Process energies from GROMACS into a standardized format."""
     if detailed:
-        return EnergyReport(energies=energies)
+        return EnergyReport(energies=_canonicalize_detailed_energies(energies))
 
     return EnergyReport(
         energies={
@@ -270,3 +270,22 @@ def _process(
             "Electrostatics": _get_gmx_energy_coul(energies),
         },
     )
+
+
+def _canonicalize_detailed_energies(
+    energies: dict[str, Quantity],
+) -> dict[str, Quantity]:
+    """Condense the full `gmx energy` report into the keys of a "detailed" report."""
+    return {
+        "Bond": energies.get("Bond", 0.0 * kj_mol),
+        "Angle": energies.get("Angle", 0.0 * kj_mol),
+        "Torsion": _get_gmx_energy_torsion(energies),
+        "vdW": energies.get("LJ (SR)", 0.0 * kj_mol) + energies.get("LJ recip.", 0.0 * kj_mol),
+        "vdW 1-4": energies.get("LJ-14", 0.0 * kj_mol),
+        "Electrostatics": energies.get("Coulomb (SR)", 0.0 * kj_mol)
+        + energies.get(
+            "Coul. recip.",
+            0.0 * kj_mol,
+        ),
+        "Electrostatics 1-4": energies.get("Coulomb-14", 0.0 * kj_mol),
+    }
