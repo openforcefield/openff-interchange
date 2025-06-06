@@ -38,6 +38,12 @@ class InvalidBoxError(InterchangeException, ValueError):
     """
 
 
+class InvalidPositionsError(InterchangeException, ValueError):
+    """
+    Generic exception for errors with positions.
+    """
+
+
 class InvalidTopologyError(InterchangeException, ValueError):
     """
     Generic exception for errors reading chemical topology data.
