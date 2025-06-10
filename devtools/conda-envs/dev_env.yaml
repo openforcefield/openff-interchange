@@ -8,7 +8,7 @@ dependencies:
   - pip
   - versioningit
   - pip
-  - numpy
+  - numpy <2.3
   - pydantic =2
   # OpenFF stack
   - openff-toolkit-base ~=0.16.6
