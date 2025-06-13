@@ -135,6 +135,33 @@ class TestNonbonded:
             assert not uses_elf10
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
 
+    def test_nagl_charge_assignment_matches_reference(self, hexane_diol):
+        from openff.toolkit.typing.engines.smirnoff import ForceField
+
+        from openff.interchange import Interchange
+
+        hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        # Leave the ToolkitAM1BCC tag in openff-2.1.0 to ensure that the NAGLCharges handler takes precedence
+        ff = ForceField("openff-2.1.0.offxml")
+        ff.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                "version": "0.3",
+            },
+        )
+
+        interchange = Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+
+        assigned_charges_unitless = [v.m for v in interchange["Electrostatics"]._get_charges().values()]
+
+        expected_charges = hexane_diol.partial_charges
+        assert expected_charges is not None
+        assert expected_charges.units == unit.elementary_charge
+        assert not all(charge == 0 for charge in expected_charges.magnitude)
+        expected_charges_unitless = [v.m for v in expected_charges]
+        numpy.testing.assert_allclose(expected_charges_unitless, assigned_charges_unitless)
+
     @pytest.mark.skip(
         reason="Turn on if toolkit ever allows non-standard scale12/13/15",
     )
