@@ -32,6 +32,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #1200 Atoms in improper torsions in LAMMPS files are now ordered correctly (with the central atom first).
 * #1200 `ImproperTorsionKey.get_central_atom_index` now returns fot correct atom index (this class stores the central atom first).
 
+### Miscellaneous improvements
+
+* #1243 Use `pyedr` instead of `panedr` for quicker processing of GROMACS energy files.
+
 ## 0.4.2 - 2025-02-26
 
 ### Behavior changes

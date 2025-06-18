@@ -20,7 +20,7 @@ dependencies:
   - nglview
   # Drivers
   - gromacs
-  - panedr
+  - pyedr
   # Testing
   - mdtraj
   - intermol

@@ -2,9 +2,9 @@
 
 import warnings
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from openff.utilities.utilities import requires_package
-from pandas import DataFrame
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.amber import get_amber_energies
@@ -18,6 +18,9 @@ from openff.interchange.exceptions import (
     LAMMPSError,
     UnsupportedCutoffMethodError,
 )
+
+if TYPE_CHECKING:
+    import pandas
 
 
 def get_all_energies(
@@ -64,7 +67,7 @@ def get_summary_data(
     interchange: "Interchange",
     combine_nonbonded_forces: bool = False,
     _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
-) -> "DataFrame":
+) -> "pandas.DataFrame":
     """Return a pandas DataFrame with summaries of energies from all available engines."""
     from openff.toolkit import unit
     from pandas import DataFrame
