@@ -30,7 +30,7 @@ dependencies:
   # shim for a build issue that's probably localized to conda-forge
   # https://github.com/conda-forge/lammps-feedstock/issues/207
   - openmpi =4
-  - panedr
+  - pyedr
   # Testing
   - mdtraj
   - intermol

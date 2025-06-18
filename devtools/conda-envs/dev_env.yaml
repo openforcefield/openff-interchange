@@ -27,7 +27,7 @@ dependencies:
   # Drivers
   - gromacs =2024
   - lammps >=2023.08.02
-  - panedr
+  - pyedr
   # shim for a build issue that's probably localized to conda-forge
   # https://github.com/conda-forge/lammps-feedstock/issues/207
   - openmpi =4
