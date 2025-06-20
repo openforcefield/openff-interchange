@@ -1,35 +1,38 @@
-from copy import deepcopy
-
 import pytest
 from openff.toolkit import ForceField, Quantity
-from openff.utilities.utilities import has_package
 
-from openff.interchange._tests import MoleculeWithConformer, get_test_file_path
+from openff.interchange._tests import get_test_file_path
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import _process, get_openmm_energies
 
-if has_package("openmm"):
-    import openmm
+openmm = pytest.importorskip("openmm")
 
 
-@pytest.fixture
-def methane_dimer(sage):
-    molecule = MoleculeWithConformer.from_smiles("C")
-    topology = deepcopy(molecule).to_topology()
+def test_detailed_requires_split_nonbonded_forces(methane_dimer):
+    """Ensure that a detailed report requires non-bonded forces to be split."""
+    with pytest.raises(ValueError, match="split out into different forces"):
+        get_openmm_energies(methane_dimer, combine_nonbonded_forces=True, detailed=True)
 
-    molecule._conformers[0] += Quantity([4, 0, 0], "angstrom")
 
-    topology.add_molecule(molecule)
+def test_key_order(methane_dimer):
+    """Ensure that the keys in the report are in a consistent order."""
+    report = get_openmm_energies(methane_dimer, detailed=True, combine_nonbonded_forces=False)
 
-    interchange = sage.create_interchange(topology)
-    interchange.minimize()
+    expected_keys = [
+        "Bond",
+        "Angle",
+        "Torsion",
+        "RBTorsion",
+        "vdW",
+        "vdW 1-4",
+        "Electrostatics",
+        "Electrostatics 1-4",
+    ]
 
-    return interchange
+    assert [*report.energies.keys()] == [key for key in expected_keys if key in report.energies]
 
 
 class TestProcess:
-    pytest.importorskip("openmm")
-
     @pytest.fixture
     def dummy_system(self):
         system = openmm.System()
@@ -96,11 +99,10 @@ class TestProcess:
 
 
 class TestReportWithPlugins:
-    pytest.importorskip("smirnoff_plugins")
-    pytest.importorskip("openeye")
-
     @pytest.fixture
     def de_force_field(self) -> ForceField:
+        pytest.importorskip("smirnoff_plugins")
+        pytest.importorskip("openeye")
         return ForceField(
             get_test_file_path("de-force-1.0.1.offxml"),
             load_plugins=True,

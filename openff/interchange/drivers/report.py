@@ -15,17 +15,17 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.pydantic import _BaseModel
 
-_KNOWN_ENERGY_TERMS: set[str] = {
+_KNOWN_ENERGY_TERMS = [
     "Bond",
     "Angle",
     "Torsion",
     "RBTorsion",
     "Nonbonded",
     "vdW",
-    "Electrostatics",
     "vdW 1-4",
+    "Electrostatics",
     "Electrostatics 1-4",
-}
+]
 
 
 def energies_validator(value: dict[str, Quantity | None]) -> dict[str, Quantity | None]:
@@ -52,7 +52,8 @@ def energies_validator(value: dict[str, Quantity | None]) -> dict[str, Quantity 
         else:
             raise InvalidEnergyError(f"Energy type {key} not understood.")
 
-    return value
+    # return sorted in a consistent order
+    return {key: value[key] for key in _KNOWN_ENERGY_TERMS if key in value}
 
 
 _EnergiesDict = Annotated[
