@@ -325,12 +325,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         return self._charges
 
-    def _get_charge_array(self, include_virtual_sites: bool = False) -> numpy.ndarray:
+    def get_charge_array(self, include_virtual_sites: bool = False) -> numpy.ndarray:
         """Return a (unitless) one-dimensional array-like of atomic charges, ordered topologically."""
         if include_virtual_sites:
             raise NotImplementedError("Not yet implemented with virtual sites")
 
-        return numpy.asarray([q.m for _, q in sorted(self.charges.items(), key=lambda x: x[0].atom_indices)])
+        return Quantity.from_list([q for _, q in sorted(self.charges.items(), key=lambda x: x[0].atom_indices)])
 
     def _get_charges(
         self,

@@ -241,19 +241,20 @@ class TestElectrostatics:
 
         charges = sage.create_interchange(topology, charge_from_molecules=[ammonia])[
             "Electrostatics"
-        ]._get_charge_array()
+        ].get_charge_array()
 
-        assert isinstance(charges, numpy.ndarray)
-        assert not isinstance(charges, Quantity)
+        assert isinstance(charges, Quantity)
+        assert not isinstance(charges, numpy.ndarray)
+        assert isinstance(charges.m, numpy.ndarray)
 
         assert numpy.allclose(
-            charges[:3],
+            charges[:3].m,
             [-0.834, 0.417, 0.417],
         )
 
         # OpenEye and AmberTools give different AM1-BCC charges
         assert numpy.allclose(
-            charges[3:12],
+            charges[3:12].m,
             [
                 -0.0971,
                 0.13143,
@@ -266,7 +267,7 @@ class TestElectrostatics:
                 0.39809,
             ],
         ) or numpy.allclose(
-            charges[3:12],
+            charges[3:12].m,
             [
                 -0.13610011,
                 0.12639989,
@@ -281,7 +282,7 @@ class TestElectrostatics:
         )
 
         assert numpy.allclose(
-            charges[-4:],
+            charges[-4:].m,
             ammonia.partial_charges.m,
         )
 
