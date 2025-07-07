@@ -16,6 +16,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### New features
 
 * #1216 Type labels can (optionally) be included in LAMMPS files.
+* #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`.
 
 ### Behavior changes
 
