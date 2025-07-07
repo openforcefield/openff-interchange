@@ -45,7 +45,8 @@ def get_openmm_energies(
         The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
     detailed : bool, default=False
         Attempt to report energies with more granularity. Requires `combine_nonbonded_forces=False`.
-        Not guaranteed to be compatible with all values of other arguments. Useful for debugging.
+        Not guaranteed to be compatible with non-default values of other arguments. Useful for 
+        debugging.
 
     Returns
     -------

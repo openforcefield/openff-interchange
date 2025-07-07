@@ -1,4 +1,4 @@
-"""Fixutres for driver tests."""
+"""Fixtures for driver tests."""
 
 from copy import deepcopy
 
