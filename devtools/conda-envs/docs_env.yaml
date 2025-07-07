@@ -15,7 +15,7 @@ dependencies:
   - mbuild
   - foyer =1
   - nglview
-  - panedr
+  - pyedr
   - typing-extensions
   - pandas-stubs
   # readthedocs dependencies
