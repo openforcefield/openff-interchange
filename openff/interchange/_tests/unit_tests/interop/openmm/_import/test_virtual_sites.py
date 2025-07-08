@@ -3,9 +3,9 @@ from openff.toolkit import Quantity, Topology
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer
-from openff.interchange.components._packmol import solvate_topology
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import _get_openmm_energies, _process, get_openmm_energies
+from openff.interchange.packmol import solvate_topology
 
 
 class TestTIP4PVirtualSites:

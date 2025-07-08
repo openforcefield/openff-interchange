@@ -10,8 +10,8 @@ from openff.utilities import get_data_file_path, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, shuffle_topology
-from openff.interchange.components._packmol import pack_box
 from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.packmol import pack_box
 
 
 def test_issue_723():

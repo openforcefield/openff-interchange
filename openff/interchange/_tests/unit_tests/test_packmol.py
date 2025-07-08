@@ -1,5 +1,5 @@
 """
-Units tests for openff.interchange.components._packmol
+Units tests for openff.interchange.packmol
 """
 
 import pathlib
@@ -11,7 +11,8 @@ from openff.units import Quantity, unit
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
-from openff.interchange.components._packmol import (
+from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
+from openff.interchange.packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
     UNIT_CUBE,
@@ -22,7 +23,6 @@ from openff.interchange.components._packmol import (
     solvate_topology,
     solvate_topology_nonwater,
 )
-from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
 
 @pytest.fixture(scope="module")
