@@ -305,7 +305,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     def charges(
         self,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
-        """Get the total partial charge on each atom, including virtual sites."""
+        """
+        Get the total partial charge on each atom, including virtual sites, as a rich dict.
+
+        For a simpler array-like representation, see `get_charge_array`.
+        """
         if len(self._charges) == 0 or self._charges_cached is False:
             # TODO: Clearing this dict **should not be necessary** but in some cases in appears
             #       that this class attribute persists in some cases, possibly only on a single
@@ -325,9 +329,16 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         return self._charges
 
+    def get_charge_array(self, include_virtual_sites: bool = False) -> Quantity:
+        """Return a one-dimensional array-like of atomic charges, ordered topologically."""
+        if include_virtual_sites:
+            raise NotImplementedError("Not yet implemented with virtual sites")
+
+        return Quantity.from_list([q for _, q in sorted(self.charges.items(), key=lambda x: x[0].atom_indices)])
+
     def _get_charges(
         self,
-        include_virtual_sites=True,
+        include_virtual_sites: bool = True,
     ) -> dict[TopologyKey | LibraryChargeTopologyKey | VirtualSiteKey, _ElementaryChargeQuantity]:
         """Get the total partial charge on each atom or particle."""
         # Keyed by index for atoms and by VirtualSiteKey for virtual sites.
