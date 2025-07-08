@@ -376,3 +376,7 @@ class MinimizationError(InterchangeException):
 
 class ExperimentalFeatureException(InterchangeException):
     """Exception raised when an experimental feature is used without opt-in."""
+
+
+class GROMACSParseError(InterchangeException, ValueError):
+    """Exception raised when a GROMACS file cannot be parsed correctly."""

@@ -16,6 +16,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### New features
 
 * #1216 Type labels can (optionally) be included in LAMMPS files.
+* #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`.
 
 ### Behavior changes
 
@@ -24,12 +25,17 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #1186 `GROMACSSystem.molecules` is changed from a dictionary to a list of tuples.
 * #1192 `Interchange.to_pdb` now uses `ensure_unique_atom_names="residues"` when writing PDB files, matching longstanding behavior of the toolkit. For more flexibility, use the `Interchange.topology` and options provided by `openff.toolkit.Topology.to_file`.
 * #1203 Hybrid pair styles, which were never necessary, are no longer used in LAMMPS files.
+* #1215 The `topology` argument to `Interchange.from_openmm` is now strictly required. Previously, it could be `None` but would error.
 
 ### Bug fixes
 
 * #1186 Fixes an issue in which GROMACS topology files were mangled when molecules were not grouped within a topology.
 * #1200 Atoms in improper torsions in LAMMPS files are now ordered correctly (with the central atom first).
 * #1200 `ImproperTorsionKey.get_central_atom_index` now returns fot correct atom index (this class stores the central atom first).
+
+### Miscellaneous improvements
+
+* #1243 Use `pyedr` instead of `panedr` for quicker processing of GROMACS energy files.
 
 ## 0.4.2 - 2025-02-26
 

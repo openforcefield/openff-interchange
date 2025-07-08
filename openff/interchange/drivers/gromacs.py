@@ -215,13 +215,10 @@ def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
     return gmx_torsion
 
 
-@requires_package("panedr")
+@requires_package("pyedr")
 def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
     """Parse an `.edr` file written by `gmx energy`."""
-    import panedr
-
-    parsed_energies = panedr.edr_to_df(edr_path).to_dict("index")[0.0]
-    parsed_energies.pop("Time")
+    from pyedr import read_edr
 
     #   for key in energies:
     #       energies[key] *= kj_mol
@@ -233,6 +230,7 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
     #           energies[required_key] = 0.0 * kj_mol
 
     keys_to_drop = [
+        "Time",
         "Kinetic En.",
         "Temperature",
         "Pres. DC",
@@ -245,9 +243,13 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
         "Vir-YZ",
         "Vir-XZ",
     ]
-    for key in keys_to_drop:
-        if key in parsed_energies:
-            parsed_energies.pop(key)
+
+    all_energies, all_names, times = read_edr(edr_path, verbose=False)
+    parsed_energies = {}
+
+    for idx, name in enumerate(all_names):
+        if name not in keys_to_drop:
+            parsed_energies[name] = all_energies[0][idx]
 
     return {key: val * kj_mol for key, val in parsed_energies.items()}
 
@@ -258,7 +260,7 @@ def _process(
 ) -> EnergyReport:
     """Process energies from GROMACS into a standardized format."""
     if detailed:
-        return EnergyReport(energies=energies)
+        return EnergyReport(energies=_canonicalize_detailed_energies(energies))
 
     return EnergyReport(
         energies={
@@ -270,3 +272,22 @@ def _process(
             "Electrostatics": _get_gmx_energy_coul(energies),
         },
     )
+
+
+def _canonicalize_detailed_energies(
+    energies: dict[str, Quantity],
+) -> dict[str, Quantity]:
+    """Condense the full `gmx energy` report into the keys of a "detailed" report."""
+    return {
+        "Bond": energies.get("Bond", 0.0 * kj_mol),
+        "Angle": energies.get("Angle", 0.0 * kj_mol),
+        "Torsion": _get_gmx_energy_torsion(energies),
+        "vdW": energies.get("LJ (SR)", 0.0 * kj_mol) + energies.get("LJ recip.", 0.0 * kj_mol),
+        "vdW 1-4": energies.get("LJ-14", 0.0 * kj_mol),
+        "Electrostatics": energies.get("Coulomb (SR)", 0.0 * kj_mol)
+        + energies.get(
+            "Coul. recip.",
+            0.0 * kj_mol,
+        ),
+        "Electrostatics 1-4": energies.get("Coulomb-14", 0.0 * kj_mol),
+    }
