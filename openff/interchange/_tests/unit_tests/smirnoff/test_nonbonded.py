@@ -225,6 +225,67 @@ class TestElectrostatics:
         compare_charges(original, get_charges_from_interchange(original))
         compare_charges(reordered, get_charges_from_interchange(reordered))
 
+    def test_get_charge_array(self, sage):
+        ammonia = Molecule.from_smiles("N")
+        ammonia.partial_charges = Quantity(numpy.array([-3, 1, 1, 1]) / 3, "elementary_charge")
+
+        # topology is water | ethanol         | ammonia
+        #              O H H C C O H H H H H H N H H H
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_mapped_smiles("[H:2][O:1][H:3]"),
+                Molecule.from_mapped_smiles("[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]"),
+                Molecule.from_mapped_smiles("[H:2][N:1]([H:3])[H:4]"),
+            ],
+        )
+
+        charges = sage.create_interchange(topology, charge_from_molecules=[ammonia])[
+            "Electrostatics"
+        ].get_charge_array()
+
+        assert isinstance(charges, Quantity)
+        assert not isinstance(charges, numpy.ndarray)
+        assert isinstance(charges.m, numpy.ndarray)
+
+        assert numpy.allclose(
+            charges[:3].m,
+            [-0.834, 0.417, 0.417],
+        )
+
+        # OpenEye and AmberTools give different AM1-BCC charges
+        assert numpy.allclose(
+            charges[3:12].m,
+            [
+                -0.0971,
+                0.13143,
+                -0.60134,
+                0.04476,
+                0.04476,
+                0.04476,
+                0.01732,
+                0.01732,
+                0.39809,
+            ],
+        ) or numpy.allclose(
+            charges[3:12].m,
+            [
+                -0.13610011,
+                0.12639989,
+                -0.59980011,
+                0.04236689,
+                0.04236689,
+                0.04236689,
+                0.04319989,
+                0.04319989,
+                0.39599989,
+            ],
+        )
+
+        assert numpy.allclose(
+            charges[-4:].m,
+            ammonia.partial_charges.m,
+        )
+
 
 def test_nonintegral_molecule_charge_error(sage, water):
     funky_charges = Quantity([0, 0, -5.5], "elementary_charge")
