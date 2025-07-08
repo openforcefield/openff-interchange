@@ -2,7 +2,7 @@ import copy
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, unit
+from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -29,7 +29,7 @@ class TestCombine:
         # Copy and translate atoms by [1, 1, 1]
         other = Interchange(topology=copy.deepcopy(interchange.topology))
         other = copy.deepcopy(interchange)
-        other.positions += 1.0 * unit.nanometer
+        other.positions += Quantity("1.0 nanometer")
 
         combined = interchange.combine(other)
 
@@ -103,6 +103,30 @@ class TestCombine:
             sage.create_interchange(basic_top).combine(
                 sage_modified.create_interchange(basic_top),
             )
+
+    @pytest.mark.parametrize("key", ["Electrostatics", "vdW"])
+    def test_cutoffs_only_slightly_differ(
+        self,
+        sage,
+        basic_top,
+        key,
+    ):
+        """Test that, by default, combining proceeds if 1-16 < cutoff_diff < 1e-6."""
+        int1 = sage.create_interchange(basic_top)
+        int2 = int1.__deepcopy__()
+
+        # should combine with a tiny difference that's still fails x1 == x2, but ...
+        int2[key].cutoff = int1[key].cutoff + Quantity("1e-10 nanometer")
+
+        int1.combine(int2)
+
+        # ... fails when the difference is more than 1e-6
+        int2[key].cutoff = int1[key].cutoff + Quantity("1e-4 nanometer")
+
+        with pytest.raises(
+            CutoffMismatchError,
+        ):
+            int1.combine(int2)
 
     def test_error_mismatched_switching_function(
         self,
