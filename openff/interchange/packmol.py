@@ -17,6 +17,15 @@ from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
+__all__ = (
+    "RHOMBIC_DODECAHEDRON",
+    "RHOMBIC_DODECAHEDRON_XYHEX",
+    "UNIT_CUBE",
+    "pack_box",
+    "solvate_topology",
+    "solvate_topology_nonwater",
+)
+
 UNIT_CUBE = numpy.asarray(
     [
         [1, 0, 0],
