@@ -8,7 +8,7 @@ from openff.interchange.exceptions import (
     MissingVirtualSitesError,
     UnsupportedExportError,
 )
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
 
 
@@ -74,14 +74,14 @@ def _build_particle_map(
     interchange: Interchange,
     molecule_virtual_site_map,
     collate: bool = False,
-) -> dict[int | VirtualSiteKey, int]:
+) -> dict[int | BaseVirtualSiteKey, int]:
     """
     Build a dict mapping particle indices between a topology and another object.
 
     If `collate=True`, virtual sites are collated with each molecule's atoms.
     If `collate=False`, virtual sites go at the very end, after all atoms were added.
     """
-    particle_map: dict[int | VirtualSiteKey, int] = dict()
+    particle_map: dict[int | BaseVirtualSiteKey, int] = dict()
 
     particle_index = 0
 

@@ -334,11 +334,7 @@ class ChargeIncrementTopologyKey(_BaseModel):
         return hash((self.this_atom_index, self.other_atom_indices))
 
 
-class VirtualSiteKey(TopologyKey):
-    """
-    A unique identifier of a virtual site in the scope of a chemical topology.
-    """
-
+class BaseVirtualSiteKey(TopologyKey):
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
     #       orientation_atom_indices point to the same thing.
@@ -351,17 +347,51 @@ class VirtualSiteKey(TopologyKey):
     )
     type: str = Field(description="The type of this virtual site parameter.")
     name: str = Field(description="The name of this virtual site parameter.")
+
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.orientation_atom_indices,
+                self.name,
+                self.type,
+            ),
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} with orientation atom indices {self.orientation_atom_indices}"
+
+
+class ImportedVirtualSiteKey(BaseVirtualSiteKey):
+    """
+    A unique identifier of a virtual site in the scope of a chemical topology.
+
+    Meant to be used with data imported from OpenMM or other engines.
+
+    Use the engine-specific identifier, like `openmm.ThreeParticleAverageSite`, in the "type" field.
+    """
+
+    pass
+
+
+class SMIRNOFFVirtualSiteKey(BaseVirtualSiteKey):
+    """A unique identifier of a SMIRNOFF virtual site in the scope of a chemical topology."""
+
     match: Literal["once", "all_permutations"] = Field(
         description="The `match` attribute of the associated virtual site type",
     )
 
-    def _tuple(self) -> tuple[tuple[int, ...], str, str, str]:
-        return (
-            self.orientation_atom_indices,
-            self.name,
-            self.type,
-            self.match,
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.orientation_atom_indices,
+                self.name,
+                self.type,
+                self.match,
+            ),
         )
+
+
+VirtualSiteKey = SMIRNOFFVirtualSiteKey
 
 
 class PotentialKey(_BaseModel):

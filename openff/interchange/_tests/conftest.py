@@ -13,19 +13,26 @@ from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file
 
 
 @pytest.fixture
-def sage():
+def sage() -> ForceField:
     return ForceField("openff-2.0.0.offxml")
 
 
 @pytest.fixture
-def sage_unconstrained():
+def sage_unconstrained() -> ForceField:
     return ForceField("openff_unconstrained-2.0.0.offxml")
 
 
 @pytest.fixture
-def sage_no_switch(sage):
+def sage_no_switch(sage) -> ForceField:
     sage["vdW"].switch_width = Quantity(0.0, "angstrom")
     return sage
+
+
+@pytest.fixture
+def sage_with_tip4p() -> ForceField:
+    # re-build off of existing fixtures if this gets implemented
+    # https://github.com/openforcefield/openff-toolkit/issues/1948
+    return ForceField("openff-2.0.0.offxml", "tip4p_fb.offxml")
 
 
 @pytest.fixture
@@ -294,6 +301,7 @@ def ff14sb() -> ForceField:
 
 @pytest.fixture
 def ligand():
+    pytest.importorskip("openeye")
     return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O", allow_undefined_stereo=True)
 
 

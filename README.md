@@ -14,7 +14,7 @@ Documentation for Interchange, including examples, a brief user guide, release h
 
 ## How to cite
 
-Please cite Interchange using the [Zenodo record](https://doi.org/10.5281/zenodo.10068101) of the [latest release](https://zenodo.org/doi/10.5281/zenodo.8147764) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/record/8147764/export/hx).
+Please cite Interchange using the [Zenodo record](https://doi.org/10.5281/zenodo.10068101) of the [latest release](https://zenodo.org/doi/10.5281/zenodo.8147764) or the version that was used. The BibTeX reference of the latest release can be found [at this link](https://zenodo.org/record/8147764/export/hx).
 
 ## Installation
 

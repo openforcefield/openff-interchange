@@ -5,6 +5,7 @@ import warnings
 from typing import TYPE_CHECKING
 
 import numpy
+from openff.toolkit import Quantity
 
 from openff.interchange.components.toolkit import _combine_topologies
 from openff.interchange.exceptions import (
@@ -16,6 +17,16 @@ from openff.interchange.warnings import InterchangeCombinationWarning
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
+
+DEFAULT_CUTOFF_TOLERANCE = Quantity("1e-6 nanometer")
+
+
+def _are_almost_equal(
+    target: Quantity | float,
+    reference: Quantity | float,
+    tolerance: Quantity | float,
+):
+    return abs(reference - target) < tolerance
 
 
 def _check_nonbonded_compatibility(
@@ -33,18 +44,30 @@ def _check_nonbonded_compatibility(
         )
 
     for key in ["vdW", "Electrostatics"]:
-        if interchange1[key].cutoff != interchange2[key].cutoff:  # type: ignore[attr-defined]
+        if not _are_almost_equal(
+            interchange1[key].cutoff,
+            interchange2[key].cutoff,
+            DEFAULT_CUTOFF_TOLERANCE,
+        ):
             raise CutoffMismatchError(
                 f"{key} cutoffs do not match. Found {interchange1[key].cutoff} and {interchange2[key].cutoff}.",  # type: ignore[attr-defined]
             )
 
-    if interchange1["vdW"].switch_width != interchange2["vdW"].switch_width:
+    if not _are_almost_equal(
+        interchange1["vdW"].switch_width,
+        interchange2["vdW"].switch_width,
+        DEFAULT_CUTOFF_TOLERANCE,
+    ):
         raise SwitchingFunctionMismatchError(
             f"Switching distance(s) do not match. Found "
             f"{interchange1['vdW'].switch_width} and {interchange2['vdW'].switch_width}.",
         )
 
-    if interchange1["vdW"].scale_14 != interchange2["vdW"].scale_14:
+    if not _are_almost_equal(
+        interchange1["vdW"].scale_14,
+        interchange2["vdW"].scale_14,
+        1e-6,
+    ):
         raise UnsupportedCombinationError(
             "1-4 scaling factors in vdW handler(s) do not match.",
         )

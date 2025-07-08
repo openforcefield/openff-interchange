@@ -77,6 +77,23 @@ For more, see [issue #1005](https://github.com/openforcefield/openff-interchange
 
 Keywords: OpenMM, GROMACS, constraints, bond constraints, rigid water
 
+### Only `ThreeParticleAverageSite` virtual sites are supported
+
+Other virtual site types will raise an error.
+
+### Virtual site exclusions re-created with "parents" virtual site exclusion policy
+
+Non-bonded exclusions involving virtual sites (between virtual sites and heavy atoms or between
+virtual sites and virtual sites) are not processed. Instead, they are later re-generated assuming the "parents" exclusion policy as defined in the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges). This should re-create typical exclusions in 4- and 5-site water models but may not be appropriate with highly custom virtual site interactions in larger molecules.
+
+### Virtual sites from multiple sources cannot be mixed
+
+Combining interchanges with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
+
+### Virtual sites must be listed after heavy atoms each molecule
+
+It's assumed that, in each molecule in an OpenMM topology, all heavy atoms are listed before any virtual sites. This includes the case of all virtual sites being listed after all heavy atoms, i.e. not collated into molecules/residues. There are no community standards around particle ordering, but virtual sites are typically listed after heavy atoms in each molecule or residue.
+
 ### Center-of-mass motion remover ignored
 
 If present, an `openmm.CMMotionRemover` "force" is ignored when loading a system. An `Interchange` object does not store this information. Note that exported systems from `Interchange.to_openmm_system` include this force by default.

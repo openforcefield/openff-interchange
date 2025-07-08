@@ -34,7 +34,15 @@ interchange.to_gromacs("mysim")  # Produces the same three files
 
 Note that the MDP file generated is configured for a single-point energy calculation and must be modified to run other simulations.
 
+### ITP files
+
 By default, the topology is written to as a monolithic file, which can be large. To split this into separate files with the `#include "molecule.itp"` convention, use `monolithic=False`. This produces a functionally equivalent topology file which splits non-bonded interactions into a file `mysim_nonbonded.itp` and each molecule's parameters in a separate file named according to the `Molecule.name` attribute.
+
+### Molecule names
+
+Molecule names in GROMACS files (both in `[ moleculetype ]` and `[ molecules ]` directives) are determined based on the value of the `Molecule.name` attribute of each molecule in the topology. The toolkit allows setting this attribute to any string.
+
+The default value of `Molecule.name` is `None`, which is not suitable for GROMACS files. In this case, Interchange will attempt to generate unique molecule names on the fly. These may look like `MOL_0`, `MOL_1`, potentially incrementing to larger numbers.
 
 ## LAMMPS
 
@@ -42,6 +50,9 @@ An [`Interchange`] object can be written to LAMMPS data and run input files with
 
 ```python
 interchange.to_lammps("data")  # Produces `data.lmp` and `data_pointenergy.in`
+interchange.to_lammps(
+    "data", include_type_labels=True
+)  # includes LAMMPS type labels in `data.lmp`
 ```
 
 Note that the generated run input file will run a single-point energy calculation and should be modified for the desired simulation.
