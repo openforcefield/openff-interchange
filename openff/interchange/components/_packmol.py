@@ -10,6 +10,7 @@ from openff.interchange.packmol import (
     solvate_topology,
     solvate_topology_nonwater,
 )
+from openff.interchange.warnings import InterchangeDeprecationWarning
 
 __all__ = (
     "RHOMBIC_DODECAHEDRON",
@@ -23,5 +24,6 @@ __all__ = (
 import warnings
 
 warnings.warn(
-    "This submodule is now part of the public API. Import from `openff.interchange.packmol instead.",
+    "This submodule is now part of the public API. Import from `openff.interchange.packmol` instead.",
+    InterchangeDeprecationWarning,
 )
