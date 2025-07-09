@@ -53,7 +53,7 @@ def sage_with_bond_charge(sage):
             type="BondCharge",
             match="all_permutations",
             distance="0.8 * angstrom ** 1",
-            charge_increment1="0.0 * elementary_charge ** 1",
+            charge_increment1="0.123 * elementary_charge ** 1",
             charge_increment2="0.0 * elementary_charge ** 1",
         ),
     )
@@ -590,7 +590,6 @@ def hydrogen_cyanide_reversed():
 def hexane_diol():
     molecule = Molecule.from_smiles("OCCCCCCO")
     molecule.assign_partial_charges(partial_charge_method="gasteiger")
-    molecule.partial_charges.m
     return molecule
 
 
