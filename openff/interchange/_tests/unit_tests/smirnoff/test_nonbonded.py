@@ -171,7 +171,6 @@ class TestNAGLChargesErrorHandling:
         from openff.toolkit import ForceField, RDKitToolkitWrapper
         from openff.toolkit.utils.exceptions import MissingPackageError
         from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
-
         from openff.interchange import Interchange
 
         # Mock the toolkit registry to not have NAGL
@@ -192,7 +191,6 @@ class TestNAGLChargesErrorHandling:
     def test_nagl_charges_invalid_model_file(self, hexane_diol):
         """Test error handling for invalid model file paths."""
         from openff.toolkit import ForceField
-
         from openff.interchange import Interchange
 
         ff = ForceField("openff-2.1.0.offxml")
@@ -203,7 +201,6 @@ class TestNAGLChargesErrorHandling:
                 "version": "0.3",
             },
         )
-        1 / 0  # Not sure I love the error that comes out of this
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
             Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
 
@@ -221,8 +218,7 @@ class TestNAGLChargesErrorHandling:
                 "version": "0.3",
             },
         )
-        1 / 0  # Not sure I love the error that comes out of this
-        with pytest.raises(Exception):  # Should be more specific about exception type
+        with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
             Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
 
     def test_nagl_charges_none_model_file(self, hexane_diol):
@@ -239,8 +235,7 @@ class TestNAGLChargesErrorHandling:
                 "version": "0.3",
             },
         )
-        1 / 0  # Not sure I love the error that comes out of this
-        with pytest.raises(Exception):  # Should be more specific about exception type
+        with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
             Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
 
 
