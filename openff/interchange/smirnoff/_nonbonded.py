@@ -334,6 +334,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         if include_virtual_sites:
             raise NotImplementedError("Not yet implemented with virtual sites")
 
+        if VirtualSiteKey in {type(key) for key in self.key_map}:
+            raise NotImplementedError(
+                "Not yet implemented when virtual sites are present, even with `include_virtual_sites=False`.",
+            )
+
         return Quantity.from_list([q for _, q in sorted(self.charges.items(), key=lambda x: x[0].atom_indices)])
 
     def _get_charges(
