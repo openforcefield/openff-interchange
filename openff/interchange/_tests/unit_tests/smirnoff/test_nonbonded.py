@@ -171,6 +171,7 @@ class TestNAGLChargesErrorHandling:
         from openff.toolkit import ForceField, RDKitToolkitWrapper
         from openff.toolkit.utils.exceptions import MissingPackageError
         from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
+
         from openff.interchange import Interchange
 
         # Mock the toolkit registry to not have NAGL
@@ -191,6 +192,7 @@ class TestNAGLChargesErrorHandling:
     def test_nagl_charges_invalid_model_file(self, hexane_diol):
         """Test error handling for invalid model file paths."""
         from openff.toolkit import ForceField
+
         from openff.interchange import Interchange
 
         ff = ForceField("openff-2.1.0.offxml")
@@ -402,11 +404,15 @@ class TestNAGLChargesIntegration:
         )
 
         # Should have charges for real atoms
-        assigned_charges = interchange["Electrostatics"].get_charge_array()
-        assert len(assigned_charges) - 1 == molecule.n_atoms
+        assigned_charges = interchange["Electrostatics"]._get_charges()
+        assert len(assigned_charges.values()) - 1 == molecule.n_atoms
 
         # Net charge should be approximately zero
-        assert abs(sum(assigned_charges[:-1]) - 0.123) < 1e-6
+        all_particle_charge_sum = sum(assigned_charges.values())
+        assert abs(all_particle_charge_sum) < 1e-6 * unit.elementary_charge
+        # Charge without the vsite should be nonzero
+        atom_charge_sum = sum([charge for tk, charge in assigned_charges.items() if tk.atom_indices is not None])
+        assert abs(atom_charge_sum - (0.123 * unit.elementary_charge)) < 1e-6 * unit.elementary_charge
 
     def test_nagl_charges_force_field_creation_complete(self, hexane_diol):
         """Test complete interchange creation with NAGLCharges."""
