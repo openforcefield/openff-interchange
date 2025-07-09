@@ -330,7 +330,11 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         return self._charges
 
     def get_charge_array(self, include_virtual_sites: bool = False) -> Quantity:
-        """Return a one-dimensional array-like of atomic charges, ordered topologically."""
+        """
+        Return a one-dimensional array-like of atomic charges, ordered topologically.
+
+        If virtual sites are present in the system, `NotImplementedError` is raised.
+        """
         if include_virtual_sites:
             raise NotImplementedError("Not yet implemented with virtual sites")
 
