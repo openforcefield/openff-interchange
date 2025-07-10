@@ -287,6 +287,20 @@ class TestElectrostatics:
         )
 
 
+def test_get_charge_array_fails_if_virtual_sites_present(water, tip4p):
+    with pytest.raises(
+        NotImplementedError,
+        match="Not yet implemented with virtual sites",
+    ):
+        tip4p.create_interchange(water.to_topology())["Electrostatics"].get_charge_array(include_virtual_sites=True)
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Not yet implemented when virtual sites are present",
+    ):
+        tip4p.create_interchange(water.to_topology())["Electrostatics"].get_charge_array(include_virtual_sites=False)
+
+
 def test_nonintegral_molecule_charge_error(sage, water):
     funky_charges = Quantity([0, 0, -5.5], "elementary_charge")
 
