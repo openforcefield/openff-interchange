@@ -908,7 +908,16 @@ class Interchange(_BaseModel):
         self,
         gro_file: Path | str,
     ):
-        """Set the positions of this `Interchange` from a GROMACS coordinate `.gro` file."""
+        """
+        Set the positions of this `Interchange` from a GROMACS coordinate `.gro` file.
+
+        Only the coordinates from the `.gro` file are used. No effort is made to ensure the topologies are compatible
+        with each other. This includes, for example, a lack of guarantee that the atom ordering in the `.gro` file
+        matches the atom ordering in the `Interchange` object.
+
+        `InvalidPositionsError` is raised if the number of rows in the coordinate array does not match the number of
+        atoms in the topology of this `Interchange`.
+        """
         from openff.interchange.interop.gromacs._import._import import _read_coordinates
 
         # should already be in nm, might not be necessary

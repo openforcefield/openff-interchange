@@ -17,6 +17,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1216 Type labels can (optionally) be included in LAMMPS files.
 * #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`.
+* #1220 Adds `Interchange.set_positions_from_gro`.
 
 ### Behavior changes
 
