@@ -1,0 +1,20 @@
+integrator              = steep
+nsteps                  = 10000
+nstxout                 = 0
+nstlog                  = 0
+nstenergy               = 0
+
+cutoff-scheme           = Verlet
+
+coulombtype             = PME
+rcoulomb                = 0.9
+verlet-buffer-tolerance = 0.005
+rlist                   = 0.9
+
+vdwtype                 = Cut-off
+vdw-modifier            = force-switch
+rvdw                    = 0.9
+rvdw-switch             = 0.8
+DispCorr                = EnerPres
+
+constraints             = h-bonds
