@@ -16,8 +16,9 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### New features
 
 * #1216 Type labels can (optionally) be included in LAMMPS files.
-* #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`.
+* #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`, which currently only works with systems lacking virtual sites.
 * #1220 Adds `Interchange.set_positions_from_gro`.
+* #1250 Allow `Interchange.combine` to proceed when cutoffs differ by up to 1e-6 nanometers.
 
 ### Behavior changes
 
