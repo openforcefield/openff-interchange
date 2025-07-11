@@ -3,9 +3,7 @@
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) file -->
   <Date>2018-04-05</Date>
   <Author>V. T. Lim, UC Irvine</Author>
-  <!-- WARNING: This file is adapted from its original source and not suitable for production. -->
   <!-- Minimal SMIRNOFF file for testing partly pyramidal geometry of ammonia. -->
-  <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
   <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#7:1]-[#1:2]" length="1.021370282176 * angstrom" k="997.7547006218 * angstrom**-2 * mole**-1 * kilocalorie" id="b86"></Bond>

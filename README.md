@@ -71,8 +71,6 @@ For more information, please consult the [full documentation](https://openff-int
 
 For more examples specific to Interchange, navigate to the `examples/` directory.
 
-**Please note that this software in an early and experimental state without a stable API or guarantees of long-term stability.**
-
 ## Copyright
 
 Copyright (c) 2020, Open Force Field Initiative

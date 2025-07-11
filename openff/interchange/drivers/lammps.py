@@ -19,10 +19,6 @@ def get_lammps_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by LAMMPS.
 
-    .. warning :: This API is not stable and subject to change.
-
-    .. todo :: Split out _running_ LAMMPS into a separate internal function
-
     Parameters
     ----------
     interchange : openff.interchange.Interchange
