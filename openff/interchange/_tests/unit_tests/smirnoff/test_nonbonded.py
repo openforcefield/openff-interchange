@@ -153,7 +153,7 @@ class TestNonbonded:
 
         interchange = Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
 
-        assigned_charges_unitless = [v.m for v in interchange["Electrostatics"]._get_charges().values()]
+        assigned_charges_unitless = interchange["Electrostatics"].get_charge_array().m
 
         expected_charges = hexane_diol.partial_charges
         assert expected_charges is not None
@@ -242,7 +242,7 @@ class TestNAGLChargesErrorHandling:
 
 
 class TestNAGLChargesPrecedence:
-    """Test NAGLCharges precedence over other charge handlers."""
+    """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
 
     def test_nagl_charges_precedence_over_am1bcc(self, hexane_diol):
         """Test that NAGLCharges takes precedence over ToolkitAM1BCC."""

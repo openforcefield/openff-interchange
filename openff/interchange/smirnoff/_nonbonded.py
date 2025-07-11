@@ -712,9 +712,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 "ToolkitAM1BCCHandler, NAGLChargesHandler, or ChargeIncrementModelHandler are expected.",
             )
 
-        # Comment for reviewer: Could get fancy here and force ToolkitAM1BCCHandler calls to go to
-        # AmberTools/OpenEyeToolkitWrapper, and NAGLChargesHandler to go to NAGLToolkitWrapper, but my initial
-        # judgement here is that this isn't worth the complexity. Happy to change this if that's the case.
         partial_charges = cls._compute_partial_charges(
             unique_molecule,
             unique_molecule.to_smiles(
