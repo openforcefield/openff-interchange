@@ -138,8 +138,6 @@ class TestNonbonded:
     def test_nagl_charge_assignment_matches_reference(self, hexane_diol):
         from openff.toolkit.typing.engines.smirnoff import ForceField
 
-        from openff.interchange import Interchange
-
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         # Leave the ToolkitAM1BCC tag in openff-2.1.0 to ensure that the NAGLCharges handler takes precedence
         ff = ForceField("openff-2.1.0.offxml")
@@ -151,7 +149,7 @@ class TestNonbonded:
             },
         )
 
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
 
         assigned_charges_unitless = interchange["Electrostatics"].get_charge_array().m
 
@@ -172,8 +170,6 @@ class TestNAGLChargesErrorHandling:
         from openff.toolkit.utils.exceptions import MissingPackageError
         from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 
-        from openff.interchange import Interchange
-
         # Mock the toolkit registry to not have NAGL
         # RDKit is needed for SMARTS matching.
         with toolkit_registry_manager(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])):
@@ -187,13 +183,11 @@ class TestNAGLChargesErrorHandling:
             )
 
             with pytest.raises(MissingPackageError, match="NAGL software isn't present"):
-                Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+                ff.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_invalid_model_file(self, hexane_diol):
         """Test error handling for invalid model file paths."""
         from openff.toolkit import ForceField
-
-        from openff.interchange import Interchange
 
         ff = ForceField("openff-2.1.0.offxml")
         ff.get_parameter_handler(
@@ -204,13 +198,11 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
-            Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+            ff.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_empty_model_file(self, hexane_diol):
         """Test error handling for empty model file parameter."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        from openff.interchange import Interchange
 
         ff = ForceField("openff-2.1.0.offxml")
         ff.get_parameter_handler(
@@ -221,13 +213,11 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
-            Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+            ff.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_none_model_file(self, hexane_diol):
         """Test error handling for None model file parameter."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        from openff.interchange import Interchange
 
         ff = ForceField("openff-2.1.0.offxml")
         ff.get_parameter_handler(
@@ -238,7 +228,7 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
-            Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+            ff.create_interchange(topology=hexane_diol.to_topology())
 
 
 class TestNAGLChargesPrecedence:
@@ -247,8 +237,6 @@ class TestNAGLChargesPrecedence:
     def test_nagl_charges_precedence_over_am1bcc(self, hexane_diol):
         """Test that NAGLCharges takes precedence over ToolkitAM1BCC."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        from openff.interchange import Interchange
 
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
@@ -271,7 +259,7 @@ class TestNAGLChargesPrecedence:
             },
         )
 
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not AM1BCC
@@ -280,8 +268,6 @@ class TestNAGLChargesPrecedence:
     def test_library_charges_precedence_over_nagl(self, methane):
         """Test that LibraryCharges takes precedence over NAGLCharges."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        from openff.interchange import Interchange
 
         # Create force field with NAGLCharges handler
         ff = ForceField("openff-2.1.0.offxml")
@@ -301,7 +287,7 @@ class TestNAGLChargesPrecedence:
             },
         )
 
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=methane.to_topology())
+        interchange = ff.create_interchange(topology=methane.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match library charges
@@ -311,8 +297,6 @@ class TestNAGLChargesPrecedence:
     def test_nagl_charges_precedence_over_charge_increments(self, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
         from openff.toolkit.typing.engines.smirnoff import ChargeIncrementModelHandler, ForceField
-
-        from openff.interchange import Interchange
 
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
@@ -338,7 +322,7 @@ class TestNAGLChargesPrecedence:
         # Remove AM1BCC handler to ensure we're testing NAGL vs ChargeIncrement precedence
         ff.deregister_parameter_handler("ToolkitAM1BCC")
 
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not formal charges
@@ -351,8 +335,6 @@ class TestNAGLChargesIntegration:
     def test_nagl_charges_multi_molecule_topology(self):
         """Test NAGLCharges with multiple molecules in topology."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        from openff.interchange import Interchange
 
         methane = Molecule.from_smiles("C")
         ethane = Molecule.from_smiles("CC")
@@ -368,7 +350,7 @@ class TestNAGLChargesIntegration:
             },
         )
 
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=topology)
+        interchange = ff.create_interchange(topology=topology)
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should have charges for all atoms
@@ -383,7 +365,6 @@ class TestNAGLChargesIntegration:
 
     def test_nagl_charges_with_virtual_sites(self, sage_with_bond_charge):
         """Test NAGLCharges compatibility with virtual sites."""
-        from openff.interchange import Interchange
 
         # Create a molecule that would have virtual sites
         molecule = Molecule.from_smiles("[Cl]CCO")
@@ -398,8 +379,7 @@ class TestNAGLChargesIntegration:
         )
 
         # Should not raise an error
-        interchange = Interchange.from_smirnoff(
-            force_field=sage_with_bond_charge,
+        interchange = sage_with_bond_charge.create_interchange(
             topology=molecule.to_topology(),
         )
 
@@ -449,8 +429,6 @@ class TestNAGLChargesIntegration:
         """Test that identical molecules get identical charges from NAGLCharges."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
 
-        from openff.interchange import Interchange
-
         # Create topology with two identical molecules
         molecule1 = Molecule.from_smiles("CCO")
         molecule2 = Molecule.from_smiles("CCO")
@@ -465,7 +443,7 @@ class TestNAGLChargesIntegration:
             },
         )
 
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=topology)
+        interchange = ff.create_interchange(topology=topology)
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # First molecule charges
