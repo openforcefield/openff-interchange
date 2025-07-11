@@ -135,21 +135,11 @@ class TestNonbonded:
             assert not uses_elf10
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
 
-    def test_nagl_charge_assignment_matches_reference(self, hexane_diol):
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
+    def test_nagl_charge_assignment_matches_reference(self, sage_with_nagl_charges, hexane_diol):
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         # Leave the ToolkitAM1BCC tag in openff-2.1.0 to ensure that the NAGLCharges handler takes precedence
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                "version": "0.3",
-            },
-        )
 
-        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
 
         assigned_charges_unitless = interchange["Electrostatics"].get_charge_array().m
 
@@ -164,33 +154,22 @@ class TestNonbonded:
 class TestNAGLChargesErrorHandling:
     """Test NAGLCharges error conditions."""
 
-    def test_nagl_charges_missing_toolkit_error(self, hexane_diol):
+    def test_nagl_charges_missing_toolkit_error(self, sage_with_nagl_charges, hexane_diol):
         """Test MissingPackageError when NAGL toolkit is not available."""
-        from openff.toolkit import ForceField, RDKitToolkitWrapper
+        from openff.toolkit import RDKitToolkitWrapper
         from openff.toolkit.utils.exceptions import MissingPackageError
         from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 
         # Mock the toolkit registry to not have NAGL
         # RDKit is needed for SMARTS matching.
         with toolkit_registry_manager(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])):
-            ff = ForceField("openff-2.1.0.offxml")
-            ff.get_parameter_handler(
-                "NAGLCharges",
-                {
-                    "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                    "version": "0.3",
-                },
-            )
 
             with pytest.raises(MissingPackageError, match="NAGL software isn't present"):
-                ff.create_interchange(topology=hexane_diol.to_topology())
+                sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
 
-    def test_nagl_charges_invalid_model_file(self, hexane_diol):
+    def test_nagl_charges_invalid_model_file(self, sage, hexane_diol):
         """Test error handling for invalid model file paths."""
-        from openff.toolkit import ForceField
-
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
+        sage.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "nonexistent_model.pt",
@@ -198,14 +177,11 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
-            ff.create_interchange(topology=hexane_diol.to_topology())
+            sage.create_interchange(topology=hexane_diol.to_topology())
 
-    def test_nagl_charges_empty_model_file(self, hexane_diol):
+    def test_nagl_charges_empty_model_file(self, sage, hexane_diol):
         """Test error handling for empty model file parameter."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
+        sage.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "",
@@ -213,14 +189,11 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
-            ff.create_interchange(topology=hexane_diol.to_topology())
+            sage.create_interchange(topology=hexane_diol.to_topology())
 
-    def test_nagl_charges_none_model_file(self, hexane_diol):
+    def test_nagl_charges_none_model_file(self, sage, hexane_diol):
         """Test error handling for None model file parameter."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
+        sage.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": None,
@@ -228,16 +201,14 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
-            ff.create_interchange(topology=hexane_diol.to_topology())
+            sage.create_interchange(topology=hexane_diol.to_topology())
 
 
 class TestNAGLChargesPrecedence:
     """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
 
-    def test_nagl_charges_precedence_over_am1bcc(self, hexane_diol):
+    def test_nagl_charges_precedence_over_am1bcc(self, sage_with_nagl_charges, hexane_diol):
         """Test that NAGLCharges takes precedence over ToolkitAM1BCC."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         nagl_charges = [c.m for c in hexane_diol.partial_charges]
@@ -249,37 +220,16 @@ class TestNAGLChargesPrecedence:
         # Ensure they're different
         assert not numpy.allclose(nagl_charges, am1bcc_charges)
 
-        # Force field with both handlers (openff-2.1.0 contains ToolkitAM1BCC)
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                "version": "0.3",
-            },
-        )
-
-        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not AM1BCC
         numpy.testing.assert_allclose(assigned_charges, nagl_charges)
 
-    def test_library_charges_precedence_over_nagl(self, methane):
+    def test_library_charges_precedence_over_nagl(self, sage_with_nagl_charges, methane):
         """Test that LibraryCharges takes precedence over NAGLCharges."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
 
-        # Create force field with NAGLCharges handler
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                "version": "0.3",
-            },
-        )
-
-        ff["LibraryCharges"].add_parameter(
+        sage_with_nagl_charges["LibraryCharges"].add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
                 "charge1": -0.2 * unit.elementary_charge,
@@ -287,42 +237,32 @@ class TestNAGLChargesPrecedence:
             },
         )
 
-        interchange = ff.create_interchange(topology=methane.to_topology())
+        interchange = sage_with_nagl_charges.create_interchange(topology=methane.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match library charges
         expected_charges = [-0.2, 0.05, 0.05, 0.05, 0.05]
         numpy.testing.assert_allclose(assigned_charges, expected_charges)
 
-    def test_nagl_charges_precedence_over_charge_increments(self, hexane_diol):
+    def test_nagl_charges_precedence_over_charge_increments(self, sage_with_nagl_charges, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
-        from openff.toolkit.typing.engines.smirnoff import ChargeIncrementModelHandler, ForceField
+        from openff.toolkit.typing.engines.smirnoff import ChargeIncrementModelHandler
 
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         nagl_charges = [c.m for c in hexane_diol.partial_charges]
-
-        # Create force field with both handlers
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                "version": "0.3",
-            },
-        )
 
         # Add ChargeIncrementModel handler (should provide base charges, not increments)
         increment_handler = ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="formal_charge",
         )
-        ff.register_parameter_handler(increment_handler)
+        sage_with_nagl_charges.register_parameter_handler(increment_handler)
 
         # Remove AM1BCC handler to ensure we're testing NAGL vs ChargeIncrement precedence
-        ff.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_with_nagl_charges.deregister_parameter_handler("ToolkitAM1BCC")
 
-        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not formal charges
@@ -332,25 +272,14 @@ class TestNAGLChargesPrecedence:
 class TestNAGLChargesIntegration:
     """Test NAGLCharges integration with other handlers."""
 
-    def test_nagl_charges_multi_molecule_topology(self):
+    def test_nagl_charges_multi_molecule_topology(self, sage_with_nagl_charges):
         """Test NAGLCharges with multiple molecules in topology."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
         methane = Molecule.from_smiles("C")
         ethane = Molecule.from_smiles("CC")
 
         topology = Topology.from_molecules([methane, ethane])
 
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                "version": "0.3",
-            },
-        )
-
-        interchange = ff.create_interchange(topology=topology)
+        interchange = sage_with_nagl_charges.create_interchange(topology=topology)
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should have charges for all atoms

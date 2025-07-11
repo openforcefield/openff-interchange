@@ -186,6 +186,16 @@ def sage_with_off_center_hydrogen(sage):
 
     return sage
 
+@pytest.fixture
+def sage_with_nagl_charges(sage):
+    sage.get_parameter_handler(
+        "NAGLCharges",
+        {
+            "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            "version": "0.3",
+        },
+    )
+    return sage
 
 @pytest.fixture
 def _simple_force_field():
