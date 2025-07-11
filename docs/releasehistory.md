@@ -15,6 +15,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### New features
 
+* #1174 Support Python 3.13.
 * #1216 Type labels can (optionally) be included in LAMMPS files.
 * #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`, which currently only works with systems lacking virtual sites.
 * #1220 Adds `Interchange.set_positions_from_gro`.
@@ -22,12 +23,13 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Behavior changes
 
-* #1194 Drop support for Python 3.10
+* #1194 Drop support for Python 3.10.
 * #1137 Internally use `openmm.LangevinMiddleIntegrator`, including in the OpenMM driver.
 * #1186 `GROMACSSystem.molecules` is changed from a dictionary to a list of tuples.
 * #1192 `Interchange.to_pdb` now uses `ensure_unique_atom_names="residues"` when writing PDB files, matching longstanding behavior of the toolkit. For more flexibility, use the `Interchange.topology` and options provided by `openff.toolkit.Topology.to_file`.
-* #1203 Hybrid pair styles, which were never necessary, are no longer used in LAMMPS files.
+* #1205 Hybrid pair styles, which were never necessary, are no longer used in LAMMPS files.
 * #1215 The `topology` argument to `Interchange.from_openmm` is now strictly required. Previously, it could be `None` but would error.
+* #1225 Treat asterisks as comments in GROMACS files.
 
 ### Bug fixes
 
@@ -38,6 +40,11 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Miscellaneous improvements
 
 * #1243 Use `pyedr` instead of `panedr` for quicker processing of GROMACS energy files.
+* #1229 Improve detailed energy reporting.
+* #1175 Make the system in the protein-ligand example charge-neutral.
+* #1183 Remove warning about use of `Interchange.combine`.
+* #1241 Document how to control GROMACS molecule names.
+* #1224 Improve errors when parsing GROMACS files.
 
 ## 0.4.2 - 2025-02-26
 
