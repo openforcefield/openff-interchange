@@ -11,10 +11,12 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
     LibraryChargeHandler,
+    NAGLChargesHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
+from openff.toolkit.utils.exceptions import MissingPackageError
 from pydantic import Field, PrivateAttr, computed_field
 from typing_extensions import Self
 
@@ -48,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 ElectrostaticsHandlerType = Union[
     ElectrostaticsHandler,
+    NAGLChargesHandler,
     ToolkitAM1BCCHandler,
     ChargeIncrementModelHandler,
     LibraryChargeHandler,
@@ -248,7 +251,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     * global settings for the electrostatic interactions such as the cutoff distance
       and the intramolecular scale factors.
     * partial charges which have been assigned by a ``ToolkitAM1BCC``,
-      ``LibraryCharges``, or a ``ChargeIncrementModel`` parameter
+      ``LibraryCharges``, ``NAGLCharges``, or a ``ChargeIncrementModel`` parameter
       handler.
     * charge corrections applied by a ``ChargeIncrementHandler``
 
@@ -284,6 +287,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Return a list of allowed types of ParameterHandler classes."""
         return [
             LibraryChargeHandler,
+            NAGLChargesHandler,
             ChargeIncrementModelHandler,
             ToolkitAM1BCCHandler,
             ElectrostaticsHandler,
@@ -384,6 +388,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                     if potential_key.associated_handler in (
                         "LibraryCharges",
+                        "NAGLChargesHandler",
                         "ToolkitAM1BCCHandler",
                         "molecules_with_preset_charges",
                         "ExternalSource",
@@ -450,7 +455,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """
         Return the order in which parameter handlers take precedence when computing charges.
         """
-        return ["LibraryCharges", "ChargeIncrementModel", "ToolkitAM1BCC"]
+        return ["LibraryCharges", "NAGLCharges", "ChargeIncrementModel", "ToolkitAM1BCC"]
 
     @classmethod
     def create(
@@ -662,7 +667,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @classmethod
     def _find_charge_model_matches(
         cls,
-        parameter_handler: ToolkitAM1BCCHandler | ChargeIncrementModelHandler,
+        parameter_handler: ToolkitAM1BCCHandler | ChargeIncrementModelHandler | NAGLChargesHandler,
         unique_molecule: Molecule,
     ) -> tuple[
         str,
@@ -679,8 +684,19 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         handler_name = parameter_handler.__class__.__name__
 
-        if handler_name == "ChargeIncrementModelHandler":
+        if handler_name == "NAGLChargesHandler":
+            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+            partial_charge_method = parameter_handler.model_file
+            if "NAGL" not in GLOBAL_TOOLKIT_REGISTRY.__repr__():
+                raise MissingPackageError(
+                    "The force field has a NAGLCharges section, but the NAGL software isn't "
+                    "present in GLOBAL_TOOLKIT_REGISTRY",
+                )
+
+        elif handler_name == "ChargeIncrementModelHandler":
             partial_charge_method = parameter_handler.partial_charge_method
+
         elif handler_name == "ToolkitAM1BCCHandler":
             from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
@@ -693,7 +709,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         else:
             raise InvalidParameterHandlerError(
                 f"Encountered unknown handler of type {type(parameter_handler)} where only "
-                "ToolkitAM1BCCHandler or ChargeIncrementModelHandler are expected.",
+                "ToolkitAM1BCCHandler, NAGLChargesHandler, or ChargeIncrementModelHandler are expected.",
             )
 
         partial_charges = cls._compute_partial_charges(
@@ -761,7 +777,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     unique_molecule,
                 )
 
-            if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel"]:
+            if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel", "NAGLCharges"]:
                 (
                     partial_charge_method,
                     am1_matches,
@@ -939,6 +955,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                                 if new_key.extras["handler"] == "ToolkitAM1BCCHandler":
                                     logger.info(
                                         "Charge section ToolkitAM1BCC, using charge method "
+                                        f"{new_key.extras['partial_charge_method']}, "
+                                        f"applied to topology atom index {topology_atom_index}",
+                                    )
+                                elif new_key.extras["handler"] == "NAGLChargesHandler":
+                                    logger.info(
+                                        "Charge section NAGLCharges, using NAGL model "
                                         f"{new_key.extras['partial_charge_method']}, "
                                         f"applied to topology atom index {topology_atom_index}",
                                     )
