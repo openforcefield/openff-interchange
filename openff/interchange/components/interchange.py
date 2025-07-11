@@ -65,8 +65,6 @@ class Interchange(_BaseModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
 
-    .. warning :: This API is not stable and subject to change.
-
     Examples
     --------
     Create an ``Interchange`` from an OpenFF ``ForceField`` and ``Molecule``
@@ -873,8 +871,7 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from GROMACS files.
 
-        .. warning :: This method is experimental and not officially suitable for production.
-        .. warning :: This API is not stable and subject to change.
+        .. warning :: This method is experimental.
 
         Parameters
         ----------
@@ -941,8 +938,6 @@ class Interchange(_BaseModel):
     ) -> "Interchange":
         """
         Create an Interchange object from OpenMM objects.
-
-        .. warning :: This API is not stable and subject to change.
 
         Notes
         -----
@@ -1075,7 +1070,7 @@ class Interchange(_BaseModel):
             )
 
     def __add__(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
+        """Combine two Interchange objects."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
             InterchangeDeprecationWarning,
@@ -1084,7 +1079,7 @@ class Interchange(_BaseModel):
         return self.combine(other)
 
     def combine(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
+        """Combine two Interchange objects."""
         from openff.interchange.operations._combine import _combine
 
         return _combine(self, other)

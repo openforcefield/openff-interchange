@@ -36,8 +36,7 @@ def to_interchange(
     """
     Convert a GROMACS system to an Interchange object.
 
-    .. warning :: This API is experimental and subject to change.
-    .. warning :: This method is experimental and not officially suitable for production.
+    .. warning :: This method is experimental.
 
     Parameters
     ----------
