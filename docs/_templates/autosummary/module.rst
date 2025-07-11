@@ -82,12 +82,15 @@
 {% if attributes %}
 {{ _('Module Attributes') | escape | underline(line="-") }}
 
+   .. autosummary::
+      :toctree:
+      :nosignatures:
    {% for item in attributes %}
-   .. autoattribute:: {% if item.startswith(fullname ~ ".") -%}
-                      {{- item[((fullname ~ ".") | length):] -}}
-                      {%- else -%}
-                      {{- item -}}
-                      {%- endif %}
+      {% if item.startswith(fullname ~ ".") -%}
+      {{- item[((fullname ~ ".") | length):] -}}
+      {%- else -%}
+      {{- item -}}
+      {%- endif %}
    {%- endfor %}
 
 {% endif %}
