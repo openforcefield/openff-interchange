@@ -294,8 +294,8 @@ class TestNAGLChargesIntegration:
         methane_charge_sum = sum(assigned_charges[: methane.n_atoms])
         ethane_charge_sum = sum(assigned_charges[methane.n_atoms :])
 
-        assert abs(methane_charge_sum) < 1e-6 * unit.elementary_charge
-        assert abs(ethane_charge_sum) < 1e-6 * unit.elementary_charge
+        assert abs(methane_charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs(ethane_charge_sum) < 1e-10 * unit.elementary_charge
 
     def test_nagl_charges_with_virtual_sites(self, sage_with_bond_charge):
         """Test NAGLCharges compatibility with virtual sites."""
@@ -323,10 +323,10 @@ class TestNAGLChargesIntegration:
 
         # Net charge should be approximately zero
         all_particle_charge_sum = sum(assigned_charges.values())
-        assert abs(all_particle_charge_sum) < 1e-6 * unit.elementary_charge
+        assert abs(all_particle_charge_sum) < 1e-10 * unit.elementary_charge
         # Charge without the vsite should be nonzero
         atom_charge_sum = sum([charge for tk, charge in assigned_charges.items() if tk.atom_indices is not None])
-        assert abs(atom_charge_sum - (0.123 * unit.elementary_charge)) < 1e-6 * unit.elementary_charge
+        assert abs(atom_charge_sum - (0.123 * unit.elementary_charge)) < 1e-10 * unit.elementary_charge
 
     def test_nagl_charges_force_field_creation_complete(self, hexane_diol):
         """Test complete interchange creation with NAGLCharges."""
@@ -357,7 +357,7 @@ class TestNAGLChargesIntegration:
 
         # Net charge should be approximately zero
         total_charge = sum(charge.m for charge in charges)
-        assert abs(total_charge) < 1e-6
+        assert abs(total_charge) < 1e-10
 
     def test_nagl_charges_identical_molecules_same_charges(self):
         """Test that identical molecules get identical charges from NAGLCharges."""
