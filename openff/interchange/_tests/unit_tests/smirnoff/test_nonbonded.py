@@ -208,6 +208,26 @@ class TestNAGLChargesErrorHandling:
         with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
+    def test_nagl_charges_fails_fallback(self, sage_with_nagl_charges):
+        """Test whether molecules that fail having charges assigned by NAGLCharges successfully
+        fall back to lower-precedence charge methods
+        """
+        # Create a molecule that NAGL can't charge
+        mol = Molecule.from_smiles("B")
+        # Create a FF with a ChargeIncrementModel that CAN charge the molecule
+        sage_with_nagl_charges.deregister_parameter_handler('Bonds')
+        sage_with_nagl_charges.deregister_parameter_handler('Constraints')
+        sage_with_nagl_charges.deregister_parameter_handler('Angles')
+        sage_with_nagl_charges.deregister_parameter_handler('ProperTorsions')
+        sage_with_nagl_charges.deregister_parameter_handler('ImproperTorsions')
+        sage_with_nagl_charges.deregister_parameter_handler('vdW')
+        sage_with_nagl_charges.get_parameter_handler("ChargeIncrementModel",
+                                 {"partial_charge_method": "formal_charge",
+                                  "version": "0.3"
+                                  }
+                                 )
+        # Ensure that no error is raised when assigning charges, since NAGL will fail but CIMH will succeed
+        sage_with_nagl_charges.create_interchange(mol.to_topology())
 
 class TestNAGLChargesPrecedence:
     """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
