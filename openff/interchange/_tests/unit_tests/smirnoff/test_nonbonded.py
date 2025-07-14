@@ -163,14 +163,14 @@ class TestNAGLChargesErrorHandling:
         # Mock the toolkit registry to not have NAGL
         # RDKit is needed for SMARTS matching.
         with toolkit_registry_manager(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])):
-
             with pytest.raises(MissingPackageError, match="NAGL software isn't present"):
                 sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
 
             # No error should be raised if using charge_from_molecules
-            sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology(),
-                                                      charge_from_molecules=[hexane_diol])
-
+            sage_with_nagl_charges.create_interchange(
+                topology=hexane_diol.to_topology(),
+                charge_from_molecules=[hexane_diol],
+            )
 
     def test_nagl_charges_invalid_model_file(self, sage, hexane_diol):
         """Test error handling for invalid model file paths."""
@@ -215,19 +215,22 @@ class TestNAGLChargesErrorHandling:
         # Create a molecule that NAGL can't charge
         mol = Molecule.from_smiles("B")
         # Create a FF with a ChargeIncrementModel that CAN charge the molecule
-        sage_with_nagl_charges.deregister_parameter_handler('Bonds')
-        sage_with_nagl_charges.deregister_parameter_handler('Constraints')
-        sage_with_nagl_charges.deregister_parameter_handler('Angles')
-        sage_with_nagl_charges.deregister_parameter_handler('ProperTorsions')
-        sage_with_nagl_charges.deregister_parameter_handler('ImproperTorsions')
-        sage_with_nagl_charges.deregister_parameter_handler('vdW')
-        sage_with_nagl_charges.get_parameter_handler("ChargeIncrementModel",
-                                 {"partial_charge_method": "formal_charge",
-                                  "version": "0.3"
-                                  }
-                                 )
+        sage_with_nagl_charges.deregister_parameter_handler("Bonds")
+        sage_with_nagl_charges.deregister_parameter_handler("Constraints")
+        sage_with_nagl_charges.deregister_parameter_handler("Angles")
+        sage_with_nagl_charges.deregister_parameter_handler("ProperTorsions")
+        sage_with_nagl_charges.deregister_parameter_handler("ImproperTorsions")
+        sage_with_nagl_charges.deregister_parameter_handler("vdW")
+        sage_with_nagl_charges.get_parameter_handler(
+            "ChargeIncrementModel",
+            {
+                "partial_charge_method": "formal_charge",
+                "version": "0.3",
+            },
+        )
         # Ensure that no error is raised when assigning charges, since NAGL will fail but CIMH will succeed
         sage_with_nagl_charges.create_interchange(mol.to_topology())
+
 
 class TestNAGLChargesPrecedence:
     """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""

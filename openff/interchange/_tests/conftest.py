@@ -186,6 +186,7 @@ def sage_with_off_center_hydrogen(sage):
 
     return sage
 
+
 @pytest.fixture
 def sage_with_nagl_charges(sage):
     sage.get_parameter_handler(
@@ -196,6 +197,7 @@ def sage_with_nagl_charges(sage):
         },
     )
     return sage
+
 
 @pytest.fixture
 def _simple_force_field():
