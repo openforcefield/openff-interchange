@@ -167,6 +167,11 @@ class TestNAGLChargesErrorHandling:
             with pytest.raises(MissingPackageError, match="NAGL software isn't present"):
                 sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
 
+            # No error should be raised if using charge_from_molecules
+            sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology(),
+                                                      charge_from_molecules=[hexane_diol])
+
+
     def test_nagl_charges_invalid_model_file(self, sage, hexane_diol):
         """Test error handling for invalid model file paths."""
         sage.get_parameter_handler(
