@@ -517,8 +517,22 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         method: str,
     ) -> Quantity:
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
+        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+        from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
+
         molecule = copy.deepcopy(molecule)
-        molecule.assign_partial_charges(method)
+        GLOBAL_TOOLKIT_REGISTRY.call(
+            "assign_partial_charges",
+            molecule=molecule,
+            partial_charge_method=method,
+            raise_exception_types=[
+                FileNotFoundError,
+                MissingPackageError,
+                HashComparisonFailedException,
+                UnableToParseDOIException,
+            ],
+        )
 
         return molecule.partial_charges
 
@@ -675,6 +689,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         dict[PotentialKey, Potential],
     ]:
         """Construct a slot and potential map for a charge model based parameter handler."""
+        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+        from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
+
         unique_molecule = copy.deepcopy(unique_molecule)
         reference_smiles = unique_molecule.to_smiles(
             isomeric=True,
@@ -693,10 +711,20 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     "The force field has a NAGLCharges section, but the NAGL software isn't "
                     "present in GLOBAL_TOOLKIT_REGISTRY",
                 )
-
+            exception_types_to_raise = [
+                FileNotFoundError,
+                MissingPackageError,
+                HashComparisonFailedException,
+                UnableToParseDOIException,
+            ]
+            additional_args = {
+                "doi": parameter_handler.digital_object_identifier,
+                "file_hash": parameter_handler.model_file_hash,
+            }
         elif handler_name == "ChargeIncrementModelHandler":
             partial_charge_method = parameter_handler.partial_charge_method
-
+            exception_types_to_raise = []
+            additional_args = {}
         elif handler_name == "ToolkitAM1BCCHandler":
             from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
@@ -706,22 +734,23 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 partial_charge_method = "am1bccelf10"
             else:
                 partial_charge_method = "am1bcc"
+            exception_types_to_raise = []
+            additional_args = {}
         else:
             raise InvalidParameterHandlerError(
                 f"Encountered unknown handler of type {type(parameter_handler)} where only "
                 "ToolkitAM1BCCHandler, NAGLChargesHandler, or ChargeIncrementModelHandler are expected.",
             )
 
-        partial_charges = cls._compute_partial_charges(
-            unique_molecule,
-            unique_molecule.to_smiles(
-                isomeric=True,
-                explicit_hydrogens=True,
-                mapped=True,
-            ),
-            method=partial_charge_method,
+        molecule = copy.deepcopy(unique_molecule)
+        GLOBAL_TOOLKIT_REGISTRY.call(
+            "assign_partial_charges",
+            molecule=molecule,
+            partial_charge_method=partial_charge_method,
+            raise_exception_types=exception_types_to_raise,
+            **additional_args,
         )
-
+        partial_charges = molecule.partial_charges
         matches = {}
         potentials = {}
 
