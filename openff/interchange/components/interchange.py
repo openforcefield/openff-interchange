@@ -871,8 +871,6 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from GROMACS files.
 
-        .. warning :: This method is experimental.
-
         Parameters
         ----------
         topology_file : Path | str
