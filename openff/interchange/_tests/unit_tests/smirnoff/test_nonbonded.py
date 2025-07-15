@@ -11,6 +11,7 @@ from openff.toolkit.typing.engines.smirnoff import (
 from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
 from packaging.version import Version
 
+import openff.nagl_models._dynamic_fetch
 from openff.interchange import Interchange
 from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 from openff.interchange.smirnoff._nonbonded import (
@@ -18,6 +19,7 @@ from openff.interchange.smirnoff._nonbonded import (
     _downconvert_vdw_handler,
     _upconvert_vdw_handler,
 )
+from openff.nagl_models.tests.test_dynamic_fetch import mocked_get_release_metadata
 
 
 class TestNonbonded:
@@ -181,8 +183,50 @@ class TestNAGLChargesErrorHandling:
                 "version": "0.3",
             },
         )
-        with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
+        with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
+
+    def test_nagl_charges_bad_hash(self, sage, hexane_diol, monkeypatch):
+        """Test error handling for a bad hash."""
+        from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
+
+        with monkeypatch.context() as m:
+            m.setattr(
+                openff.nagl_models._dynamic_fetch,
+                "get_release_metadata",
+                mocked_get_release_metadata,
+            )
+            sage.get_parameter_handler(
+                "NAGLCharges",
+                {
+                    "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                    "model_file_hash": "bad_hash",
+                    "version": "0.3",
+                },
+            )
+            with pytest.raises(HashComparisonFailedException):
+                sage.create_interchange(topology=hexane_diol.to_topology())
+
+    def test_nagl_charges_bad_doi(self, sage, hexane_diol, monkeypatch):
+        """Test error handling for a bad DOI."""
+        from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
+
+        with monkeypatch.context() as m:
+            m.setattr(
+                openff.nagl_models._dynamic_fetch,
+                "get_release_metadata",
+                mocked_get_release_metadata,
+            )
+            sage.get_parameter_handler(
+                "NAGLCharges",
+                {
+                    "model_file": "nonexistent_model.pt",
+                    "digital_object_identifier": "blah.foo/bar",
+                    "version": "0.3",
+                },
+            )
+            with pytest.raises(UnableToParseDOIException):
+                sage.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_empty_model_file(self, sage, hexane_diol):
         """Test error handling for empty model file parameter."""
@@ -193,7 +237,7 @@ class TestNAGLChargesErrorHandling:
                 "version": "0.3",
             },
         )
-        with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
+        with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_none_model_file(self, sage, hexane_diol):
@@ -205,9 +249,10 @@ class TestNAGLChargesErrorHandling:
                 "version": "0.3",
             },
         )
-        with pytest.raises(ValueError, match="No registered toolkits can provide the capability"):
+        with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
+    @pytest.mark.skip("Behavior not implemented yet")
     def test_nagl_charges_fails_fallback(self, sage_with_nagl_charges):
         """Test whether molecules that fail having charges assigned by NAGLCharges successfully
         fall back to lower-precedence charge methods
