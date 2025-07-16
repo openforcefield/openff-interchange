@@ -763,7 +763,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
             if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel", "NAGLCharges"]:
                 try:
-
                     (
                         partial_charge_method,
                         am1_matches,
