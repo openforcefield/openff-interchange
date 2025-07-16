@@ -744,7 +744,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         potentials: dict[PotentialKey, Potential] = dict()
 
         expected_matches = {i for i in range(unique_molecule.n_atoms)}
-
+        exceptions = []
         for handler_type in cls.parameter_handler_precedence():
             if handler_type not in parameter_handlers:
                 continue
@@ -761,15 +761,20 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     unique_molecule,
                 )
 
-            if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel"]:
-                (
-                    partial_charge_method,
-                    am1_matches,
-                    am1_potentials,
-                ) = cls._find_charge_model_matches(
-                    parameter_handler,
-                    unique_molecule,
-                )
+            if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel", "NAGLCharges"]:
+                try:
+
+                    (
+                        partial_charge_method,
+                        am1_matches,
+                        am1_potentials,
+                    ) = cls._find_charge_model_matches(
+                        parameter_handler,
+                        unique_molecule,
+                    )
+                except ValueError as e:
+                    exceptions.append(e)
+                    continue
 
             if slot_matches is None and am1_matches is None:
                 raise NotImplementedError()
@@ -813,10 +818,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         found_matches = {index for key in matches for index in key.atom_indices}
 
         if found_matches != expected_matches:
+            exceptions_txt = "\n\n\n".join([str(i) for i in exceptions])
+
             raise RuntimeError(
                 f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
                 "not be fully assigned charges. Charges were assigned to atoms "
-                f"{found_matches} but the molecule contains {expected_matches}.",
+                f"{found_matches} but the molecule contains {expected_matches}."
+                f"\n\n{exceptions_txt}",
             )
 
         return matches, potentials
