@@ -11,7 +11,6 @@ from openff.toolkit.typing.engines.smirnoff import (
 from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
 from packaging.version import Version
 
-import openff.nagl_models._dynamic_fetch
 from openff.interchange import Interchange
 from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 from openff.interchange.smirnoff._nonbonded import (
@@ -19,7 +18,8 @@ from openff.interchange.smirnoff._nonbonded import (
     _downconvert_vdw_handler,
     _upconvert_vdw_handler,
 )
-#from openff.nagl_models.tests.test_dynamic_fetch import mocked_get_release_metadata
+
+# from openff.nagl_models.tests.test_dynamic_fetch import mocked_get_release_metadata
 
 
 class TestNonbonded:
