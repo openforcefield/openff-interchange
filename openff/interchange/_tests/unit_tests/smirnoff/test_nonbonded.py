@@ -252,6 +252,7 @@ class TestNAGLChargesErrorHandling:
         with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
+
 class TestNAGLChargesPrecedence:
     """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
 
