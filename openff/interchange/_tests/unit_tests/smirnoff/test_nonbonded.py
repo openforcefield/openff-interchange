@@ -19,7 +19,7 @@ from openff.interchange.smirnoff._nonbonded import (
     _downconvert_vdw_handler,
     _upconvert_vdw_handler,
 )
-from openff.nagl_models.tests.test_dynamic_fetch import mocked_get_release_metadata
+#from openff.nagl_models.tests.test_dynamic_fetch import mocked_get_release_metadata
 
 
 class TestNonbonded:
@@ -191,11 +191,11 @@ class TestNAGLChargesErrorHandling:
         from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
 
         with monkeypatch.context() as m:
-            m.setattr(
-                openff.nagl_models._dynamic_fetch,
-                "get_release_metadata",
-                mocked_get_release_metadata,
-            )
+            # m.setattr(
+            #     openff.nagl_models._dynamic_fetch,
+            #     "get_release_metadata",
+            #     mocked_get_release_metadata,
+            # )
             sage.get_parameter_handler(
                 "NAGLCharges",
                 {
@@ -212,11 +212,11 @@ class TestNAGLChargesErrorHandling:
         from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
 
         with monkeypatch.context() as m:
-            m.setattr(
-                openff.nagl_models._dynamic_fetch,
-                "get_release_metadata",
-                mocked_get_release_metadata,
-            )
+            # m.setattr(
+            #     openff.nagl_models._dynamic_fetch,
+            #     "get_release_metadata",
+            #     mocked_get_release_metadata,
+            # )
             sage.get_parameter_handler(
                 "NAGLCharges",
                 {
