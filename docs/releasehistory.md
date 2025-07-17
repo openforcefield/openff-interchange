@@ -13,6 +13,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Miscellaneous improvements
+
+* #1263 Removes `importlib_metadata` backport when loading plugins.
+
+## 0.4.3 - 2025-07-11
+
 ### New features
 
 * #1174 Support Python 3.13.
