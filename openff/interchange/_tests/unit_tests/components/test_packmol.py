@@ -447,3 +447,25 @@ class TestPackmolWrapper:
             assert "STOP 173" in open("packmol_error.log").read()
         else:
             assert not pathlib.Path("packmol_error.log").is_file()
+
+    def test_solvate_topology_neutral_acetic_acid(self):
+        solute = Molecule.from_smiles("CC(=O)[O-]")
+        solute.generate_conformers(n_conformers=1)
+        solute.assign_partial_charges(partial_charge_method="formal_charge")
+
+        assert solute.total_charge.m == -1.0
+
+        topology = solvate_topology(solute.to_topology(), nacl_conc=0.1 * unit.molar, padding=2 * unit.nm)
+
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+    def test_solvate_topology_neutral_ammonium(self):
+        solute = Molecule.from_smiles("[NH4+]")
+        solute.generate_conformers(n_conformers=1)
+        solute.assign_partial_charges(partial_charge_method="formal_charge")
+
+        assert solute.total_charge.m == 1.0
+
+        topology = solvate_topology(solute.to_topology(), nacl_conc=0.1 * unit.molar, padding=2 * unit.nm)
+
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
