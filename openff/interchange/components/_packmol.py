@@ -900,14 +900,22 @@ def solvate_topology(
     nacl_mass_to_add = solvent_mass * nacl_mass_fraction
     nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
 
+    # round down, since later we'll be adding and not removing for neutralisation
+    na_to_add = numpy.floor(nacl_to_add)
+    cl_to_add = numpy.floor(nacl_to_add)
+
     # Compute the number of water molecules to add to make up the remaining mass
     water_mass_to_add = solvent_mass - nacl_mass
     water_to_add = (water_mass_to_add / water_mass).m_as("dimensionless").round()
 
-    # Neutralise the system by adding and removing salt
+    # Neutralise the system by **adding** the counter-ion, which we think OpenMM does
     solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
-    na_to_add = numpy.ceil(nacl_to_add - solute_charge.m / 2.0)
-    cl_to_add = numpy.floor(nacl_to_add + solute_charge.m / 2.0)
+
+    if solute_charge.m > 0:
+        cl_to_add += solute_charge.m
+    elif solute_charge.m < 0:
+        # need to add one Na+ for each *negative* charge
+        na_to_add += -1 * solute_charge.m
 
     if abs(solute_charge.m + na_to_add - cl_to_add) > 1e-6:
         raise PACKMOLValueError(
