@@ -907,7 +907,7 @@ def solvate_topology(
     # Neutralise the system by adding and removing salt
     solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
     na_to_add = numpy.ceil(nacl_to_add - solute_charge.m / 2.0)
-    cl_to_add = numpy.floor(nacl_to_add + solute_charge.m / 2.0)
+    cl_to_add = numpy.ceil(nacl_to_add + solute_charge.m / 2.0)
 
     if abs(solute_charge.m + na_to_add - cl_to_add) > 1e-6:
         raise PACKMOLValueError(
