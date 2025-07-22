@@ -909,7 +909,12 @@ def solvate_topology(
     na_to_add = numpy.ceil(nacl_to_add - solute_charge.m / 2.0)
     cl_to_add = numpy.floor(nacl_to_add + solute_charge.m / 2.0)
 
-    # Pack the box
+    if abs(solute_charge.m + na_to_add - cl_to_add) > 1e-6:
+        raise PACKMOLValueError(
+            f"Failed to neutralise solute with charge {solute_charge.m}; meant to add {nacl_to_add} NaCl.\n"
+            f"Tried adding {na_to_add} Na+ and {cl_to_add} Cl- ions.",
+        )
+
     return pack_box(
         [water, na, cl],
         [int(water_to_add), int(na_to_add), int(cl_to_add)],
