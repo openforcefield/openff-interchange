@@ -127,13 +127,19 @@ def _validate_inputs(
         elements.
 
     """
-    if box_vectors is None and target_density is None and (solute is None or solute.box_vectors is None):
+    if (
+        box_vectors is None
+        and target_density is None
+        and (solute is None or solute.box_vectors is None)
+    ):
         raise PACKMOLValueError(
-            "One of `box_vectors`, `target_density`, or" + " `solute.box_vectors` must be specified.",
+            "One of `box_vectors`, `target_density`, or"
+            + " `solute.box_vectors` must be specified.",
         )
     if box_vectors is not None and target_density is not None:
         raise PACKMOLValueError(
-            "`box_vectors` and `target_density` cannot be specified together;" + " choose one or the other.",
+            "`box_vectors` and `target_density` cannot be specified together;"
+            + " choose one or the other.",
         )
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
@@ -344,7 +350,10 @@ def _box_from_density(
 
     """
     # Get the desired volume in cubic working units
-    total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
+    total_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) * n
+        for molecule, n in zip(molecules, n_copies)
+    )
     volume = total_mass / target_density
 
     return _scale_box(box_shape, volume)
@@ -880,10 +889,16 @@ def solvate_topology(
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
-    solute_mass = sum(sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules)
+    solute_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
+    )
     solvent_mass = target_mass - solute_mass
 
     _check_add_positive_mass(solvent_mass)
+
+    # Compute total charge of all solute molecules and its magnitude
+    solute_charge = sum([molecule.total_charge.m for molecule in topology.molecules])
+    solute_charge_magnitude = numpy.abs(solute_charge)
 
     # Get reference data and prepare solvent molecules
     water = Molecule.from_smiles("O")
@@ -893,23 +908,51 @@ def solvate_topology(
         [atom.mass for atom in cl.atoms],
     )
     water_mass = sum([atom.mass for atom in water.atoms])
-    molarity_pure_water = Quantity(55.5, "mole / liter")
+    molarity_pure_water = Quantity(55.4, "mole / liter")
 
-    # Compute the number of salt "molecules" to add from the mass and concentration
-    nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
-    nacl_mass_to_add = solvent_mass * nacl_mass_fraction
-    nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+    # Compute the number of salt ions to add for bulk salt
+    # If ionic strength is zero, then the solute_ion_ratio needed for SLTCAP is undefined
+    if nacl_conc == Quantity(0, "mole / liter"):
+        nacl_to_add = 0
+        water_mass_to_add = solvent_mass
 
-    # Compute the number of water molecules to add to make up the remaining mass
-    water_mass_to_add = solvent_mass - nacl_mass
+    else:
+        # Compute the number of salt "molecules" to add from the mass and concentration
+        # for a neutral solute
+        neutral_nacl_mass_fraction = (nacl_conc * nacl_mass) / (
+            molarity_pure_water * water_mass
+        )
+        neutral_nacl_mass_to_add = solvent_mass * neutral_nacl_mass_fraction
+        neutral_nacl_to_add = (
+            (neutral_nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+        )
+
+        # Compute the number of salt "molecules" to add using the SLTCAP method
+        solute_ion_ratio = solute_charge_magnitude / (2 * neutral_nacl_to_add)
+        sltcap_effective_ionic_strength = nacl_conc * (
+            numpy.sqrt(1 + solute_ion_ratio * solute_ion_ratio) - solute_ion_ratio
+        )
+
+        nacl_mass_fraction = (sltcap_effective_ionic_strength * nacl_mass) / (
+            molarity_pure_water * water_mass
+        )
+        nacl_mass_to_add = solvent_mass * nacl_mass_fraction
+        nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+
+        # Compute the number of water molecules to add to make up the remaining mass
+        water_mass_to_add = solvent_mass - nacl_mass_to_add
+
     water_to_add = (water_mass_to_add / water_mass).m_as("dimensionless").round()
 
     # Neutralise the system by adding and removing salt
-    solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
-    na_to_add = numpy.ceil(nacl_to_add - solute_charge.m / 2.0)
-    cl_to_add = numpy.ceil(nacl_to_add + solute_charge.m / 2.0)
+    na_to_add = numpy.round(
+        nacl_to_add + (solute_charge_magnitude - solute_charge) / 2.0
+    )
+    cl_to_add = numpy.round(
+        nacl_to_add + (solute_charge_magnitude + solute_charge) / 2.0
+    )
 
-    if abs(solute_charge.m + na_to_add - cl_to_add) > 1e-6:
+    if abs(solute_charge + na_to_add - cl_to_add) > 1e-6:
         raise PACKMOLValueError(
             f"Failed to neutralise solute with charge {solute_charge.m}; meant to add {nacl_to_add} NaCl.\n"
             f"Tried adding {na_to_add} Na+ and {cl_to_add} Cl- ions. This should not happen, please raise an issue!",
@@ -986,7 +1029,9 @@ def solvate_topology_nonwater(
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
-    solute_mass = sum(sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules)
+    solute_mass = sum(
+        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
+    )
 
     solvent_mass_to_add = target_mass - solute_mass
 
