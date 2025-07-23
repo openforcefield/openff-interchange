@@ -458,9 +458,9 @@ def _build_input_file(
     Parameters
     ----------
     molecule_file_names: list of str
-        The paths to the molecule pdb files.
+        The paths to the molecule pdb files, skipped if corresponding count is zero.
     molecule_counts: list of int
-        The number of each molecule to add.
+        The number of each molecule to add, skipped if zero.
     structure_to_solvate: str, optional
         The path to the structure to solvate.
     box_size: openff.units.Quantity
@@ -504,6 +504,9 @@ def _build_input_file(
 
     # Add a section for each type of molecule to add.
     for file_name, count in zip(molecule_file_names, molecule_counts):
+        if count == 0:
+            continue
+
         input_lines.extend(
             [
                 f"structure {file_name}",
@@ -578,7 +581,8 @@ def pack_box(
         The molecules in the system.
     number_of_copies : list of int
         A list of the number of copies of each molecule type, of length
-        equal to the length of ``molecules``.
+        equal to the length of ``molecules``. If any element is zero, the
+        corresponding molecule is not added.
     solute: Topology, optional
         An OpenFF :py:class:`Topology <openff.toolkit.Topology>` to
         include in the box. If ``box_vectors`` and ``target_density`` are not
