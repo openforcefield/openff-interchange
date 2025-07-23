@@ -912,7 +912,7 @@ def solvate_topology(
     if abs(solute_charge.m + na_to_add - cl_to_add) > 1e-6:
         raise PACKMOLValueError(
             f"Failed to neutralise solute with charge {solute_charge.m}; meant to add {nacl_to_add} NaCl.\n"
-            f"Tried adding {na_to_add} Na+ and {cl_to_add} Cl- ions.",
+            f"Tried adding {na_to_add} Na+ and {cl_to_add} Cl- ions. This should not happen, please raise an issue!",
         )
 
     return pack_box(
