@@ -469,3 +469,32 @@ class TestPackmolWrapper:
         topology = solvate_topology(solute.to_topology(), nacl_conc=0.1 * unit.molar, padding=2 * unit.nm)
 
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+    def test_solvate_topology_neutral_solute_no_ions(self, ethanol_with_conformer):
+        topology = solvate_topology(
+            ethanol_with_conformer.to_topology(),
+            nacl_conc=0.0 * unit.molar,
+            padding=2 * unit.nm,
+        )
+
+        # there should be no ions in the topology
+        assert all([molecule.n_atoms > 1 for molecule in topology.molecules])
+
+        # but it should be charge neutral
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+    @pytest.mark.parametrize("n_monomers", [1, 2, 3, 4, 5])
+    def test_solvate_topology_highly_charged_low_nacl_conc(self, n_monomers):
+        """Ensure counter-ions are added, even with a highly charged solute and low NaCl concentration."""
+        solute = MoleculeWithConformer.from_smiles(n_monomers * "CC([O-])CC(O)", allow_undefined_stereo=True)
+
+        topology = solvate_topology(
+            solute.to_topology(),
+            nacl_conc=1e-3 * unit.molar,
+            padding=2 * unit.nm,
+        )
+
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+        # There should be some Na+ ions in the topology (but not necessarily Cl-)
+        assert any(molecule.to_smiles() == "[Na+]" for molecule in topology.molecules)
