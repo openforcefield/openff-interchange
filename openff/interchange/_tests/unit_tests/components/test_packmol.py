@@ -449,26 +449,19 @@ class TestPackmolWrapper:
             assert not pathlib.Path("packmol_error.log").is_file()
 
     @pytest.mark.slow
-    def test_solvate_topology_neutral_acetic_acid(self):
-        solute = Molecule.from_smiles("CC(=O)[O-]")
+    @pytest.mark.parametrize("ion_conc", [0.0, 0.1, 0.0001])
+    @pytest.mark.parametrize("solute_smiles", ["CC(=O)[O-]", "[NH4+]"])
+    def test_solvate_topology_neutralize_charged_solutes(self, ion_conc, solute_smiles):
+        solute = Molecule.from_smiles(solute_smiles)
         solute.generate_conformers(n_conformers=1)
-        solute.assign_partial_charges(partial_charge_method="formal_charge")
 
-        assert solute.total_charge.m == -1.0
+        assert solute.total_charge.m != -0.0
 
-        topology = solvate_topology(solute.to_topology(), nacl_conc=0.1 * unit.molar, padding=2 * unit.nm)
-
-        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
-
-    @pytest.mark.slow
-    def test_solvate_topology_neutral_ammonium(self):
-        solute = Molecule.from_smiles("[NH4+]")
-        solute.generate_conformers(n_conformers=1)
-        solute.assign_partial_charges(partial_charge_method="formal_charge")
-
-        assert solute.total_charge.m == 1.0
-
-        topology = solvate_topology(solute.to_topology(), nacl_conc=0.1 * unit.molar, padding=2 * unit.nm)
+        topology = solvate_topology(
+            solute.to_topology(),
+            nacl_conc=ion_conc * unit.molar,
+            padding=2 * unit.nm,
+        )
 
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
 

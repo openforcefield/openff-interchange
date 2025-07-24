@@ -832,6 +832,8 @@ def solvate_topology(
     """
     Add water and ions to neutralise and solvate a topology.
 
+    The [SLTCAP](10.1021/acs.jctc.7b01254)  method is used to determine the number of each ion to add.
+
     Parameters
     ----------
     topology
@@ -873,6 +875,9 @@ def solvate_topology(
     -----
     Returned topologies may have larger box vectors than what would be defined
     by the target density.
+
+    Returned topologies may have ion concentrations higher than the value of the
+    the `nacl_conc` argument.
     """
     _check_box_shape_shape(box_shape)
 
