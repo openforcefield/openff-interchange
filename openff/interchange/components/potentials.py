@@ -129,6 +129,8 @@ def validate_key_map(v: Any, handler, info) -> dict:
                     key_class = LibraryChargeTopologyKey  # type: ignore[assignment]
                 case "ToolkitAM1BCCHandler":
                     key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
+                case "molecules_with_preset_charges":
+                    key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
 
                 case _:
                     key_class = TopologyKey
@@ -141,8 +143,10 @@ def validate_key_map(v: Any, handler, info) -> dict:
                         ): PotentialKey.model_validate_json(val),
                     },
                 )
-            except Exception:
-                raise ValueError(val_dict["associated_handler"])
+            except Exception as error:
+                raise ValueError(
+                    f"Failed to deserialize a `PotentialKey` with {val_dict['associated_handler']=}",
+                ) from error
 
             del key_class
 
