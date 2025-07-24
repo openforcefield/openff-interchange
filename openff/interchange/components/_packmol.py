@@ -912,18 +912,23 @@ def solvate_topology(
         neutral_nacl_mass_to_add = solvent_mass * neutral_nacl_mass_fraction
         neutral_nacl_to_add = (neutral_nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
 
-        # Compute the number of salt "molecules" to add using the SLTCAP method
-        solute_ion_ratio = solute_charge_magnitude / (2 * neutral_nacl_to_add)
-        sltcap_effective_ionic_strength = nacl_conc * (
-            numpy.sqrt(1 + solute_ion_ratio * solute_ion_ratio) - solute_ion_ratio
-        )
+        if neutral_nacl_to_add == 0:
+            nacl_to_add = 0
+            water_mass_to_add = solvent_mass
 
-        nacl_mass_fraction = (sltcap_effective_ionic_strength * nacl_mass) / (molarity_pure_water * water_mass)
-        nacl_mass_to_add = solvent_mass * nacl_mass_fraction
-        nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+        else:
+            # Compute the number of salt "molecules" to add using the SLTCAP method
+            solute_ion_ratio = solute_charge_magnitude / (2 * neutral_nacl_to_add)
+            sltcap_effective_ionic_strength = nacl_conc * (
+                numpy.sqrt(1 + solute_ion_ratio * solute_ion_ratio) - solute_ion_ratio
+            )
 
-        # Compute the number of water molecules to add to make up the remaining mass
-        water_mass_to_add = solvent_mass - nacl_mass_to_add
+            nacl_mass_fraction = (sltcap_effective_ionic_strength * nacl_mass) / (molarity_pure_water * water_mass)
+            nacl_mass_to_add = solvent_mass * nacl_mass_fraction
+            nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+
+            # Compute the number of water molecules to add to make up the remaining mass
+            water_mass_to_add = solvent_mass - nacl_mass_to_add
 
     water_to_add = (water_mass_to_add / water_mass).m_as("dimensionless").round()
 
