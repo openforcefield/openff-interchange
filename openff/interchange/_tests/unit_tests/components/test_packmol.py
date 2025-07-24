@@ -452,7 +452,6 @@ class TestPackmolWrapper:
     def test_solvate_topology_neutral_acetic_acid(self):
         solute = Molecule.from_smiles("CC(=O)[O-]")
         solute.generate_conformers(n_conformers=1)
-        solute.assign_partial_charges(partial_charge_method="formal_charge")
 
         assert solute.total_charge.m == -1.0
 
@@ -464,7 +463,6 @@ class TestPackmolWrapper:
     def test_solvate_topology_neutral_ammonium(self):
         solute = Molecule.from_smiles("[NH4+]")
         solute.generate_conformers(n_conformers=1)
-        solute.assign_partial_charges(partial_charge_method="formal_charge")
 
         assert solute.total_charge.m == 1.0
 
