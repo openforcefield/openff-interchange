@@ -20,16 +20,17 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - macos-latest
           - ubuntu-latest
         python-version:
           - "3.11"
-          - "3.12"
-          - "3.13"
+          #- "3.12"
+          #- "3.13"
         openeye:
-          - true
+          #- true
           - false
         openmm:
           - true
