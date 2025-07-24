@@ -448,6 +448,7 @@ class TestPackmolWrapper:
         else:
             assert not pathlib.Path("packmol_error.log").is_file()
 
+    @pytest.mark.slow
     def test_solvate_topology_neutral_acetic_acid(self):
         solute = Molecule.from_smiles("CC(=O)[O-]")
         solute.generate_conformers(n_conformers=1)
@@ -459,6 +460,7 @@ class TestPackmolWrapper:
 
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
 
+    @pytest.mark.slow
     def test_solvate_topology_neutral_ammonium(self):
         solute = Molecule.from_smiles("[NH4+]")
         solute.generate_conformers(n_conformers=1)
@@ -470,6 +472,7 @@ class TestPackmolWrapper:
 
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
 
+    @pytest.mark.slow
     def test_solvate_topology_neutral_solute_no_ions(self, ethanol_with_conformer):
         topology = solvate_topology(
             ethanol_with_conformer.to_topology(),
@@ -483,6 +486,7 @@ class TestPackmolWrapper:
         # but it should be charge neutral
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("n_monomers", [1, 2, 3, 4, 5])
     def test_solvate_topology_highly_charged_low_nacl_conc(self, n_monomers):
         """Ensure counter-ions are added, even with a highly charged solute and low NaCl concentration."""
@@ -498,3 +502,16 @@ class TestPackmolWrapper:
 
         # There should be some Na+ ions in the topology (but not necessarily Cl-)
         assert any(molecule.to_smiles() == "[Na+]" for molecule in topology.molecules)
+
+    def test_trim_zero_molecules(self, caffeine, water, ligand, ethanol):
+        """
+        Test that pack_box trims molecules from inputs when the count is zero.
+        See Issue #1267: https://github.com/openforcefield/openff-interchange/issues/1267
+        """
+        topology = pack_box(
+            molecules=[caffeine, ligand, water, ethanol],
+            number_of_copies=[1, 0, 10, 0],
+            box_vectors=Quantity(3 * numpy.eye(3), "nanometer"),
+        )
+
+        assert topology.n_molecules == 11
