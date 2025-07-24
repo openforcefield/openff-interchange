@@ -458,9 +458,9 @@ def _build_input_file(
     Parameters
     ----------
     molecule_file_names: list of str
-        The paths to the molecule pdb files, skipped if corresponding count is zero.
+        The paths to the molecule pdb files. No file will be produced for molecules where corresponding count is zero.
     molecule_counts: list of int
-        The number of each molecule to add, skipped if zero.
+        The number of each molecule to add. No file will be produced for molecules where corresponding count is zero.
     structure_to_solvate: str, optional
         The path to the structure to solvate.
     box_size: openff.units.Quantity
