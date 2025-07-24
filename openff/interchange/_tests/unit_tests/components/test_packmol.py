@@ -448,14 +448,14 @@ class TestPackmolWrapper:
         else:
             assert not pathlib.Path("packmol_error.log").is_file()
 
-    def test_trim_zero_molecules(self, caffeine, water):
+    def test_trim_zero_molecules(self, caffeine, water, ligand, ethanol):
         """
         Test that pack_box trims molecules from inputs when the count is zero.
         See Issue #1267: https://github.com/openforcefield/openff-interchange/issues/1267
         """
         topology = pack_box(
-            molecules=[caffeine, water, water],
-            number_of_copies=[1, 10, 0],
+            molecules=[caffeine, ligand, water, ethanol],
+            number_of_copies=[1, 0, 10, 0],
             box_vectors=Quantity(3 * numpy.eye(3), "nanometer"),
         )
 
