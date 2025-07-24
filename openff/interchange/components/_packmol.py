@@ -127,19 +127,13 @@ def _validate_inputs(
         elements.
 
     """
-    if (
-        box_vectors is None
-        and target_density is None
-        and (solute is None or solute.box_vectors is None)
-    ):
+    if box_vectors is None and target_density is None and (solute is None or solute.box_vectors is None):
         raise PACKMOLValueError(
-            "One of `box_vectors`, `target_density`, or"
-            + " `solute.box_vectors` must be specified.",
+            "One of `box_vectors`, `target_density`, or" + " `solute.box_vectors` must be specified.",
         )
     if box_vectors is not None and target_density is not None:
         raise PACKMOLValueError(
-            "`box_vectors` and `target_density` cannot be specified together;"
-            + " choose one or the other.",
+            "`box_vectors` and `target_density` cannot be specified together;" + " choose one or the other.",
         )
 
     if box_vectors is not None and box_vectors.shape != (3, 3):
@@ -350,10 +344,7 @@ def _box_from_density(
 
     """
     # Get the desired volume in cubic working units
-    total_mass = sum(
-        sum([atom.mass for atom in molecule.atoms]) * n
-        for molecule, n in zip(molecules, n_copies)
-    )
+    total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
     volume = total_mass / target_density
 
     return _scale_box(box_shape, volume)
@@ -889,9 +880,7 @@ def solvate_topology(
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
-    solute_mass = sum(
-        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
-    )
+    solute_mass = sum(sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules)
     solvent_mass = target_mass - solute_mass
 
     _check_add_positive_mass(solvent_mass)
@@ -919,13 +908,9 @@ def solvate_topology(
     else:
         # Compute the number of salt "molecules" to add from the mass and concentration
         # for a neutral solute
-        neutral_nacl_mass_fraction = (nacl_conc * nacl_mass) / (
-            molarity_pure_water * water_mass
-        )
+        neutral_nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
         neutral_nacl_mass_to_add = solvent_mass * neutral_nacl_mass_fraction
-        neutral_nacl_to_add = (
-            (neutral_nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
-        )
+        neutral_nacl_to_add = (neutral_nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
 
         # Compute the number of salt "molecules" to add using the SLTCAP method
         solute_ion_ratio = solute_charge_magnitude / (2 * neutral_nacl_to_add)
@@ -933,9 +918,7 @@ def solvate_topology(
             numpy.sqrt(1 + solute_ion_ratio * solute_ion_ratio) - solute_ion_ratio
         )
 
-        nacl_mass_fraction = (sltcap_effective_ionic_strength * nacl_mass) / (
-            molarity_pure_water * water_mass
-        )
+        nacl_mass_fraction = (sltcap_effective_ionic_strength * nacl_mass) / (molarity_pure_water * water_mass)
         nacl_mass_to_add = solvent_mass * nacl_mass_fraction
         nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
 
@@ -946,10 +929,10 @@ def solvate_topology(
 
     # Neutralise the system by adding and removing salt
     na_to_add = numpy.round(
-        nacl_to_add + (solute_charge_magnitude - solute_charge) / 2.0
+        nacl_to_add + (solute_charge_magnitude - solute_charge) / 2.0,
     )
     cl_to_add = numpy.round(
-        nacl_to_add + (solute_charge_magnitude + solute_charge) / 2.0
+        nacl_to_add + (solute_charge_magnitude + solute_charge) / 2.0,
     )
 
     if abs(solute_charge + na_to_add - cl_to_add) > 1e-6:
@@ -1029,9 +1012,7 @@ def solvate_topology_nonwater(
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
     target_mass = box_volume * target_density
-    solute_mass = sum(
-        sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules
-    )
+    solute_mass = sum(sum([atom.mass for atom in molecule.atoms]) for molecule in topology.molecules)
 
     solvent_mass_to_add = target_mass - solute_mass
 
