@@ -140,3 +140,20 @@ def test_issue_1052(sage, ethanol):
     out = sage.create_interchange(ethanol.to_topology())
 
     assert len(out["Electrostatics"].charges) > 0
+
+
+@skip_if_missing("openmm")
+def test_issue_1209(sage, ethanol):
+    from openff.interchange.drivers.openmm import get_openmm_energies
+
+    ethanol.assign_partial_charges("gasteiger")
+    ethanol.generate_conformers(n_conformers=1)
+
+    out = sage.create_interchange(ethanol.to_topology(), charge_from_molecules=[ethanol])
+
+    get_openmm_energies(out, combine_nonbonded_forces=False).compare(
+        get_openmm_energies(
+            Interchange.model_validate_json(out.model_dump_json()),
+            combine_nonbonded_forces=False,
+        ),
+    )
