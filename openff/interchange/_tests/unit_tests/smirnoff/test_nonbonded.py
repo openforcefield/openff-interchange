@@ -235,29 +235,149 @@ class TestNAGLChargesErrorHandling:
             with pytest.raises(UnableToParseDOIException):
                 sage.create_interchange(topology=hexane_diol.to_topology())
 
-    def test_nagl_charges_empty_model_file(self, sage, hexane_diol):
-        """Test error handling for empty model file parameter."""
-        sage.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": "",
-                "version": "0.3",
-            },
-        )
-        with pytest.raises(FileNotFoundError):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+    def test_nagl_charges_fallback_to_charge_increment_model(self, sage):
+        """Test that NAGL falls back to ChargeIncrementModel when molecule contains unsupported elements."""
+        from openff.toolkit.typing.engines.smirnoff import ForceField
 
-    def test_nagl_charges_none_model_file(self, sage, hexane_diol):
-        """Test error handling for None model file parameter."""
-        sage.get_parameter_handler(
-            "NAGLCharges",
-            {
-                "model_file": None,
-                "version": "0.3",
-            },
+        pytest.importorskip("openff.nagl")
+        from openff.toolkit.typing.engines.smirnoff import (
+            ChargeIncrementModelHandler,
+            ElectrostaticsHandler,
+            NAGLChargesHandler,
         )
-        with pytest.raises(FileNotFoundError):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+
+        # Create a boron-containing molecule with nonzero formal charge
+        # BF4- anion - boron is not supported by current NAGL models
+        boron_molecule = Molecule.from_smiles("[B-]([F])([F])([F])[F]")
+
+        # Verify formal charges are not all zero
+        formal_charges = [atom.formal_charge.m for atom in boron_molecule.atoms]
+        assert not all(charge == 0 for charge in formal_charges)
+
+        # Create minimal force field with only the needed handlers
+        ff = ForceField()
+
+        # Add Electrostatics handler
+        ff.register_parameter_handler(
+            ElectrostaticsHandler(version="0.4")
+        )
+
+        # Add NAGLCharges handler
+        ff.register_parameter_handler(
+            NAGLChargesHandler(
+                version="0.3",
+                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt"
+            )
+        )
+
+        # Add ChargeIncrementModel handler with formal_charge method and no increments
+        charge_increment_handler = ChargeIncrementModelHandler(
+            version="0.3",
+            partial_charge_method="formal_charge"
+        )
+        ff.register_parameter_handler(charge_increment_handler)
+
+        # Should succeed despite NAGL not supporting boron
+        interchange = ff.create_interchange(topology=boron_molecule.to_topology())
+
+        # Should have assigned charges to all atoms
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+        assert len(assigned_charges) == boron_molecule.n_atoms
+
+        # Assigned charges should match formal charges (fallback to ChargeIncrementModel)
+        expected_charges = [atom.formal_charge.m for atom in boron_molecule.atoms]
+        numpy.testing.assert_allclose(assigned_charges.m, expected_charges)
+
+        # Net charge should match molecule's total formal charge
+        assert abs(sum(assigned_charges.m) - boron_molecule.total_charge.m) < 1e-10
+
+    def test_nagl_charges_all_handlers_fail_comprehensive_error(self, sage):
+        """Test error reporting when all charge assignment methods fail."""
+        pytest.importorskip("openff.nagl")
+        from openff.toolkit.typing.engines.smirnoff import (
+            ChargeIncrementModelHandler,
+            ElectrostaticsHandler,
+            NAGLChargesHandler,
+            ToolkitAM1BCCHandler,
+        )
+        from openff.toolkit import ForceField
+        
+        # Create a uranium compound - not supported by any current charge assignment method
+        uranium_molecule = Molecule.from_smiles("[U+4]")
+        
+        # Create force field with multiple charge assignment handlers
+        ff = ForceField()
+        
+        # Add Electrostatics handler
+        ff.register_parameter_handler(
+            ElectrostaticsHandler(version="0.4")
+        )
+        
+        # Add NAGLCharges handler
+        ff.register_parameter_handler(
+            NAGLChargesHandler(
+                version="0.3",
+                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt"
+            )
+        )
+        
+        # Add ToolkitAM1BCC handler
+        ff.register_parameter_handler(
+            ToolkitAM1BCCHandler(version="0.3")
+        )
+        
+        # Add ChargeIncrementModel handler with gasteiger method
+        charge_increment_handler = ChargeIncrementModelHandler(
+            version="0.3",
+            partial_charge_method="mmff94"
+        )
+        ff.register_parameter_handler(charge_increment_handler)
+        
+        # Should fail with comprehensive error message
+        with pytest.raises(RuntimeError) as excinfo:
+            ff.create_interchange(topology=uranium_molecule.to_topology())
+        
+        error_message = str(excinfo.value)
+        
+        # Error should mention that no charges could be assigned
+        assert "could not be fully assigned charges" in error_message
+        
+        # Error should contain information about each handler's failure
+        assert "NAGLCharges" in error_message
+        assert "ToolkitAM1BCC" in error_message  
+        assert "ChargeIncrementModel" in error_message
+        
+        # Should mention the exceptions raised by various handlers
+        assert "exceptions raised by various handlers" in error_message
+
+        # Example error message:
+        #
+        # [U+4] could not be fully assigned charges. Charges were assigned to atoms set() but the molecule contains {0}. The exceptions raised by various handlers are:
+        # NAGLCharges
+        # No registered toolkits can provide the capability "assign_partial_charges" for args "()" and kwargs "{'molecule': Molecule with name '' and SMILES '[U+4]', 'partial_charge_method': 'openff-gnn-am1bcc-0.1.0-rc.3.pt', 'doi': None, 'file_hash': None}"
+        # Available toolkits are: [ToolkitWrapper around OpenFF NAGL version 0.5.2, ToolkitWrapper around The RDKit version 2023.09.6, ToolkitWrapper around AmberTools version 23.3, ToolkitWrapper around Built-in Toolkit version None]
+        #  ToolkitWrapper around OpenFF NAGL version 0.5.2 <class 'ValueError'> : Molecule contains forbidden element 92
+        #  ToolkitWrapper around The RDKit version 2023.09.6 <class 'TypeError'> : RDKitToolkitWrapper.assign_partial_charges() got an unexpected keyword argument 'doi'
+        #  ToolkitWrapper around AmberTools version 23.3 <class 'TypeError'> : AmberToolsToolkitWrapper.assign_partial_charges() got an unexpected keyword argument 'doi'
+        #  ToolkitWrapper around Built-in Toolkit version None <class 'TypeError'> : BuiltInToolkitWrapper.assign_partial_charges() got an unexpected keyword argument 'doi'
+        #
+        #
+        # ChargeIncrementModel
+        # No registered toolkits can provide the capability "assign_partial_charges" for args "()" and kwargs "{'molecule': Molecule with name '' and SMILES '[U+4]', 'partial_charge_method': 'mmff94'}"
+        # Available toolkits are: [ToolkitWrapper around OpenFF NAGL version 0.5.2, ToolkitWrapper around The RDKit version 2023.09.6, ToolkitWrapper around AmberTools version 23.3, ToolkitWrapper around Built-in Toolkit version None]
+        #  ToolkitWrapper around OpenFF NAGL version 0.5.2 <class 'openff.nagl_models._dynamic_fetch.BadFileSuffixError'> : NAGLToolkitWrapper does not recognize file path extension on filename='mmff94', expected '.pt' suffix
+        #  ToolkitWrapper around The RDKit version 2023.09.6 <class 'AttributeError'> : 'NoneType' object has no attribute 'GetMMFFPartialCharge'
+        #  ToolkitWrapper around AmberTools version 23.3 <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : partial_charge_method 'mmff94' is not available from AmberToolsToolkitWrapper. Available charge methods are {'am1bcc': {'antechamber_keyword': 'bcc', 'min_confs': 1, 'max_confs': 1, 'rec_confs': 1}, 'am1-mulliken': {'antechamber_keyword': 'mul', 'min_confs': 1, 'max_confs': 1, 'rec_confs': 1}, 'gasteiger': {'antechamber_keyword': 'gas', 'min_confs': 0, 'max_confs': 0, 'rec_confs': 0}}
+        #  ToolkitWrapper around Built-in Toolkit version None <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : Partial charge method "mmff94"" is not supported by the Built-in toolkit. Available charge methods are {'zeros': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}, 'formal_charge': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}}
+        #
+        #
+        # ToolkitAM1BCC
+        # No registered toolkits can provide the capability "assign_partial_charges" for args "()" and kwargs "{'molecule': Molecule with name '' and SMILES '[U+4]', 'partial_charge_method': 'am1bcc'}"
+        # Available toolkits are: [ToolkitWrapper around OpenFF NAGL version 0.5.2, ToolkitWrapper around The RDKit version 2023.09.6, ToolkitWrapper around AmberTools version 23.3, ToolkitWrapper around Built-in Toolkit version None]
+        #  ToolkitWrapper around OpenFF NAGL version 0.5.2 <class 'openff.nagl_models._dynamic_fetch.BadFileSuffixError'> : NAGLToolkitWrapper does not recognize file path extension on filename='am1bcc', expected '.pt' suffix
+        #  ToolkitWrapper around The RDKit version 2023.09.6 <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : partial_charge_method 'am1bcc' is not available from RDKitToolkitWrapper. Available charge methods are {'mmff94': {}, 'gasteiger': {}}
+        #  ToolkitWrapper around AmberTools version 23.3 <class 'subprocess.CalledProcessError'> : Command '['antechamber', '-i', 'molecule.sdf', '-fi', 'sdf', '-o', 'charged.mol2', '-fo', 'mol2', '-pf', 'yes', '-dr', 'n', '-c', 'bcc', '-nc', '4.0']' returned non-zero exit status 1.
+        #  ToolkitWrapper around Built-in Toolkit version None <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : Partial charge method "am1bcc"" is not supported by the Built-in toolkit. Available charge methods are {'zeros': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}, 'formal_charge': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}}
 
 
 class TestNAGLChargesPrecedence:
