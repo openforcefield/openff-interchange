@@ -432,6 +432,65 @@ class TestNAGLChargesIntegration:
         # Should be identical
         numpy.testing.assert_allclose(mol1_charges, mol2_charges)
 
+    def test_nagl_charges_with_charge_from_molecules(self, sage_with_nagl_charges, hexane_diol):
+        """Test that charge_from_molecules takes precedence over NAGLCharges."""
+        # Assign preset charges using a different method
+        hexane_diol.assign_partial_charges("gasteiger")
+        preset_charges = [c.m for c in hexane_diol.partial_charges]
+        
+        # Create interchange with charge_from_molecules - should use preset charges
+        interchange = sage_with_nagl_charges.create_interchange(
+            topology=hexane_diol.to_topology(),
+            charge_from_molecules=[hexane_diol]
+        )
+        
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+        
+        # Should match preset charges, not NAGL charges
+        numpy.testing.assert_allclose(assigned_charges.m, preset_charges)
+        
+        # Verify NAGL would give different charges
+        hexane_diol_copy = Molecule.from_smiles(hexane_diol.to_smiles())
+        hexane_diol_copy.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        nagl_charges = [c.m for c in hexane_diol_copy.partial_charges]
+        
+        # Preset and NAGL charges should be different
+        assert not numpy.allclose(preset_charges, nagl_charges, atol=1e-3)
+
+    def test_nagl_charges_with_mixed_charge_sources(self, sage_with_nagl_charges):
+        """Test NAGLCharges with some molecules having preset charges and others not."""
+        # Create molecules
+        ethanol = Molecule.from_smiles("CCO")
+        methanol = Molecule.from_smiles("CO")
+        
+        # Assign preset charges to only one molecule
+        ethanol.assign_partial_charges("gasteiger")
+        preset_ethanol_charges = [c.m for c in ethanol.partial_charges]
+        
+        topology = Topology.from_molecules([ethanol, methanol])
+        
+        # Create interchange with preset charges for ethanol only
+        interchange = sage_with_nagl_charges.create_interchange(
+            topology=topology,
+            charge_from_molecules=[ethanol]
+        )
+        
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+        
+        # First molecule (ethanol) should match preset charges
+        ethanol_charges = assigned_charges[:ethanol.n_atoms]
+        numpy.testing.assert_allclose(ethanol_charges.m, preset_ethanol_charges)
+        
+        # Second molecule (methanol) should get NAGL charges
+        methanol_charges = assigned_charges[ethanol.n_atoms:]
+        
+        # Get reference NAGL charges for methanol
+        methanol_copy = Molecule.from_smiles("CO")
+        methanol_copy.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        nagl_methanol_charges = [c.m for c in methanol_copy.partial_charges]
+        
+        numpy.testing.assert_allclose(methanol_charges.m, nagl_methanol_charges)
+
     @pytest.mark.skip(
         reason="Turn on if toolkit ever allows non-standard scale12/13/15",
     )
