@@ -157,7 +157,9 @@ class TestNAGLChargesErrorHandling:
     """Test NAGLCharges error conditions."""
 
     def test_nagl_charges_missing_toolkit_error(self, sage_with_nagl_charges, hexane_diol):
-        """Test MissingPackageError when NAGL toolkit is not available."""
+        """Test MissingPackageError when NAGL toolkit is not available. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by NAGL if it were available."""
         from openff.toolkit import RDKitToolkitWrapper
         from openff.toolkit.utils.exceptions import MissingPackageError
         from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
@@ -175,7 +177,9 @@ class TestNAGLChargesErrorHandling:
             )
 
     def test_nagl_charges_invalid_model_file(self, sage, hexane_diol):
-        """Test error handling for invalid model file paths."""
+        """Test error handling for invalid model file paths. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by this model it had been able to find it."""
         sage.get_parameter_handler(
             "NAGLCharges",
             {
@@ -186,16 +190,22 @@ class TestNAGLChargesErrorHandling:
         with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
+        sage['NAGLCharges'].model_file = ""
+        with pytest.raises(FileNotFoundError):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+        sage['NAGLCharges'].model_file = None
+        with pytest.raises(FileNotFoundError):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+
     def test_nagl_charges_bad_hash(self, sage, hexane_diol, monkeypatch):
-        """Test error handling for a bad hash."""
+        """Test error handling for a bad hash. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by this model if the hash comparison hadn't failed."""
         from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
 
         with monkeypatch.context() as m:
-            # m.setattr(
-            #     openff.nagl_models._dynamic_fetch,
-            #     "get_release_metadata",
-            #     mocked_get_release_metadata,
-            # )
             sage.get_parameter_handler(
                 "NAGLCharges",
                 {
@@ -208,15 +218,12 @@ class TestNAGLChargesErrorHandling:
                 sage.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_bad_doi(self, sage, hexane_diol, monkeypatch):
-        """Test error handling for a bad DOI."""
+        """Test error handling for a bad DOI. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by this model, since it's unfetchable."""
         from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
 
         with monkeypatch.context() as m:
-            # m.setattr(
-            #     openff.nagl_models._dynamic_fetch,
-            #     "get_release_metadata",
-            #     mocked_get_release_metadata,
-            # )
             sage.get_parameter_handler(
                 "NAGLCharges",
                 {
