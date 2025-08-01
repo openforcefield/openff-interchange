@@ -859,7 +859,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             raise RuntimeError(
                 f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
                 "not be fully assigned charges. Charges were assigned to atoms "
-                f"{found_matches} but the molecule contains {expected_matches}. "
+                f"{found_matches} but the molecule contains {expected_matches}. ",
             )
 
         return matches, potentials

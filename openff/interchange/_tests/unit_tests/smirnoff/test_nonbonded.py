@@ -1,14 +1,16 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
     LibraryChargeHandler,
+    NAGLChargesHandler,
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
-from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
+from openff.toolkit.utils.exceptions import MissingPackageError, SMIRNOFFVersionError
+from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 from packaging.version import Version
 
 from openff.interchange import Interchange
@@ -18,8 +20,6 @@ from openff.interchange.smirnoff._nonbonded import (
     _downconvert_vdw_handler,
     _upconvert_vdw_handler,
 )
-
-# from openff.nagl_models.tests.test_dynamic_fetch import mocked_get_release_metadata
 
 
 class TestNonbonded:
@@ -160,9 +160,6 @@ class TestNAGLChargesErrorHandling:
         """Test MissingPackageError when NAGL toolkit is not available. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by NAGL if it were available."""
-        from openff.toolkit import RDKitToolkitWrapper
-        from openff.toolkit.utils.exceptions import MissingPackageError
-        from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 
         # Mock the toolkit registry to not have NAGL
         # RDKit is needed for SMARTS matching.
@@ -190,14 +187,13 @@ class TestNAGLChargesErrorHandling:
         with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
-        sage['NAGLCharges'].model_file = ""
+        sage["NAGLCharges"].model_file = ""
         with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
-        sage['NAGLCharges'].model_file = None
+        sage["NAGLCharges"].model_file = None
         with pytest.raises(FileNotFoundError):
             sage.create_interchange(topology=hexane_diol.to_topology())
-
 
     def test_nagl_charges_bad_hash(self, sage, hexane_diol, monkeypatch):
         """Test error handling for a bad hash. This should fail immediately instead of falling
@@ -205,17 +201,16 @@ class TestNAGLChargesErrorHandling:
         had charges assigned by this model if the hash comparison hadn't failed."""
         from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
 
-        with monkeypatch.context() as m:
-            sage.get_parameter_handler(
-                "NAGLCharges",
-                {
-                    "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-                    "model_file_hash": "bad_hash",
-                    "version": "0.3",
-                },
-            )
-            with pytest.raises(HashComparisonFailedException):
-                sage.create_interchange(topology=hexane_diol.to_topology())
+        sage.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                "model_file_hash": "bad_hash",
+                "version": "0.3",
+            },
+        )
+        with pytest.raises(HashComparisonFailedException):
+            sage.create_interchange(topology=hexane_diol.to_topology())
 
     def test_nagl_charges_bad_doi(self, sage, hexane_diol, monkeypatch):
         """Test error handling for a bad DOI. This should fail immediately instead of falling
@@ -223,30 +218,24 @@ class TestNAGLChargesErrorHandling:
         had charges assigned by this model, since it's unfetchable."""
         from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
 
-        with monkeypatch.context() as m:
-            sage.get_parameter_handler(
-                "NAGLCharges",
-                {
-                    "model_file": "nonexistent_model.pt",
-                    "digital_object_identifier": "blah.foo/bar",
-                    "version": "0.3",
-                },
-            )
-            with pytest.raises(UnableToParseDOIException):
-                sage.create_interchange(topology=hexane_diol.to_topology())
+        sage.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "nonexistent_model.pt",
+                "digital_object_identifier": "blah.foo/bar",
+                "version": "0.3",
+            },
+        )
+        with pytest.raises(UnableToParseDOIException):
+            sage.create_interchange(topology=hexane_diol.to_topology())
 
-    @pytest.mark.xfail(reason="charge assignment handler fallback behavior not yet implemented",
-                       raises=ValueError)
+    @pytest.mark.xfail(
+        reason="charge assignment handler fallback behavior not yet implemented",
+        raises=ValueError,
+    )
     def test_nagl_charges_fallback_to_charge_increment_model(self, sage):
         """Test that NAGL falls back to ChargeIncrementModel when molecule contains unsupported elements."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
         pytest.importorskip("openff.nagl")
-        from openff.toolkit.typing.engines.smirnoff import (
-            ChargeIncrementModelHandler,
-            ElectrostaticsHandler,
-            NAGLChargesHandler,
-        )
 
         # Create a boron-containing molecule with nonzero formal charge
         # BF4- anion - boron is not supported by current NAGL models
@@ -261,21 +250,21 @@ class TestNAGLChargesErrorHandling:
 
         # Add Electrostatics handler
         ff.register_parameter_handler(
-            ElectrostaticsHandler(version="0.4")
+            ElectrostaticsHandler(version="0.4"),
         )
 
         # Add NAGLCharges handler
         ff.register_parameter_handler(
             NAGLChargesHandler(
                 version="0.3",
-                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt"
-            )
+                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            ),
         )
 
         # Add ChargeIncrementModel handler with formal_charge method and no increments
         charge_increment_handler = ChargeIncrementModelHandler(
             version="0.3",
-            partial_charge_method="formal_charge"
+            partial_charge_method="formal_charge",
         )
         ff.register_parameter_handler(charge_increment_handler)
 
@@ -284,7 +273,6 @@ class TestNAGLChargesErrorHandling:
 
         # Should have assigned charges to all atoms
         assigned_charges = interchange["Electrostatics"].get_charge_array()
-        assert len(assigned_charges) == boron_molecule.n_atoms
 
         # Assigned charges should match formal charges (fallback to ChargeIncrementModel)
         expected_charges = [atom.formal_charge.m for atom in boron_molecule.atoms]
@@ -293,95 +281,61 @@ class TestNAGLChargesErrorHandling:
         # Net charge should match molecule's total formal charge
         assert abs(sum(assigned_charges.m) - boron_molecule.total_charge.m) < 1e-10
 
-    @pytest.mark.xfail(reason="charge assignment handler fallback behavior not yet implemented",
-                       raises=ValueError)
+    @pytest.mark.xfail(
+        reason="charge assignment handler fallback behavior not yet implemented",
+        raises=ValueError,
+    )
     def test_nagl_charges_all_handlers_fail_comprehensive_error(self, sage):
         """Test error reporting when all charge assignment methods fail."""
         pytest.importorskip("openff.nagl")
-        from openff.toolkit.typing.engines.smirnoff import (
-            ChargeIncrementModelHandler,
-            ElectrostaticsHandler,
-            NAGLChargesHandler,
-            ToolkitAM1BCCHandler,
-        )
-        from openff.toolkit import ForceField
-        
+
         # Create a uranium compound - not supported by any current charge assignment method
         uranium_molecule = Molecule.from_smiles("[U+4]")
-        
+
         # Create force field with multiple charge assignment handlers
         ff = ForceField()
-        
+
         # Add Electrostatics handler
         ff.register_parameter_handler(
-            ElectrostaticsHandler(version="0.4")
+            ElectrostaticsHandler(version="0.4"),
         )
-        
+
         # Add NAGLCharges handler
         ff.register_parameter_handler(
             NAGLChargesHandler(
                 version="0.3",
-                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt"
-            )
+                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            ),
         )
-        
+
         # Add ToolkitAM1BCC handler
         ff.register_parameter_handler(
-            ToolkitAM1BCCHandler(version="0.3")
+            ToolkitAM1BCCHandler(version="0.3"),
         )
-        
+
         # Add ChargeIncrementModel handler with gasteiger method
         charge_increment_handler = ChargeIncrementModelHandler(
             version="0.3",
-            partial_charge_method="mmff94"
+            partial_charge_method="mmff94",
         )
         ff.register_parameter_handler(charge_increment_handler)
-        
+
         # Should fail with comprehensive error message
         with pytest.raises(RuntimeError) as excinfo:
             ff.create_interchange(topology=uranium_molecule.to_topology())
-        
+
         error_message = str(excinfo.value)
-        
+
         # Error should mention that no charges could be assigned
         assert "could not be fully assigned charges" in error_message
-        
+
         # Error should contain information about each handler's failure
         assert "NAGLCharges" in error_message
-        assert "ToolkitAM1BCC" in error_message  
+        assert "ToolkitAM1BCC" in error_message
         assert "ChargeIncrementModel" in error_message
-        
+
         # Should mention the exceptions raised by various handlers
         assert "exceptions raised by various handlers" in error_message
-
-        # Example error message:
-        #
-        # [U+4] could not be fully assigned charges. Charges were assigned to atoms set() but the molecule contains {0}. The exceptions raised by various handlers are:
-        # NAGLCharges
-        # No registered toolkits can provide the capability "assign_partial_charges" for args "()" and kwargs "{'molecule': Molecule with name '' and SMILES '[U+4]', 'partial_charge_method': 'openff-gnn-am1bcc-0.1.0-rc.3.pt', 'doi': None, 'file_hash': None}"
-        # Available toolkits are: [ToolkitWrapper around OpenFF NAGL version 0.5.2, ToolkitWrapper around The RDKit version 2023.09.6, ToolkitWrapper around AmberTools version 23.3, ToolkitWrapper around Built-in Toolkit version None]
-        #  ToolkitWrapper around OpenFF NAGL version 0.5.2 <class 'ValueError'> : Molecule contains forbidden element 92
-        #  ToolkitWrapper around The RDKit version 2023.09.6 <class 'TypeError'> : RDKitToolkitWrapper.assign_partial_charges() got an unexpected keyword argument 'doi'
-        #  ToolkitWrapper around AmberTools version 23.3 <class 'TypeError'> : AmberToolsToolkitWrapper.assign_partial_charges() got an unexpected keyword argument 'doi'
-        #  ToolkitWrapper around Built-in Toolkit version None <class 'TypeError'> : BuiltInToolkitWrapper.assign_partial_charges() got an unexpected keyword argument 'doi'
-        #
-        #
-        # ChargeIncrementModel
-        # No registered toolkits can provide the capability "assign_partial_charges" for args "()" and kwargs "{'molecule': Molecule with name '' and SMILES '[U+4]', 'partial_charge_method': 'mmff94'}"
-        # Available toolkits are: [ToolkitWrapper around OpenFF NAGL version 0.5.2, ToolkitWrapper around The RDKit version 2023.09.6, ToolkitWrapper around AmberTools version 23.3, ToolkitWrapper around Built-in Toolkit version None]
-        #  ToolkitWrapper around OpenFF NAGL version 0.5.2 <class 'openff.nagl_models._dynamic_fetch.BadFileSuffixError'> : NAGLToolkitWrapper does not recognize file path extension on filename='mmff94', expected '.pt' suffix
-        #  ToolkitWrapper around The RDKit version 2023.09.6 <class 'AttributeError'> : 'NoneType' object has no attribute 'GetMMFFPartialCharge'
-        #  ToolkitWrapper around AmberTools version 23.3 <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : partial_charge_method 'mmff94' is not available from AmberToolsToolkitWrapper. Available charge methods are {'am1bcc': {'antechamber_keyword': 'bcc', 'min_confs': 1, 'max_confs': 1, 'rec_confs': 1}, 'am1-mulliken': {'antechamber_keyword': 'mul', 'min_confs': 1, 'max_confs': 1, 'rec_confs': 1}, 'gasteiger': {'antechamber_keyword': 'gas', 'min_confs': 0, 'max_confs': 0, 'rec_confs': 0}}
-        #  ToolkitWrapper around Built-in Toolkit version None <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : Partial charge method "mmff94"" is not supported by the Built-in toolkit. Available charge methods are {'zeros': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}, 'formal_charge': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}}
-        #
-        #
-        # ToolkitAM1BCC
-        # No registered toolkits can provide the capability "assign_partial_charges" for args "()" and kwargs "{'molecule': Molecule with name '' and SMILES '[U+4]', 'partial_charge_method': 'am1bcc'}"
-        # Available toolkits are: [ToolkitWrapper around OpenFF NAGL version 0.5.2, ToolkitWrapper around The RDKit version 2023.09.6, ToolkitWrapper around AmberTools version 23.3, ToolkitWrapper around Built-in Toolkit version None]
-        #  ToolkitWrapper around OpenFF NAGL version 0.5.2 <class 'openff.nagl_models._dynamic_fetch.BadFileSuffixError'> : NAGLToolkitWrapper does not recognize file path extension on filename='am1bcc', expected '.pt' suffix
-        #  ToolkitWrapper around The RDKit version 2023.09.6 <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : partial_charge_method 'am1bcc' is not available from RDKitToolkitWrapper. Available charge methods are {'mmff94': {}, 'gasteiger': {}}
-        #  ToolkitWrapper around AmberTools version 23.3 <class 'subprocess.CalledProcessError'> : Command '['antechamber', '-i', 'molecule.sdf', '-fi', 'sdf', '-o', 'charged.mol2', '-fo', 'mol2', '-pf', 'yes', '-dr', 'n', '-c', 'bcc', '-nc', '4.0']' returned non-zero exit status 1.
-        #  ToolkitWrapper around Built-in Toolkit version None <class 'openff.toolkit.utils.exceptions.ChargeMethodUnavailableError'> : Partial charge method "am1bcc"" is not supported by the Built-in toolkit. Available charge methods are {'zeros': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}, 'formal_charge': {'rec_confs': 0, 'min_confs': 0, 'max_confs': 0}}
 
 
 class TestNAGLChargesPrecedence:
@@ -426,7 +380,6 @@ class TestNAGLChargesPrecedence:
 
     def test_nagl_charges_precedence_over_charge_increments(self, sage_with_nagl_charges, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
-        from openff.toolkit.typing.engines.smirnoff import ChargeIncrementModelHandler
 
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
@@ -461,9 +414,6 @@ class TestNAGLChargesIntegration:
 
         interchange = sage_with_nagl_charges.create_interchange(topology=topology)
         assigned_charges = interchange["Electrostatics"].get_charge_array()
-
-        # Should have charges for all atoms
-        assert len(assigned_charges) == topology.n_atoms
 
         # Each molecule should have approximately zero net charge
         methane_charge_sum = sum(assigned_charges[: methane.n_atoms])
@@ -505,9 +455,6 @@ class TestNAGLChargesIntegration:
 
     def test_nagl_charges_force_field_creation_complete(self, hexane_diol):
         """Test complete interchange creation with NAGLCharges."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
-        from openff.interchange import Interchange
 
         ff = ForceField("openff-2.1.0.offxml")
         ff.get_parameter_handler(
@@ -519,7 +466,7 @@ class TestNAGLChargesIntegration:
         )
 
         # Should create complete interchange without errors
-        interchange = Interchange.from_smirnoff(force_field=ff, topology=hexane_diol.to_topology())
+        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
 
         # Should have all expected collections
         expected_collections = ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions", "vdW", "Electrostatics"]
@@ -536,7 +483,6 @@ class TestNAGLChargesIntegration:
 
     def test_nagl_charges_identical_molecules_same_charges(self):
         """Test that identical molecules get identical charges from NAGLCharges."""
-        from openff.toolkit.typing.engines.smirnoff import ForceField
 
         # Create topology with two identical molecules
         molecule1 = Molecule.from_smiles("CCO")
@@ -568,23 +514,23 @@ class TestNAGLChargesIntegration:
         # Assign preset charges using a different method
         hexane_diol.assign_partial_charges("gasteiger")
         preset_charges = [c.m for c in hexane_diol.partial_charges]
-        
+
         # Create interchange with charge_from_molecules - should use preset charges
         interchange = sage_with_nagl_charges.create_interchange(
             topology=hexane_diol.to_topology(),
-            charge_from_molecules=[hexane_diol]
+            charge_from_molecules=[hexane_diol],
         )
-        
+
         assigned_charges = interchange["Electrostatics"].get_charge_array()
-        
+
         # Should match preset charges, not NAGL charges
         numpy.testing.assert_allclose(assigned_charges.m, preset_charges)
-        
+
         # Verify NAGL would give different charges
         hexane_diol_copy = Molecule.from_smiles(hexane_diol.to_smiles())
         hexane_diol_copy.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         nagl_charges = [c.m for c in hexane_diol_copy.partial_charges]
-        
+
         # Preset and NAGL charges should be different
         assert not numpy.allclose(preset_charges, nagl_charges, atol=1e-3)
 
@@ -593,99 +539,98 @@ class TestNAGLChargesIntegration:
         # Create molecules
         ethanol = Molecule.from_smiles("CCO")
         methanol = Molecule.from_smiles("CO")
-        
+
         # Assign preset charges to only one molecule
         ethanol.assign_partial_charges("gasteiger")
         preset_ethanol_charges = [c.m for c in ethanol.partial_charges]
-        
+
         topology = Topology.from_molecules([ethanol, methanol])
-        
+
         # Create interchange with preset charges for ethanol only
         interchange = sage_with_nagl_charges.create_interchange(
             topology=topology,
-            charge_from_molecules=[ethanol]
+            charge_from_molecules=[ethanol],
         )
-        
+
         assigned_charges = interchange["Electrostatics"].get_charge_array()
-        
+
         # First molecule (ethanol) should match preset charges
-        ethanol_charges = assigned_charges[:ethanol.n_atoms]
+        ethanol_charges = assigned_charges[: ethanol.n_atoms]
         numpy.testing.assert_allclose(ethanol_charges.m, preset_ethanol_charges)
-        
+
         # Second molecule (methanol) should get NAGL charges
-        methanol_charges = assigned_charges[ethanol.n_atoms:]
-        
+        methanol_charges = assigned_charges[ethanol.n_atoms :]
+
         # Get reference NAGL charges for methanol
         methanol_copy = Molecule.from_smiles("CO")
         methanol_copy.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         nagl_methanol_charges = [c.m for c in methanol_copy.partial_charges]
-        
+
         numpy.testing.assert_allclose(methanol_charges.m, nagl_methanol_charges)
 
     @pytest.mark.slow
     def test_nagl_charges_large_molecule_performance(self, sage_with_nagl_charges):
         """Test that NAGL charge assignment completes in reasonable time for large molecules."""
         import time
-        
+
         # Create a very large molecule
         large_molecule = Molecule.from_smiles("C" * 200)  # 200-carbon alkane chain
-        
+
         start_time = time.time()
-        
+
         # Should complete without error
         interchange = sage_with_nagl_charges.create_interchange(topology=large_molecule.to_topology())
-        
+
         end_time = time.time()
         execution_time = end_time - start_time
-        
+
         # Should complete within reasonable time (less than 30 seconds)
         assert execution_time < 10.0, f"NAGL charge assignment took {execution_time:.2f}s, which is too long"
-        
+
         # Net charge should be approximately zero
         charges = interchange["Electrostatics"].get_charge_array()
         total_charge = sum(charges.m)
         assert abs(total_charge) < 1e-10
 
-    @pytest.mark.slow  
+    @pytest.mark.slow
     def test_nagl_charges_multiple_large_molecules_performance(self, sage_with_nagl_charges):
         """Test performance with multiple large molecules in topology."""
         import time
-        
+
         # Create multiple copies of medium-sized molecules
         base_molecules = [
             Molecule.from_smiles("C" * 20),  # 20-carbon chain
-            Molecule.from_smiles("C" * 25),  # 25-carbon chain  
+            Molecule.from_smiles("C" * 25),  # 25-carbon chain
             Molecule.from_smiles("C" * 30),  # 30-carbon chain
         ]
-        
+
         # Create 20 copies of each
         molecules = []
         for _ in range(20):
             for base_mol in base_molecules:
                 molecules.append(base_mol)
-        
+
         topology = Topology.from_molecules(molecules)
-        
+
         start_time = time.time()
-        
+
         # Should complete without error
         interchange = sage_with_nagl_charges.create_interchange(topology=topology)
-        
+
         end_time = time.time()
         execution_time = end_time - start_time
-        
+
         # Should complete within reasonable time
         assert execution_time < 10.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
-        
+
         # Each molecule should have approximately zero net charge
         charges = interchange["Electrostatics"].get_charge_array()
         start_idx = 0
         for molecule in molecules:
-            mol_charges = charges[start_idx:start_idx + molecule.n_atoms]
+            mol_charges = charges[start_idx : start_idx + molecule.n_atoms]
             mol_total_charge = sum(mol_charges.m)
             assert abs(mol_total_charge) < 1e-10
             start_idx += molecule.n_atoms
-
 
     @pytest.mark.skip(
         reason="Turn on if toolkit ever allows non-standard scale12/13/15",

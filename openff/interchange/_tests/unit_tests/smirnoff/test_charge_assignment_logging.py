@@ -15,7 +15,7 @@ Hierarchy is
 1. Match molecules with preset charges
 2. Match chemical environment against library charges
 3. Run NAGLCharges (if present in the FF)
-3. Run charge method in ChargeIncrementModel section (if present in the FF) and then 
+3. Run charge method in ChargeIncrementModel section (if present in the FF) and then
    match chemical environment against charge increments
 4. Run AM1-BCC (or a variant) on remaining molecules (if present in the FF)
 
@@ -132,7 +132,7 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
 
         elif message.startswith("Charge section ToolkitAM1BCC"):
             info[message.split(", ")[1].split(" ")[-1]].append(int(message.split("atom index ")[-1]))
-            
+
         elif message.startswith("Charge section NAGLCharges"):
             info["NAGLChargesHandler"].append(int(message.split("atom index ")[-1]))
 
@@ -472,12 +472,12 @@ def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
 def test_case11(caplog, sage_with_nagl_charges, ligand):
     """Test that NAGL charge assignment is properly logged."""
     pytest.importorskip("openff.nagl")
-    
+
     with caplog.at_level(logging.INFO):
         sage_with_nagl_charges.create_interchange(ligand.to_topology())
-        
+
         info = map_methods_to_atom_indices(caplog)
-        
+
         # Should log NAGL charges for all atoms
         assert "NAGLChargesHandler" in info
         assert info["NAGLChargesHandler"] == [*range(0, ligand.n_atoms)]
@@ -486,14 +486,14 @@ def test_case11(caplog, sage_with_nagl_charges, ligand):
 def test_case12(caplog, sage_with_nagl_charges, water):
     """Test logging when LibraryCharges takes precedence over NAGL."""
     pytest.importorskip("openff.nagl")
-    
+
     topology = Topology.from_molecules([water, water])
-    
+
     with caplog.at_level(logging.INFO):
         sage_with_nagl_charges.create_interchange(topology)
-        
+
         info = map_methods_to_atom_indices(caplog)
-        
+
         # Water should get library charges, not NAGL
         assert info["library"] == [*range(0, 6)]  # 2 water molecules, 3 atoms each
         assert "NAGLChargesHandler" not in info
@@ -502,35 +502,35 @@ def test_case12(caplog, sage_with_nagl_charges, water):
 def test_case13(caplog, sage_with_nagl_charges, ligand, water):
     """Test logging with mixed molecule types (some library, some NAGL)."""
     pytest.importorskip("openff.nagl")
-    
+
     topology = Topology.from_molecules([ligand, water])
-    
+
     with caplog.at_level(logging.INFO):
         sage_with_nagl_charges.create_interchange(topology)
-        
+
         info = map_methods_to_atom_indices(caplog)
-        
+
         # Ligand should get NAGL charges
         assert info["NAGLChargesHandler"] == [*range(0, ligand.n_atoms)]
-        
-        # Water should get library charges  
+
+        # Water should get library charges
         assert info["library"] == [*range(ligand.n_atoms, ligand.n_atoms + water.n_atoms)]
 
 
 def test_case14(caplog, sage_with_nagl_charges, ligand):
     """Test logging when preset charges are used instead of NAGL."""
     pytest.importorskip("openff.nagl")
-    
+
     ligand.assign_partial_charges("gasteiger")
-    
+
     with caplog.at_level(logging.INFO):
         sage_with_nagl_charges.create_interchange(
             ligand.to_topology(),
-            charge_from_molecules=[ligand]
+            charge_from_molecules=[ligand],
         )
-        
+
         info = map_methods_to_atom_indices(caplog)
-        
+
         # Should use preset charges, not NAGL
         assert info["preset"] == [*range(0, ligand.n_atoms)]
         assert "NAGLChargesHandler" not in info
