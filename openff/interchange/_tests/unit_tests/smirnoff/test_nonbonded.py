@@ -491,6 +491,71 @@ class TestNAGLChargesIntegration:
         
         numpy.testing.assert_allclose(methanol_charges.m, nagl_methanol_charges)
 
+    @pytest.mark.slow
+    def test_nagl_charges_large_molecule_performance(self, sage_with_nagl_charges):
+        """Test that NAGL charge assignment completes in reasonable time for large molecules."""
+        import time
+        
+        # Create a very large molecule
+        large_molecule = Molecule.from_smiles("C" * 200)  # 200-carbon alkane chain
+        
+        start_time = time.time()
+        
+        # Should complete without error
+        interchange = sage_with_nagl_charges.create_interchange(topology=large_molecule.to_topology())
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        # Should complete within reasonable time (less than 30 seconds)
+        assert execution_time < 10.0, f"NAGL charge assignment took {execution_time:.2f}s, which is too long"
+        
+        # Net charge should be approximately zero
+        charges = interchange["Electrostatics"].get_charge_array()
+        total_charge = sum(charges.m)
+        assert abs(total_charge) < 1e-10
+
+    @pytest.mark.slow  
+    def test_nagl_charges_multiple_large_molecules_performance(self, sage_with_nagl_charges):
+        """Test performance with multiple large molecules in topology."""
+        import time
+        
+        # Create multiple copies of medium-sized molecules
+        base_molecules = [
+            Molecule.from_smiles("C" * 20),  # 20-carbon chain
+            Molecule.from_smiles("C" * 25),  # 25-carbon chain  
+            Molecule.from_smiles("C" * 30),  # 30-carbon chain
+        ]
+        
+        # Create 20 copies of each
+        molecules = []
+        for _ in range(20):
+            for base_mol in base_molecules:
+                molecules.append(base_mol)
+        
+        topology = Topology.from_molecules(molecules)
+        
+        start_time = time.time()
+        
+        # Should complete without error
+        interchange = sage_with_nagl_charges.create_interchange(topology=topology)
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        # Should complete within reasonable time
+        assert execution_time < 10.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
+        
+        # Each molecule should have approximately zero net charge
+        charges = interchange["Electrostatics"].get_charge_array()
+        start_idx = 0
+        for molecule in molecules:
+            mol_charges = charges[start_idx:start_idx + molecule.n_atoms]
+            mol_total_charge = sum(mol_charges.m)
+            assert abs(mol_total_charge) < 1e-10
+            start_idx += molecule.n_atoms
+
+
     @pytest.mark.skip(
         reason="Turn on if toolkit ever allows non-standard scale12/13/15",
     )
