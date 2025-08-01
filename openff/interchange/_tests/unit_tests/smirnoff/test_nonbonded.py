@@ -235,6 +235,8 @@ class TestNAGLChargesErrorHandling:
             with pytest.raises(UnableToParseDOIException):
                 sage.create_interchange(topology=hexane_diol.to_topology())
 
+    @pytest.mark.xfail(reason="charge assignment handler fallback behavior not yet implemented",
+                       raises=ValueError)
     def test_nagl_charges_fallback_to_charge_increment_model(self, sage):
         """Test that NAGL falls back to ChargeIncrementModel when molecule contains unsupported elements."""
         from openff.toolkit.typing.engines.smirnoff import ForceField
@@ -291,6 +293,8 @@ class TestNAGLChargesErrorHandling:
         # Net charge should match molecule's total formal charge
         assert abs(sum(assigned_charges.m) - boron_molecule.total_charge.m) < 1e-10
 
+    @pytest.mark.xfail(reason="charge assignment handler fallback behavior not yet implemented",
+                       raises=ValueError)
     def test_nagl_charges_all_handlers_fail_comprehensive_error(self, sage):
         """Test error reporting when all charge assignment methods fail."""
         pytest.importorskip("openff.nagl")

@@ -789,7 +789,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         potentials: dict[PotentialKey, Potential] = dict()
 
         expected_matches = {i for i in range(unique_molecule.n_atoms)}
-        parameter_handler_to_exception = {}
         for handler_type in cls.parameter_handler_precedence():
             if handler_type not in parameter_handlers:
                 continue
@@ -799,26 +798,21 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             slot_matches, am1_matches = None, None
             slot_potentials: dict = {}
             am1_potentials: dict = {}
-            try:
-                if handler_type in ["LibraryCharges", "ChargeIncrementModel"]:
-                    slot_matches, slot_potentials = cls._find_slot_matches(
-                        parameter_handler,
-                        unique_molecule,
-                    )
+            if handler_type in ["LibraryCharges", "ChargeIncrementModel"]:
+                slot_matches, slot_potentials = cls._find_slot_matches(
+                    parameter_handler,
+                    unique_molecule,
+                )
 
-                if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel", "NAGLCharges"]:
-                    (
-                        partial_charge_method,
-                        am1_matches,
-                        am1_potentials,
-                    ) = cls._find_charge_model_matches(
-                        parameter_handler,
-                        unique_molecule,
-                    )
-            except ValueError as e:
-                parameter_handler_to_exception[handler_type] = e
-                continue
-
+            if handler_type in ["ToolkitAM1BCC", "ChargeIncrementModel", "NAGLCharges"]:
+                (
+                    partial_charge_method,
+                    am1_matches,
+                    am1_potentials,
+                ) = cls._find_charge_model_matches(
+                    parameter_handler,
+                    unique_molecule,
+                )
 
             if slot_matches is None and am1_matches is None:
                 raise NotImplementedError()
@@ -862,13 +856,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         found_matches = {index for key in matches for index in key.atom_indices}
 
         if found_matches != expected_matches:
-            formatted_handler_exceptions = '\n\n'.join(['\n'.join((handler, str(exception))) for handler, exception in parameter_handler_to_exception.items()])
             raise RuntimeError(
                 f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
                 "not be fully assigned charges. Charges were assigned to atoms "
                 f"{found_matches} but the molecule contains {expected_matches}. "
-                f"The exceptions raised by various handlers are:\n"
-                f"{formatted_handler_exceptions}",
             )
 
         return matches, potentials
