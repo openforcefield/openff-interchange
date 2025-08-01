@@ -789,6 +789,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         potentials: dict[PotentialKey, Potential] = dict()
 
         expected_matches = {i for i in range(unique_molecule.n_atoms)}
+
         for handler_type in cls.parameter_handler_precedence():
             if handler_type not in parameter_handlers:
                 continue
@@ -798,6 +799,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             slot_matches, am1_matches = None, None
             slot_potentials: dict = {}
             am1_potentials: dict = {}
+
             if handler_type in ["LibraryCharges", "ChargeIncrementModel"]:
                 slot_matches, slot_potentials = cls._find_slot_matches(
                     parameter_handler,
@@ -859,7 +861,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             raise RuntimeError(
                 f"{unique_molecule.to_smiles(explicit_hydrogens=False)} could "
                 "not be fully assigned charges. Charges were assigned to atoms "
-                f"{found_matches} but the molecule contains {expected_matches}. ",
+                f"{found_matches} but the molecule contains {expected_matches}.",
             )
 
         return matches, potentials
