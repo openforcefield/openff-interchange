@@ -703,10 +703,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         handler_name = parameter_handler.__class__.__name__
 
         if handler_name == "NAGLChargesHandler":
-            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, NAGLToolkitWrapper
 
             partial_charge_method = parameter_handler.model_file
-            if "NAGL" not in GLOBAL_TOOLKIT_REGISTRY.__repr__():
+            if NAGLToolkitWrapper not in {type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits}:
                 raise MissingPackageError(
                     "The force field has a NAGLCharges section, but the NAGL software isn't "
                     "present in GLOBAL_TOOLKIT_REGISTRY",
