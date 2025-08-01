@@ -229,6 +229,8 @@ class TestNAGLChargesErrorHandling:
         with pytest.raises(UnableToParseDOIException):
             sage.create_interchange(topology=hexane_diol.to_topology())
 
+    # For more information on why this test is skipped, see
+    # https://github.com/openforcefield/openff-interchange/pull/1206/commits/f99a10e17ad56235ba1f36ae35f6383a22ed840a#r2248864028
     @pytest.mark.xfail(
         reason="charge assignment handler fallback behavior not yet implemented",
         raises=ValueError,
