@@ -149,7 +149,7 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
 
 
 @pytest.fixture
-def sage_with_nagl(sage):
+def sage_with_nagl_chargeincrements(sage):
     from openff.toolkit.typing.engines.smirnoff.parameters import ChargeIncrementModelHandler, ChargeIncrementType
 
     sage.register_parameter_handler(
@@ -416,7 +416,7 @@ def test_case9(caplog, sage_with_bond_charge):
         assert info["orientation"] == [0, 1]
 
 
-def test_case10(caplog, sage_with_nagl, ligand):
+def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
     from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
     from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
@@ -430,7 +430,7 @@ def test_case10(caplog, sage_with_nagl, ligand):
                 toolkit_precedence=[NAGLToolkitWrapper, RDKitToolkitWrapper],
             ),
         ):
-            sage_with_nagl.create_interchange(ligand.to_topology())
+            sage_with_nagl_chargeincrements.create_interchange(ligand.to_topology())
 
         info = map_methods_to_atom_indices(caplog)
 
