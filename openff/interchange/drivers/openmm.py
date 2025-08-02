@@ -29,8 +29,6 @@ def get_openmm_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by OpenMM.
 
-    .. warning :: This API is not stable and subject to change.
-
     Parameters
     ----------
     interchange : openff.interchange.Interchange

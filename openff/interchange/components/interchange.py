@@ -27,6 +27,7 @@ from openff.interchange.common._valence import (
 from openff.interchange.components.mdconfig import MDConfig
 from openff.interchange.components.potentials import Collection, _AnnotatedCollections
 from openff.interchange.exceptions import (
+    InvalidPositionsError,
     MissingParameterHandlerError,
     MissingPositionsError,
     UnsupportedExportError,
@@ -63,8 +64,6 @@ if TYPE_CHECKING:
 class Interchange(_BaseModel):
     """
     A object for storing, manipulating, and converting molecular mechanics data.
-
-    .. warning :: This API is not stable and subject to change.
 
     Examples
     --------
@@ -872,9 +871,6 @@ class Interchange(_BaseModel):
         """
         Create an Interchange object from GROMACS files.
 
-        .. warning :: This method is experimental and not officially suitable for production.
-        .. warning :: This API is not stable and subject to change.
-
         Parameters
         ----------
         topology_file : Path | str
@@ -903,6 +899,33 @@ class Interchange(_BaseModel):
             ),
         )
 
+    def set_positions_from_gro(
+        self,
+        gro_file: Path | str,
+    ):
+        """
+        Set the positions of this `Interchange` from a GROMACS coordinate `.gro` file.
+
+        Only the coordinates from the `.gro` file are used. No effort is made to ensure the topologies are compatible
+        with each other. This includes, for example, a lack of guarantee that the atom ordering in the `.gro` file
+        matches the atom ordering in the `Interchange` object.
+
+        `InvalidPositionsError` is raised if the number of rows in the coordinate array does not match the number of
+        atoms in the topology of this `Interchange`.
+        """
+        from openff.interchange.interop.gromacs._import._import import _read_coordinates
+
+        # should already be in nm, might not be necessary
+        coordinates = _read_coordinates(gro_file).to(unit.nanometer)
+
+        if coordinates.shape != (self.topology.n_atoms, 3):
+            raise InvalidPositionsError(
+                f"Coordinates in {gro_file} do not match the number of atoms in the topology. ",
+                f"Parsed coordinates have shape {coordinates.shape} but topology has {self.topology.n_atoms} atoms.",
+            )
+
+        self.positions = coordinates
+
     @classmethod
     def from_openmm(
         cls,
@@ -913,8 +936,6 @@ class Interchange(_BaseModel):
     ) -> "Interchange":
         """
         Create an Interchange object from OpenMM objects.
-
-        .. warning :: This API is not stable and subject to change.
 
         Notes
         -----
@@ -1047,7 +1068,7 @@ class Interchange(_BaseModel):
             )
 
     def __add__(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
+        """Combine two Interchange objects."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
             InterchangeDeprecationWarning,
@@ -1056,7 +1077,7 @@ class Interchange(_BaseModel):
         return self.combine(other)
 
     def combine(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects. This method is unstable and not yet safe for general use."""
+        """Combine two Interchange objects."""
         from openff.interchange.operations._combine import _combine
 
         return _combine(self, other)

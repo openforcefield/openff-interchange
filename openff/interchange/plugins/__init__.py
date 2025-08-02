@@ -11,7 +11,8 @@ __all__ = [
 
 def load_smirnoff_plugins() -> list:
     """Load external potential handlers as plugins."""
-    from importlib_metadata import entry_points
+    from importlib.metadata import entry_points
+
     from pydantic import PydanticUserError
 
     plugin_handlers = list()
