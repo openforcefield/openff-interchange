@@ -50,7 +50,9 @@ def _create_interchange(
     box: Quantity | None = None,
     positions: Quantity | None = None,
 ) -> Interchange:
-    interchange = Interchange(topology=Topology(topology))
+    interchange = Interchange()
+
+    interchange._topology = Topology(topology)
 
     interchange.positions = _infer_positions(interchange.topology, positions)
 

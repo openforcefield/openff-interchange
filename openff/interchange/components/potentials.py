@@ -164,8 +164,8 @@ def serialize_key_map(
     info,
 ) -> dict[str, str]:
     """Serialize the parameters field of a Potential object."""
-    if info.mode == "json":
-        return {key.model_dump_json(): value.model_dump_json() for key, value in value.items()}
+    if info.mode in ("json", "python"):
+        return {key.model_dump_json(): _value.model_dump_json() for key, _value in value.items()}
 
     else:
         raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
@@ -207,7 +207,7 @@ def serialize_potentials(
     info,
 ) -> dict[str, str]:
     """Serialize the potentials field."""
-    if info.mode == "json":
+    if info.mode in ("json", "python"):
         return {key.model_dump_json(): _value.model_dump_json() for key, _value in value.items()}
 
     else:

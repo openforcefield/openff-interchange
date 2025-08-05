@@ -30,7 +30,6 @@ def _process_constraints(
 
     for top_key, pot_key in constraint_handler.key_map.items():
         openff_indices = top_key.atom_indices
-
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
         params = constraint_handler.potentials[pot_key].parameters

@@ -14,7 +14,15 @@ class _BaseModel(BaseModel):
     )
 
     def model_dump(self, **kwargs) -> dict[str, Any]:
-        return super().model_dump(serialize_as_any=True, **kwargs)
+        return super().model_dump(
+            include=self.__class__.model_fields.keys(),
+            serialize_as_any=True,
+            **kwargs,
+        )
 
     def model_dump_json(self, **kwargs) -> str:
-        return super().model_dump_json(serialize_as_any=True, **kwargs)
+        return super().model_dump_json(
+            include=self.__class__.model_fields.keys(),
+            serialize_as_any=True,
+            **kwargs,
+        )

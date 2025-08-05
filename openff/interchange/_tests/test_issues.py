@@ -103,7 +103,7 @@ def test_issue_1031():
         topology=openmm_topology,
     )
 
-    openff_atom_names = {atom.name for atom in interchange.topology.atoms}
+    openff_atom_names = {atom.name for atom in interchange.get_topology().atoms}
 
     assert sorted(openmm_atom_names) == sorted(openff_atom_names)
 

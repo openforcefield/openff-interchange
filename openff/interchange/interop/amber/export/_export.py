@@ -350,12 +350,12 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         # will happen roughly once per dihedral, use a set for speed.
         already_counted: set[tuple[int, ...]] = set()
 
-        per_atom_exclusion_lists = _get_per_atom_exclusion_lists(interchange.topology)
+        per_atom_exclusion_lists = _get_per_atom_exclusion_lists(interchange.get_topology())
 
         number_excluded_atoms, excluded_atoms_list = _get_exclusion_lists(
             per_atom_exclusion_lists,
         )
-        atomic_numbers = tuple(atom.atomic_number for atom in interchange.topology.atoms)
+        atomic_numbers = tuple(atom.atomic_number for atom in interchange.get_topology().atoms)
 
         bonds_inc_hydrogen, bonds_without_hydrogen = _get_bond_lists(
             interchange,
@@ -378,13 +378,13 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         )
 
         # total number of atoms
-        NATOM = interchange.topology.n_atoms
+        NATOM = interchange.get_topology().n_atoms
         # total number of distinct atom types
         NTYPES = len(interchange["vdW"].potentials)
         # number of bonds containing hydrogen
-        NBONH = _get_num_h_bonds(interchange.topology)
+        NBONH = _get_num_h_bonds(interchange.get_topology())
         # number of bonds not containing hydrogen
-        MBONA = interchange.topology.n_bonds - NBONH
+        MBONA = interchange.get_topology().n_bonds - NBONH
         # number of angles containing hydrogen
         NTHETH = int(len(angles_inc_hydrogen) / 4)
         # number of angles not containing hydrogen
@@ -398,7 +398,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         # number of excluded atoms
         NNB = len(excluded_atoms_list)
         # number of residues
-        NRES = max(1, len([*interchange.topology.hierarchy_iterator("residues")]))
+        NRES = max(1, len([*interchange.get_topology().hierarchy_iterator("residues")]))
         NBONA = MBONA  # : MBONA + number of constraint bonds
         NTHETA = MTHETA  # : MTHETA + number of constraint angles
         NPHIA = MPHIA  # : MPHIA + number of constraint dihedrals
@@ -422,7 +422,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         # set to 1 if standard periodic box, 2 when truncated octahedral
         IFBOX = 0 if interchange.box is None else 1
         # number of atoms in the largest residue
-        NMXRS = interchange.topology.n_atoms
+        NMXRS = interchange.get_topology().n_atoms
         IFCAP = 0  # : set to 1 if the CAP option from edit was specified
         NUMEXTRA = 0  # : number of extra points found in topology
         # number of PIMD slices / number of beads
@@ -472,7 +472,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         atom_names: list[str] = list()
 
-        for atom in interchange.topology.atoms:
+        for atom in interchange.get_topology().atoms:
             if hasattr(atom, "name"):
                 if atom.name:
                     atom_names.append(atom.name)
@@ -496,7 +496,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG MASS\n%FORMAT(5E16.8)\n")
-        masses = [a.mass.m for a in interchange.topology.atoms]
+        masses = [a.mass.m for a in interchange.get_topology().atoms]
         text_blob = "".join([f"{val:16.8E}" for val in masses])
         _write_text_blob(prmtop, text_blob)
 
@@ -563,7 +563,8 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         residue_names = [
-            getattr(residue, "residue_name", "RES") for residue in interchange.topology.hierarchy_iterator("residues")
+            getattr(residue, "residue_name", "RES")
+            for residue in interchange.get_topology().hierarchy_iterator("residues")
         ]
 
         # Avoid blank residue labels, though this is a band-aid. See issue #652
@@ -576,8 +577,8 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         residue_pointers = (
             [
-                interchange.topology.atom_index(next(iter(residue.atoms)))
-                for residue in interchange.topology.hierarchy_iterator("residues")
+                interchange.get_topology().atom_index(next(iter(residue.atoms)))
+                for residue in interchange.get_topology().hierarchy_iterator("residues")
             ]
             if NRES > 1
             else [0]
@@ -731,7 +732,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             # TODO: No easy way to accurately export this section while
             #       using an MDTraj topology
             prmtop.write("%FLAG ATOMS_PER_MOLECULE\n%FORMAT(10I8)\n")
-            prmtop.write(str(interchange.topology.n_atoms).rjust(8))
+            prmtop.write(str(interchange.get_topology().n_atoms).rjust(8))
             prmtop.write("\n")
 
             prmtop.write("%FLAG BOX_DIMENSIONS\n%FORMAT(5E16.8)\n")
@@ -768,7 +769,7 @@ def to_inpcrd(interchange: "Interchange", file_path: Path | str):
     if isinstance(file_path, Path):
         path = file_path
 
-    n_atoms = interchange.topology.n_atoms
+    n_atoms = interchange.get_topology().n_atoms
     time = 0.0
 
     with open(path, "w") as inpcrd:

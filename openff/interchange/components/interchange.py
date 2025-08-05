@@ -4,11 +4,11 @@ import tempfile
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, Union, overload
 
 from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.utilities.utilities import has_package, requires_package
-from pydantic import Field
+from pydantic import BaseModel, Field, ModelWrapValidatorHandler, PrivateAttr, model_validator
 
 from openff.interchange._annotations import (
     PositiveFloat,
@@ -36,7 +36,6 @@ from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
 from openff.interchange.pydantic import _BaseModel
-from openff.interchange.serialization import _AnnotatedTopology
 from openff.interchange.smirnoff import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFVirtualSiteCollection,
@@ -82,11 +81,35 @@ class Interchange(_BaseModel):
     """
 
     collections: _AnnotatedCollections = Field(dict())
-    topology: _AnnotatedTopology
     mdconfig: MDConfig | None = Field(None)
     box: _BoxQuantity | None = Field(None)  # Needs shape/OpenMM validation
     positions: _PositionsQuantity | None = Field(None)  # Ditto
     velocities: _VelocityQuantity | None = Field(None)  # Ditto
+    _topology: Topology = PrivateAttr(default_factory=Topology)
+
+    @model_validator(mode="wrap")
+    def validate_model_wrap(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
+        if isinstance(data, dict) and "topology" in data.keys():
+            deserialized = handler(data)
+            if type(data["topology"]) is dict:
+                deserialized._topology = Topology.from_dict(data["topology"])
+            elif type(data["topology"]) is str:
+                deserialized._topology = Topology.from_json(data["topology"])
+            return deserialized
+        else:
+            return handler(data)
+
+    def get_topology(self) -> Topology:
+        return self._topology
+
+    @property
+    def topology(self) -> Topology:
+        warnings.warn(
+            "The `Interchange.topology` attribute is deprecated and will be removed in version 1.0."
+            "It will become read-only and accessible via `Interchange.get_topology()`.",
+        )
+
+        return self.get_topology()
 
     @classmethod
     def from_smirnoff(
@@ -994,6 +1017,46 @@ class Interchange(_BaseModel):
         raise MissingParameterHandlerError(
             f"Could not find parameter handler of name {handler_name}",
         )
+
+    def model_dump(self, **kwargs) -> dict[str, Any]:
+        # pydantic.PrivateAttr is not included in dumps - so manually add it in
+        data = BaseModel.model_dump(
+            self,
+            include=(
+                "collections",
+                "box",
+                "positions",
+                "velocities",
+                "mdconfig",
+            ),
+            serialize_as_any=True,
+        )
+        data["topology"] = self._topology.to_dict()
+
+        return data
+
+    def model_dump_json(self, **kwargs) -> str:
+        # horribly hacky, but don't know how else to inject an extra key-val pair into the JSON
+        # contents while also respecting the custom serialization we built in
+        import json
+
+        original = json.loads(
+            BaseModel.model_dump_json(
+                self,
+                include=(
+                    "collections",
+                    "box",
+                    "positions",
+                    "velocities",
+                    "mdconfig",
+                ),
+                serialize_as_any=True,
+            ),
+        )
+
+        original["topology"] = self._topology.to_json()
+
+        return json.dumps(original)
 
     @overload
     def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection": ...

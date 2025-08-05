@@ -205,7 +205,7 @@ class TestGROMACS:
 
         for found_residue, original_residue in zip(
             parmed_structure.residues,
-            out.topology.hierarchy_iterator("residues"),
+            out.get_topology().hierarchy_iterator("residues"),
         ):
             assert found_residue.name == original_residue.residue_name
             assert str(found_residue.number + 1) == original_residue.residue_number

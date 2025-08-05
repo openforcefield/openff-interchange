@@ -297,7 +297,8 @@ def to_interchange(
 
             molecule_start_index += len(molecule_type.atoms)
 
-    interchange = Interchange(topology=_convert_topology(system))
+    interchange = Interchange()
+    interchange._topology = _convert_topology(system)
 
     interchange.collections.update(
         {

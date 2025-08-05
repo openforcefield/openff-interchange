@@ -105,7 +105,7 @@ def _combine(
 
     result = copy.deepcopy(input1)
 
-    result.topology = _combine_topologies(input1.topology, input2.topology)
+    result._topology = _combine_topologies(input1.topology, input2.topology)
     atom_offset = input1.topology.n_atoms
 
     _check_nonbonded_compatibility(input1, input2)
