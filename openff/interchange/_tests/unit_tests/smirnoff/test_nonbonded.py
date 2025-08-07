@@ -383,7 +383,6 @@ class TestNAGLChargesPrecedence:
 
     def test_nagl_charges_precedence_over_charge_increments(self, sage_nagl, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
-        sage_nagl.get_parameter_handler("ToolkitAM1BCC", {"version": "0.3"})
 
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
@@ -395,9 +394,6 @@ class TestNAGLChargesPrecedence:
             partial_charge_method="formal_charge",
         )
         sage_nagl.register_parameter_handler(increment_handler)
-
-        # Remove AM1BCC handler to ensure we're testing NAGL vs ChargeIncrement precedence
-        sage_nagl.deregister_parameter_handler("ToolkitAM1BCC")
 
         interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
