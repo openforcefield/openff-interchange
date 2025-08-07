@@ -196,6 +196,7 @@ def sage_with_nagl_charges(sage):
             "version": "0.3",
         },
     )
+    sage.deregister_parameter_handler("ToolkitAM1BCC")
     return sage
 
 
