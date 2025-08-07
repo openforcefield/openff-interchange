@@ -188,7 +188,7 @@ def sage_with_off_center_hydrogen(sage):
 
 
 @pytest.fixture
-def sage_with_nagl_charges(sage):
+def sage_nagl(sage):
     sage.get_parameter_handler(
         "NAGLCharges",
         {

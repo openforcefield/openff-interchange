@@ -469,12 +469,12 @@ def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
         assert AM1BCC_KEY not in info
 
 
-def test_case11(caplog, sage_with_nagl_charges, ligand):
+def test_case11(caplog, sage_nagl, ligand):
     """Test that NAGL charge assignment is properly logged."""
     pytest.importorskip("openff.nagl")
 
     with caplog.at_level(logging.INFO):
-        sage_with_nagl_charges.create_interchange(ligand.to_topology())
+        sage_nagl.create_interchange(ligand.to_topology())
 
         info = map_methods_to_atom_indices(caplog)
 
@@ -483,14 +483,14 @@ def test_case11(caplog, sage_with_nagl_charges, ligand):
         assert info["NAGLChargesHandler"] == [*range(0, ligand.n_atoms)]
 
 
-def test_case12(caplog, sage_with_nagl_charges, water):
+def test_case12(caplog, sage_nagl, water):
     """Test logging when LibraryCharges takes precedence over NAGL."""
     pytest.importorskip("openff.nagl")
 
     topology = Topology.from_molecules([water, water])
 
     with caplog.at_level(logging.INFO):
-        sage_with_nagl_charges.create_interchange(topology)
+        sage_nagl.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
 
@@ -499,14 +499,14 @@ def test_case12(caplog, sage_with_nagl_charges, water):
         assert "NAGLChargesHandler" not in info
 
 
-def test_case13(caplog, sage_with_nagl_charges, ligand, water):
+def test_case13(caplog, sage_nagl, ligand, water):
     """Test logging with mixed molecule types (some library, some NAGL)."""
     pytest.importorskip("openff.nagl")
 
     topology = Topology.from_molecules([ligand, water])
 
     with caplog.at_level(logging.INFO):
-        sage_with_nagl_charges.create_interchange(topology)
+        sage_nagl.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
 
@@ -517,14 +517,14 @@ def test_case13(caplog, sage_with_nagl_charges, ligand, water):
         assert info["library"] == [*range(ligand.n_atoms, ligand.n_atoms + water.n_atoms)]
 
 
-def test_case14(caplog, sage_with_nagl_charges, ligand):
+def test_case14(caplog, sage_nagl, ligand):
     """Test logging when preset charges are used instead of NAGL."""
     pytest.importorskip("openff.nagl")
 
     ligand.assign_partial_charges("gasteiger")
 
     with caplog.at_level(logging.INFO):
-        sage_with_nagl_charges.create_interchange(
+        sage_nagl.create_interchange(
             ligand.to_topology(),
             charge_from_molecules=[ligand],
         )

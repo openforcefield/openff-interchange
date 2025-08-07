@@ -137,11 +137,11 @@ class TestNonbonded:
             assert not uses_elf10
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
 
-    def test_nagl_charge_assignment_matches_reference(self, sage_with_nagl_charges, hexane_diol):
+    def test_nagl_charge_assignment_matches_reference(self, sage_nagl, hexane_diol):
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         # Leave the ToolkitAM1BCC tag in openff-2.1.0 to ensure that the NAGLCharges handler takes precedence
 
-        interchange = sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
 
         assigned_charges_unitless = interchange["Electrostatics"].get_charge_array().m
 
@@ -156,7 +156,7 @@ class TestNonbonded:
 class TestNAGLChargesErrorHandling:
     """Test NAGLCharges error conditions."""
 
-    def test_nagl_charges_missing_toolkit_error(self, sage_with_nagl_charges, hexane_diol):
+    def test_nagl_charges_missing_toolkit_error(self, sage_nagl, hexane_diol):
         """Test MissingPackageError when NAGL toolkit is not available. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by NAGL if it were available."""
@@ -165,10 +165,10 @@ class TestNAGLChargesErrorHandling:
         # RDKit is needed for SMARTS matching.
         with toolkit_registry_manager(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])):
             with pytest.raises(MissingPackageError, match="NAGL software isn't present"):
-                sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
+                sage_nagl.create_interchange(topology=hexane_diol.to_topology())
 
             # No error should be raised if using charge_from_molecules
-            sage_with_nagl_charges.create_interchange(
+            sage_nagl.create_interchange(
                 topology=hexane_diol.to_topology(),
                 charge_from_molecules=[hexane_diol],
             )
@@ -343,7 +343,7 @@ class TestNAGLChargesErrorHandling:
 class TestNAGLChargesPrecedence:
     """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
 
-    def test_nagl_charges_precedence_over_am1bcc(self, sage_with_nagl_charges, hexane_diol):
+    def test_nagl_charges_precedence_over_am1bcc(self, sage_nagl, hexane_diol):
         """Test that NAGLCharges takes precedence over ToolkitAM1BCC."""
         sage_nagl.get_parameter_handler("ToolkitAM1BCC", {"version": "0.3"})
         # Get reference charges from NAGL
@@ -357,16 +357,16 @@ class TestNAGLChargesPrecedence:
         # Ensure they're different
         assert not numpy.allclose(nagl_charges, am1bcc_charges)
 
-        interchange = sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not AM1BCC
         numpy.testing.assert_allclose(assigned_charges, nagl_charges)
 
-    def test_library_charges_precedence_over_nagl(self, sage_with_nagl_charges, methane):
+    def test_library_charges_precedence_over_nagl(self, sage_nagl, methane):
         """Test that LibraryCharges takes precedence over NAGLCharges."""
 
-        sage_with_nagl_charges["LibraryCharges"].add_parameter(
+        sage_nagl["LibraryCharges"].add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
                 "charge1": -0.2 * unit.elementary_charge,
@@ -374,14 +374,14 @@ class TestNAGLChargesPrecedence:
             },
         )
 
-        interchange = sage_with_nagl_charges.create_interchange(topology=methane.to_topology())
+        interchange = sage_nagl.create_interchange(topology=methane.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match library charges
         expected_charges = [-0.2, 0.05, 0.05, 0.05, 0.05]
         numpy.testing.assert_allclose(assigned_charges, expected_charges)
 
-    def test_nagl_charges_precedence_over_charge_increments(self, sage_with_nagl_charges, hexane_diol):
+    def test_nagl_charges_precedence_over_charge_increments(self, sage_nagl, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
         sage_nagl.get_parameter_handler("ToolkitAM1BCC", {"version": "0.3"})
 
@@ -394,12 +394,12 @@ class TestNAGLChargesPrecedence:
             version=0.3,
             partial_charge_method="formal_charge",
         )
-        sage_with_nagl_charges.register_parameter_handler(increment_handler)
+        sage_nagl.register_parameter_handler(increment_handler)
 
         # Remove AM1BCC handler to ensure we're testing NAGL vs ChargeIncrement precedence
-        sage_with_nagl_charges.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_nagl.deregister_parameter_handler("ToolkitAM1BCC")
 
-        interchange = sage_with_nagl_charges.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not formal charges
@@ -409,14 +409,14 @@ class TestNAGLChargesPrecedence:
 class TestNAGLChargesIntegration:
     """Test NAGLCharges integration with other handlers."""
 
-    def test_nagl_charges_multi_molecule_topology(self, sage_with_nagl_charges):
+    def test_nagl_charges_multi_molecule_topology(self, sage_nagl):
         """Test NAGLCharges with multiple molecules in topology."""
         methane = Molecule.from_smiles("C")
         ethane = Molecule.from_smiles("CC")
 
         topology = Topology.from_molecules([methane, ethane])
 
-        interchange = sage_with_nagl_charges.create_interchange(topology=topology)
+        interchange = sage_nagl.create_interchange(topology=topology)
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Each molecule should have approximately zero net charge
@@ -513,14 +513,14 @@ class TestNAGLChargesIntegration:
         # Should be identical
         numpy.testing.assert_allclose(mol1_charges, mol2_charges)
 
-    def test_nagl_charges_with_charge_from_molecules(self, sage_with_nagl_charges, hexane_diol):
+    def test_nagl_charges_with_charge_from_molecules(self, sage_nagl, hexane_diol):
         """Test that charge_from_molecules takes precedence over NAGLCharges."""
         # Assign preset charges using a different method
         hexane_diol.assign_partial_charges("gasteiger")
         preset_charges = [c.m for c in hexane_diol.partial_charges]
 
         # Create interchange with charge_from_molecules - should use preset charges
-        interchange = sage_with_nagl_charges.create_interchange(
+        interchange = sage_nagl.create_interchange(
             topology=hexane_diol.to_topology(),
             charge_from_molecules=[hexane_diol],
         )
@@ -538,7 +538,7 @@ class TestNAGLChargesIntegration:
         # Preset and NAGL charges should be different
         assert not numpy.allclose(preset_charges, nagl_charges, atol=1e-3)
 
-    def test_nagl_charges_with_mixed_charge_sources(self, sage_with_nagl_charges):
+    def test_nagl_charges_with_mixed_charge_sources(self, sage_nagl):
         """Test NAGLCharges with some molecules having preset charges and others not."""
         # Create molecules
         ethanol = Molecule.from_smiles("CCO")
@@ -551,7 +551,7 @@ class TestNAGLChargesIntegration:
         topology = Topology.from_molecules([ethanol, methanol])
 
         # Create interchange with preset charges for ethanol only
-        interchange = sage_with_nagl_charges.create_interchange(
+        interchange = sage_nagl.create_interchange(
             topology=topology,
             charge_from_molecules=[ethanol],
         )
@@ -573,7 +573,7 @@ class TestNAGLChargesIntegration:
         numpy.testing.assert_allclose(methanol_charges.m, nagl_methanol_charges)
 
     @pytest.mark.slow
-    def test_nagl_charges_large_molecule_performance(self, sage_with_nagl_charges):
+    def test_nagl_charges_large_molecule_performance(self, sage_nagl):
         """Test that NAGL charge assignment completes in reasonable time for large molecules."""
         import time
 
@@ -583,7 +583,7 @@ class TestNAGLChargesIntegration:
         start_time = time.time()
 
         # Should complete without error
-        interchange = sage_with_nagl_charges.create_interchange(topology=large_molecule.to_topology())
+        interchange = sage_nagl.create_interchange(topology=large_molecule.to_topology())
 
         end_time = time.time()
         execution_time = end_time - start_time
@@ -597,7 +597,7 @@ class TestNAGLChargesIntegration:
         assert abs(total_charge) < 1e-10
 
     @pytest.mark.slow
-    def test_nagl_charges_multiple_large_molecules_performance(self, sage_with_nagl_charges):
+    def test_nagl_charges_multiple_large_molecules_performance(self, sage_nagl):
         """Test performance with multiple large molecules in topology."""
         import time
 
@@ -619,7 +619,7 @@ class TestNAGLChargesIntegration:
         start_time = time.time()
 
         # Should complete without error
-        interchange = sage_with_nagl_charges.create_interchange(topology=topology)
+        interchange = sage_nagl.create_interchange(topology=topology)
 
         end_time = time.time()
         execution_time = end_time - start_time
