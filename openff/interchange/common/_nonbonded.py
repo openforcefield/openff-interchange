@@ -132,7 +132,6 @@ class ElectrostaticsCollection(_NonbondedCollection):
 
         return Quantity.from_list([q for _, q in sorted(self.charges.items(), key=lambda x: x[0].atom_indices)])
 
-
     def _get_charges(
         self,
         include_virtual_sites: bool = False,
