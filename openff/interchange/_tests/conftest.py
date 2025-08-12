@@ -53,7 +53,7 @@ def sage_with_bond_charge(sage):
             type="BondCharge",
             match="all_permutations",
             distance="0.8 * angstrom ** 1",
-            charge_increment1="0.0 * elementary_charge ** 1",
+            charge_increment1="0.123 * elementary_charge ** 1",
             charge_increment2="0.0 * elementary_charge ** 1",
         ),
     )
@@ -184,6 +184,19 @@ def sage_with_off_center_hydrogen(sage):
         },
     )
 
+    return sage
+
+
+@pytest.fixture
+def sage_nagl(sage):
+    sage.get_parameter_handler(
+        "NAGLCharges",
+        {
+            "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            "version": "0.3",
+        },
+    )
+    sage.deregister_parameter_handler("ToolkitAM1BCC")
     return sage
 
 
@@ -590,7 +603,6 @@ def hydrogen_cyanide_reversed():
 def hexane_diol():
     molecule = Molecule.from_smiles("OCCCCCCO")
     molecule.assign_partial_charges(partial_charge_method="gasteiger")
-    molecule.partial_charges.m
     return molecule
 
 
