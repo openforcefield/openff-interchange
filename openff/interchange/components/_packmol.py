@@ -601,7 +601,7 @@ def pack_box(
     target_density : openff.units.Quantity, optional
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_vectors`` must be provided.
-    box_shape: Arraylike, optional
+    box_shape: Arraylike
         The shape of the simulation box, used in conjunction with
         the ``target_density`` parameter. Should be a dimensionless array with
         shape (3,3) for a triclinic box or (3,) for a rectangular box. Shape
