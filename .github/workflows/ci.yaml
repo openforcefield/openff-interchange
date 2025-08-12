@@ -42,7 +42,7 @@ jobs:
       COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
