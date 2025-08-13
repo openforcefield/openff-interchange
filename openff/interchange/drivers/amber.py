@@ -27,14 +27,14 @@ def get_amber_energies(
 
     Parameters
     ----------
-    interchange : openff.interchange.components.interchange.Interchange
+    interchange
         An OpenFF Interchange object to compute the single-point energy of
-    detailed : bool, default=False
+    detailed
         If True, return a detailed report containing the energies of each
 
     Returns
     -------
-    report : EnergyReport
+    report
         An `EnergyReport` object containing the single-point energies.
 
     """
@@ -75,11 +75,11 @@ def _run_sander(
 
     Parameters
     ----------
-    prmtop_file : str or pathlib.Path
+    prmtop_file
         The path to an Amber topology (`.prmtop`) file.
-    inpcrd_file : str or pathlib.Path
+    inpcrd_file
         The path to an Amber coordinate (`.inpcrd`) file.
-    input_file : str or pathlib.Path
+    input_file
         The path to an Amber/sander input (`.in`) file.
 
     Returns

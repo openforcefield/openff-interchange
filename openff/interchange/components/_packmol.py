@@ -72,7 +72,7 @@ def _find_packmol() -> str | None:
 
     Returns
     -------
-    str, optional
+    packmol_path
         The path to the packmol binary if it could be found, otherwise
         `None`.
 
@@ -108,20 +108,20 @@ def _validate_inputs(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.Molecule
+    molecules
         The molecules in the system.
-    number_of_copies : list of int
+    number_of_copies
         A list of the number of copies of each molecule type, of length
         equal to the length of `molecules`.
-    solute: Topology, optional
+    solute
         The OpenFF Topology to be solvated.
-    box_vectors : openff.units.Quantity,
+    box_vectors
         The box vectors to fill in units compatible with angstroms. If `None`,
         `target_density` must be provided.
-    target_density : openff.units.Quantity, optional
+    target_density
         Target mass density for final system with units compatible with g / mL.
          If `None`, `box_size` must be provided.
-    box_shape: NDArray
+    box_shape
         The shape of the simulation box, used in conjunction with the
         `target_density` parameter. Should have shape (3, 3) with all positive
         elements.
@@ -207,7 +207,7 @@ def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
 
     Parameters
     ----------
-    box_vectors: NDArray
+    box_vectors
         Array with shape (3, 3) representing the box vectors of a triclinic cell
 
     """
@@ -325,14 +325,14 @@ def _box_from_density(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.Molecule
+    molecules
         The molecules in the system.
-    n_copies : list of int
+    n_copies
         The number of copies of each molecule.
-    target_density : openff.units.Quantity
+    target_density
         The target mass density for final system. It should have units
         compatible with g / mL.
-    box_shape: NDArray
+    box_shape
         The shape of the simulation box, used in conjunction with the
         `target_density` parameter. Should have shape (3, 3) with all positive
         elements.
@@ -365,7 +365,6 @@ def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quanti
         3x3 matrix whose rows are the box vectors.
     volume
         Desired scalar volume of the box in units of volume.
-
     box_scaleup_factor
         The factor, applied linearly, by which the estimated box size should be increased.
 
@@ -457,17 +456,17 @@ def _build_input_file(
 
     Parameters
     ----------
-    molecule_file_names: list of str
+    molecule_file_names
         The paths to the molecule pdb files. No file will be produced for molecules where corresponding count is zero.
-    molecule_counts: list of int
+    molecule_counts
         The number of each molecule to add. No file will be produced for molecules where corresponding count is zero.
-    structure_to_solvate: str, optional
+    structure_to_solvate
         The path to the structure to solvate.
-    box_size: openff.units.Quantity
+    box_size
         The lengths of each side of the box we want to fill. This is the box
         size of the rectangular brick representation of the simulation box; the
         packmol box will be shrunk by the tolerance.
-    tolerance: openff.units.Quantity
+    tolerance
         The packmol convergence tolerance.
 
     Returns
@@ -577,31 +576,31 @@ def pack_box(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.Molecule
+    molecules
         The molecules in the system.
-    number_of_copies : list of int
+    number_of_copies
         A list of the number of copies of each molecule type, of length
         equal to the length of ``molecules``. If any element is zero, the
         corresponding molecule is not added.
-    solute: Topology, optional
+    solute
         An OpenFF :py:class:`Topology <openff.toolkit.Topology>` to
         include in the box. If ``box_vectors`` and ``target_density`` are not
         specified, box vectors can be taken from ``solute.box_vectors``.
-    tolerance : openff.units.Quantity
+    tolerance
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,
         values as small as 0.5 Å will converge faster and can still produce
         stable simulations after energy minimisation.
-    box_vectors : openff.units.Quantity, optional
+    box_vectors
         The box vectors to fill in units of distance. If ``None``,
         ``target_density`` must be provided. Array with shape (3,3). Box vectors
         must be provided in `OpenMM reduced form <http://docs.openmm.org/latest/
         userguide/theory/05_other_features.html#periodic-boundary-conditions>`_.
-    target_density : openff.units.Quantity, optional
+    target_density
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_vectors`` must be provided.
-    box_shape: Arraylike
+    box_shape
         The shape of the simulation box, used in conjunction with
         the ``target_density`` parameter. Should be a dimensionless array with
         shape (3,3) for a triclinic box or (3,) for a rectangular box. Shape
@@ -615,10 +614,10 @@ def pack_box(
         the solute will centered at the origin. If ``"brick"``, the solute will
         be centered in the box's rectangular brick representation. If
         ``False`` (the default), the solute will not be moved.
-    working_directory: str, optional
+    working_directory
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
-    retain_working_files: bool
+    retain_working_files
         If ``True`` all of the working files, such as individual molecule
         coordinate files, will be retained.
 
@@ -843,18 +842,18 @@ def solvate_topology(
         molarity. This is used to calculate a mass fraction for the bulk
         solvent and does not represent the actual concentration in the final
         box.
-    padding : Scalar with dimensions of length
+    padding
         The desired distance between the solute and the edge of the box. Ignored
         if the topology already has box vectors. The usual recommendation is
         that this equals or exceeds the VdW cut-off distance, so that the
         solute is isolated by its periodic images by twice the cut-off.
-    box_shape : Array with shape (3, 3)
+    box_shape
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
         padding given above. Some typical shapes are provided in this module.
-    target_density : Scalar with dimensions of mass density
+    target_density
         The target mass density for the packed box.
-    tolerance: Scalar with dimensions of distance
+    tolerance
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,
@@ -983,18 +982,18 @@ def solvate_topology_nonwater(
         The OpenFF Topology to solvate.
     solvent
         The OpenFF Molecule to use as the solvent.
-    padding : Scalar with dimensions of length
+    padding
         The desired distance between the solute and the edge of the box. Ignored
         if the topology already has box vectors. The usual recommendation is
         that this equals or exceeds the VdW cut-off distance, so that the
         solute is isolated by its periodic images by twice the cut-off.
-    box_shape : Array with shape (3, 3)
+    box_shape
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
         padding given above. Some typical shapes are provided in this module.
-    target_density : Scalar with dimensions of mass density
+    target_density
         The target mass density for the packed box.
-    tolerance: Scalar with dimensions of distance
+    tolerance
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,

@@ -45,23 +45,23 @@ def to_openmm_system(
 
     Parameters
     ----------
-    interchange : openff.interchange.Interchange
+    interchange
         An OpenFF Interchange object
-    combine_nonbonded_forces : bool, default=False
+    combine_nonbonded_forces
         If True, an attempt will be made to combine all non-bonded interactions into a single openmm.NonbondedForce.
         If False, non-bonded interactions will be split across multiple forces.
-    add_constrained_forces : bool, default=False,
+    add_constrained_forces
         If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
         on a bond or angle that is fully constrained.
-    ewald_tolerance : float, default=1e-4
+    ewald_tolerance
         The value passed to `NonbondedForce.setEwaldErrorTolerance`
-    hydrogen_mass : PositiveFloat, default=1.007947
+    hydrogen_mass
         The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
         than the default value, mass will be transferred from neighboring heavy atoms.
 
     Returns
     -------
-    system : openmm.System
+    system
         The corresponding OpenMM System object
 
     """

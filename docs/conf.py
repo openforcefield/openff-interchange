@@ -98,6 +98,7 @@ autodoc_default_options = {
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
+autodoc_typehints = "signature"
 autodoc_typehints_format = "short"
 # Workaround for autodoc_typehints_format not working for attributes
 # see https://github.com/sphinx-doc/sphinx/issues/10290#issuecomment-1079740009
