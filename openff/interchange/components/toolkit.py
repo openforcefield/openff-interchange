@@ -129,9 +129,9 @@ def _simple_topology_from_openmm(
 
     Arguments
     ---------
-    openmm_topology: openmm.app.Topology
+    openmm_topology
         The OpenMM Topology to convert.
-    system: openmm.System, optional
+    system
         The OpenMM System associated with the topology. Only needed if there are virtual sites in the topology.
     """
     # TODO: Splice in fully-defined OpenFF `Molecule`s?

@@ -31,24 +31,24 @@ def get_openmm_energies(
 
     Parameters
     ----------
-    interchange : openff.interchange.Interchange
+    interchange
         An OpenFF Interchange object to compute the single-point energy of
-    round_positions : int, optional
+    round_positions
         The number of decimal places, in nanometers, to round positions. This can be useful when
         comparing to i.e. GROMACS energies, in which positions may be rounded.
-    combine_nonbonded_forces : bool, default=False
+    combine_nonbonded_forces
         Whether or not to combine all non-bonded interactions (vdW, short- and long-range
         ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
-    platform : str, default="Reference"
+    platform
         The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
-    detailed : bool, default=False
+    detailed
         Attempt to report energies with more granularity. Requires `combine_nonbonded_forces=False`.
         Not guaranteed to be compatible with non-default values of other arguments. Useful for
         debugging.
 
     Returns
     -------
-    report : EnergyReport
+    report
         An `EnergyReport` object containing the single-point energies.
 
     """
