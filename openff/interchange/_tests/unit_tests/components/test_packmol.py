@@ -508,3 +508,34 @@ class TestPackmolWrapper:
         )
 
         assert topology.n_molecules == 11
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("n_monomers", [1, 2, 3, 4, 5])
+    def test_solvate_topology_uses_topology_box_vectors(self, n_monomers):
+        """Ensure the topology's box vectors are used if they are present."""
+        solute = MoleculeWithConformer.from_smiles(n_monomers * "CC([O-])CC(O)", allow_undefined_stereo=True)
+        solute_topology = solute.to_topology()
+        solute_topology.box_vectors = Quantity(2.0 * UNIT_CUBE, "nm")
+
+        topology = solvate_topology(
+            solute_topology,
+            nacl_conc=1e-3 * unit.molar,
+        )
+
+        assert numpy.all(topology.box_vectors == solute_topology.box_vectors)
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("n_monomers", [1, 2, 3, 4, 5])
+    def test_solvate_topology_nonwater_uses_topology_box_vectors(self, n_monomers):
+        """Ensure the topology's box vectors are used if they are present."""
+        solute = MoleculeWithConformer.from_smiles(n_monomers * "CC([O-])CC(O)", allow_undefined_stereo=True)
+        solute_topology = solute.to_topology()
+        solute_topology.box_vectors = Quantity(4.0 * UNIT_CUBE, "nm")
+
+        topology = solvate_topology_nonwater(
+            solute_topology,
+            solvent=Molecule.from_smiles("CCCCCCO"),
+            target_density=Quantity(0.5, "gram/milliliter"),
+        )
+
+        assert numpy.all(topology.box_vectors == solute_topology.box_vectors)
