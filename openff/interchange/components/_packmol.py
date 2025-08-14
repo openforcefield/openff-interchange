@@ -844,10 +844,10 @@ def solvate_topology(
         solvent and does not represent the actual concentration in the final
         box.
     padding : Scalar with dimensions of length
-        The desired distance between the solute and the edge of the box. Ignored
-        if the topology already has box vectors. The usual recommendation is
-        that this equals or exceeds the VdW cut-off distance, so that the
-        solute is isolated by its periodic images by twice the cut-off.
+        The desired distance between the solute and the edge of the box. The
+        usual recommendation is that this equals or exceeds the VdW cut-off
+        distance, so that the solute is isolated by its periodic images by twice
+        the cut-off.
     box_shape : Array with shape (3, 3)
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
@@ -984,10 +984,10 @@ def solvate_topology_nonwater(
     solvent
         The OpenFF Molecule to use as the solvent.
     padding : Scalar with dimensions of length
-        The desired distance between the solute and the edge of the box. Ignored
-        if the topology already has box vectors. The usual recommendation is
-        that this equals or exceeds the VdW cut-off distance, so that the
-        solute is isolated by its periodic images by twice the cut-off.
+        The desired distance between the solute and the edge of the box. The
+        usual recommendation is that this equals or exceeds the VdW cut-off
+        distance, so that the solute is isolated by its periodic images by twice
+        the cut-off.
     box_shape : Array with shape (3, 3)
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
