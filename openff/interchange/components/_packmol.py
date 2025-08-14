@@ -882,9 +882,12 @@ def solvate_topology(
     _check_box_shape_shape(box_shape)
 
     # Compute box vectors from the solute length and requested padding
-    solute_length = _max_dist_between_points(topology.get_positions())
-    image_distance = solute_length + padding * 2
-    box_vectors = box_shape * image_distance
+    if topology.box_vectors is None:
+        solute_length = _max_dist_between_points(topology.get_positions())
+        image_distance = solute_length + padding * 2
+        box_vectors = box_shape * image_distance
+    else:
+        box_vectors = topology.box_vectors
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
@@ -1019,9 +1022,12 @@ def solvate_topology_nonwater(
     _check_box_shape_shape(box_shape)
 
     # Compute box vectors from the solute length and requested padding
-    solute_length = _max_dist_between_points(topology.get_positions())
-    image_distance = solute_length + padding * 2
-    box_vectors = box_shape * image_distance
+    if topology.box_vectors is None:
+        solute_length = _max_dist_between_points(topology.get_positions())
+        image_distance = solute_length + padding * 2
+        box_vectors = box_shape * image_distance
+    else:
+        box_vectors = topology.box_vectors
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
