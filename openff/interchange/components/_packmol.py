@@ -823,7 +823,7 @@ def _load_positions(output_file_path) -> NDArray:
 def solvate_topology(
     topology: Topology,
     nacl_conc: Quantity = Quantity(0.1, "mole / liter"),
-    padding: Quantity = Quantity(1.2, "nanometer"),
+    padding: Quantity | None = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     target_density: Quantity = Quantity(0.9, "gram / milliliter"),
     tolerance: Quantity = Quantity(2.0, "angstrom"),
@@ -881,10 +881,21 @@ def solvate_topology(
     """
     _check_box_shape_shape(box_shape)
 
-    # Compute box vectors from the solute length and requested padding
-    solute_length = _max_dist_between_points(topology.get_positions())
-    image_distance = solute_length + padding * 2
-    box_vectors = box_shape * image_distance
+    if topology.box_vectors is None:
+        # if input topology does not have box vectors, compute them from the
+        # solute length and requested padding
+        solute_length = _max_dist_between_points(topology.get_positions())
+        image_distance = solute_length + padding * 2
+        box_vectors = box_shape * image_distance
+
+    else:
+        if padding is not None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has defined box vectors and a solvent padding "
+                "distance was also specified. The solvent padding distance must be set to `None` if "
+                "box vectors are already defined on the input topology.",
+                "Either use `padding=None` or set `.box_vectors=None` on the input topology."
+            )
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
@@ -969,7 +980,7 @@ def solvate_topology_nonwater(
     topology: Topology,
     solvent: Molecule,
     target_density: Quantity,
-    padding: Quantity = Quantity(1.2, "nanometer"),
+    padding: Quantity | None = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     tolerance: Quantity = Quantity(2.0, "angstrom"),
     working_directory: str | None = None,
@@ -1018,10 +1029,21 @@ def solvate_topology_nonwater(
     """
     _check_box_shape_shape(box_shape)
 
-    # Compute box vectors from the solute length and requested padding
-    solute_length = _max_dist_between_points(topology.get_positions())
-    image_distance = solute_length + padding * 2
-    box_vectors = box_shape * image_distance
+    if topology.box_vectors is None:
+        # if input topology does not have box vectors, compute them from the
+        # solute length and requested padding
+        solute_length = _max_dist_between_points(topology.get_positions())
+        image_distance = solute_length + padding * 2
+        box_vectors = box_shape * image_distance
+
+    else:
+        if padding is not None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has defined box vectors and a solvent padding "
+                "distance was also specified. The solvent padding distance must be set to `None` if "
+                "box vectors are already defined on the input topology.",
+                "Either use `padding=None` or set `.box_vectors=None` on the input topology."
+            )
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
