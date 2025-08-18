@@ -38,3 +38,5 @@ dependencies:
   - pdbfixer
   - openeye-toolkits =2024.1.0
   - rich
+  - pip:
+      - git+https://github.com/openforcefield/openff-toolkit.git@main
