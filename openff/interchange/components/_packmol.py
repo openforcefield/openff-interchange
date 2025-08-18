@@ -631,6 +631,8 @@ def pack_box(
     ------
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
+    PACKMOLValueError
+        When an input(s) are invalid or inconsistent.
 
     Notes
     -----
@@ -843,11 +845,13 @@ def solvate_topology(
         molarity. This is used to calculate a mass fraction for the bulk
         solvent and does not represent the actual concentration in the final
         box.
-    padding : Scalar with dimensions of length
-        The desired distance between the solute and the edge of the box. Ignored
-        if the topology already has box vectors. The usual recommendation is
-        that this equals or exceeds the VdW cut-off distance, so that the
-        solute is isolated by its periodic images by twice the cut-off.
+    padding
+        The desired distance between the solute and the edge of the box.  The
+        usual recommendation is that this equals or exceeds the VdW cut-off
+        distance, so that the solute is isolated by its periodic images by twice
+        the cut-off.  Must be set to `None` if the input topology has box
+        vectors.  Must be specified if the input topology does not have box
+        vectors.
     box_shape : Array with shape (3, 3)
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
@@ -870,6 +874,8 @@ def solvate_topology(
     ------
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
+    PACKMOLValueError
+        When an input(s) are invalid or inconsistent.
 
     Notes
     -----
@@ -882,6 +888,13 @@ def solvate_topology(
     _check_box_shape_shape(box_shape)
 
     if topology.box_vectors is None:
+        if padding is None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has no box vectors and a solvent padding "
+                "distance was not specified. The solvent padding distance must be non-`None` if "
+                "box vectors are not defined on the input topology.",
+            )
+
         # if input topology does not have box vectors, compute them from the
         # solute length and requested padding
         solute_length = _max_dist_between_points(topology.get_positions())
@@ -894,8 +907,10 @@ def solvate_topology(
                 "Incompatible inputs: input topology has defined box vectors and a solvent padding "
                 "distance was also specified. The solvent padding distance must be set to `None` if "
                 "box vectors are already defined on the input topology.",
-                "Either use `padding=None` or set `.box_vectors=None` on the input topology."
+                "Either use `padding=None` or set `.box_vectors=None` on the input topology.",
             )
+
+        box_vectors = topology.box_vectors
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
@@ -994,11 +1009,13 @@ def solvate_topology_nonwater(
         The OpenFF Topology to solvate.
     solvent
         The OpenFF Molecule to use as the solvent.
-    padding : Scalar with dimensions of length
-        The desired distance between the solute and the edge of the box. Ignored
-        if the topology already has box vectors. The usual recommendation is
-        that this equals or exceeds the VdW cut-off distance, so that the
-        solute is isolated by its periodic images by twice the cut-off.
+    padding
+        The desired distance between the solute and the edge of the box.  The
+        usual recommendation is that this equals or exceeds the VdW cut-off
+        distance, so that the solute is isolated by its periodic images by twice
+        the cut-off.  Must be set to `None` if the input topology has box
+        vectors.  Must be specified if the input topology does not have box
+        vectors.
     box_shape : Array with shape (3, 3)
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
@@ -1021,6 +1038,8 @@ def solvate_topology_nonwater(
     ------
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
+    PACKMOLValueError
+        When an input(s) are invalid or inconsistent.
 
     Notes
     -----
@@ -1030,6 +1049,13 @@ def solvate_topology_nonwater(
     _check_box_shape_shape(box_shape)
 
     if topology.box_vectors is None:
+        if padding is None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has no box vectors and a solvent padding "
+                "distance was not specified. The solvent padding distance must be non-`None` if "
+                "box vectors are not defined on the input topology.",
+            )
+
         # if input topology does not have box vectors, compute them from the
         # solute length and requested padding
         solute_length = _max_dist_between_points(topology.get_positions())
@@ -1042,8 +1068,10 @@ def solvate_topology_nonwater(
                 "Incompatible inputs: input topology has defined box vectors and a solvent padding "
                 "distance was also specified. The solvent padding distance must be set to `None` if "
                 "box vectors are already defined on the input topology.",
-                "Either use `padding=None` or set `.box_vectors=None` on the input topology."
+                "Either use `padding=None` or set `.box_vectors=None` on the input topology.",
             )
+
+        box_vectors = topology.box_vectors
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3

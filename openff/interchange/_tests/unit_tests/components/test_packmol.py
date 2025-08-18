@@ -508,3 +508,82 @@ class TestPackmolWrapper:
         )
 
         assert topology.n_molecules == 11
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("solvation_function", ["solvate_topology", "solvate_topology_nonwater"])
+    @pytest.mark.parametrize("n_monomers", [1, 3, 5])
+    def test_solvate_topology_uses_topology_box_vectors(self, solvation_function, n_monomers):
+        """Ensure the topology's box vectors are used if they are present."""
+        solute = MoleculeWithConformer.from_smiles(n_monomers * "CC([O-])CC(O)", allow_undefined_stereo=True)
+        solute_topology = solute.to_topology()
+        solute_topology.box_vectors = Quantity(2.0 * UNIT_CUBE, "nm")
+
+        match solvation_function.__name__:
+            case "solvate_topology":
+                topology = solvation_function(
+                    solute_topology,
+                    nacl_conc=1e-3 * unit.molar,
+                )
+            case "solvate_topology_nonwater":
+                topology = solvation_function(
+                    solute_topology,
+                    solvent=Molecule.from_smiles("CCCCCCO"),
+                    target_density=Quantity(0.5, "gram/milliliter"),
+                )
+
+        assert numpy.all(topology.box_vectors == solute_topology.box_vectors)
+
+    @pytest.mark.parametrize("solvation_function", ["solvate_topology", "solvate_topology_nonwater"])
+    def test_padding_overspecified(self, solvation_function):
+        solute_topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
+
+        match solvation_function.__name__:
+            case "solvate_topology":
+                args = tuple(
+                    solute_topology,
+                    nacl_conc=1e-3 * unit.molar,
+                )
+            case "solvate_topology_nonwater":
+                args = tuple(
+                    solute_topology,
+                    solvent=Molecule.from_smiles("CCCCCCO"),
+                    target_density=Quantity(0.5, "gram/milliliter"),
+                )
+
+        # no box, default padding (1.2 nm), should pack without error
+        packed_topology1 = solvation_function(*args)
+
+        # not sure how reproducible box vectors are with padding argument, so be loose
+        # this molecule gets me box vectors ~2.8 nm locally, which is roughly twice padding
+        # with an extra bit for the approximate molecule size
+        assert numpy.allclose(
+            packed_topology1.box_vectors.m_as("nanometer"),
+            2.8 * numpy.eye(3),
+            atol=0.2,
+        )
+
+        # no box, no padding should raise an error
+        with pytest.raises(
+            PACKMOLValueError,
+            match="Incompatible inputs: input topology has no box vectors and a solvent padding "
+            "distance was not specified.",
+        ):
+            solvation_function(*args, padding=None)
+
+        solute_topology.box_vectors = Quantity(2.123 * UNIT_CUBE, "nm")
+
+        # with box, default padding should raise an error
+        with pytest.raises(
+            PACKMOLValueError,
+            match="Incompatible inputs.*input topology has defined box vectors and a "
+            "solvent padding distance was also specified",
+        ):
+            solvation_function(*args)
+
+        # with box, no padding should pack
+        packed_topology2 = solvation_function(*args, padding=None)
+
+        numpy.testing.assert_allclose(
+            packed_topology2.box_vectors.m_as(unit.nanometer).diagonal(),
+            [2.123, 2.123, 2.123],
+        )
