@@ -8,7 +8,7 @@ dependencies:
   - numpy <2.3
   - pydantic =2
   # OpenFF stack
-  - openff-toolkit-base ~=0.16.8
+  - openff-toolkit-base =0.17
   - openff-units =0.3
   - ambertools =24
   # Needs to be explicitly listed to not be dropped when AmberTools is removed
@@ -36,6 +36,3 @@ dependencies:
   - types-setuptools
   - pandas-stubs
   # Temporary testing dep
-  - pip:
-      - git+https://github.com/openforcefield/openff-toolkit.git@naglcharges-handler
-      - git+https://github.com/openforcefield/openff-nagl-models.git@main
