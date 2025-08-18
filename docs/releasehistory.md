@@ -11,11 +11,24 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.4.4 - 2025-07-29
+
+### Behavior changes
+
+* #1273 In `solvate_topology`, ions counts are determined using the SLTCAP method.
+
+### Bug fixes
+
+* #1273 `solvate_topology` now returns a charge-neutral topology.
+* #1272 In `pack_box` and other Packmol-wrapping functions, molecules with zero count are skipped.
 
 ### Miscellaneous improvements
 
 * #1263 Removes `importlib_metadata` backport when loading plugins.
+
+### Documentation improvements
+
+* #1259 Remove obsolete warnings of experimental/unstable status
 
 ## 0.4.3 - 2025-07-11
 
