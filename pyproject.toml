@@ -12,10 +12,9 @@ description = "A project (and object) for storing, manipulating, and converting 
 readme = "README.md"
 license = { text = "MIT" }
 authors = [ { name = "Open Force Field Initiative", email = "info@openforcefield.org" } ]
+requires-python = ">=3.11"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
