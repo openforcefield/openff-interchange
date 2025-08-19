@@ -35,4 +35,3 @@ dependencies:
   - typing-extensions
   - types-setuptools
   - pandas-stubs
-  # Temporary testing dep
