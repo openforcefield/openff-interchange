@@ -1,14 +1,16 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
     LibraryChargeHandler,
+    NAGLChargesHandler,
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
-from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
+from openff.toolkit.utils.exceptions import MissingPackageError, SMIRNOFFVersionError
+from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 from packaging.version import Version
 
 from openff.interchange import Interchange
@@ -134,6 +136,501 @@ class TestNonbonded:
         else:
             assert not uses_elf10
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
+
+    def test_nagl_charge_assignment_matches_reference(self, sage_nagl, hexane_diol):
+        hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        # Leave the ToolkitAM1BCC tag in openff-2.1.0 to ensure that the NAGLCharges handler takes precedence
+
+        interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
+
+        assigned_charges_unitless = interchange["Electrostatics"].get_charge_array().m
+
+        expected_charges = hexane_diol.partial_charges
+        assert expected_charges is not None
+        assert expected_charges.units == unit.elementary_charge
+        assert not all(charge == 0 for charge in expected_charges.magnitude)
+        expected_charges_unitless = [v.m for v in expected_charges]
+        numpy.testing.assert_allclose(expected_charges_unitless, assigned_charges_unitless)
+
+
+class TestNAGLChargesErrorHandling:
+    """Test NAGLCharges error conditions."""
+
+    def test_nagl_charges_missing_toolkit_error(self, sage_nagl, hexane_diol):
+        """Test MissingPackageError when NAGL toolkit is not available. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by NAGL if it were available."""
+
+        # Mock the toolkit registry to not have NAGL
+        # RDKit is needed for SMARTS matching.
+        with toolkit_registry_manager(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])):
+            with pytest.raises(MissingPackageError, match="NAGL software isn't present"):
+                sage_nagl.create_interchange(topology=hexane_diol.to_topology())
+
+            # No error should be raised if using charge_from_molecules
+            sage_nagl.create_interchange(
+                topology=hexane_diol.to_topology(),
+                charge_from_molecules=[hexane_diol],
+            )
+
+    def test_nagl_charges_invalid_model_file(self, sage, hexane_diol):
+        """Test error handling for invalid model file paths. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by this model it had been able to find it."""
+        sage.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "nonexistent_model.pt",
+                "version": "0.3",
+            },
+        )
+        with pytest.raises(FileNotFoundError):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+        sage["NAGLCharges"].model_file = ""
+        with pytest.raises(FileNotFoundError):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+        sage["NAGLCharges"].model_file = None
+        with pytest.raises(FileNotFoundError):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+    def test_nagl_charges_bad_hash(self, sage, hexane_diol, monkeypatch):
+        """Test error handling for a bad hash. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by this model if the hash comparison hadn't failed."""
+        from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
+
+        sage.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                "model_file_hash": "bad_hash",
+                "version": "0.3",
+            },
+        )
+        with pytest.raises(HashComparisonFailedException):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+    def test_nagl_charges_bad_doi(self, sage, hexane_diol, monkeypatch):
+        """Test error handling for a bad DOI. This should fail immediately instead of falling
+        back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
+        had charges assigned by this model, since it's unfetchable."""
+        from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
+
+        sage.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "nonexistent_model.pt",
+                "digital_object_identifier": "blah.foo/bar",
+                "version": "0.3",
+            },
+        )
+        with pytest.raises(UnableToParseDOIException):
+            sage.create_interchange(topology=hexane_diol.to_topology())
+
+    # For more information on why this test is skipped, see
+    # https://github.com/openforcefield/openff-interchange/pull/1206/commits/f99a10e17ad56235ba1f36ae35f6383a22ed840a#r2248864028
+    @pytest.mark.xfail(
+        reason="charge assignment handler fallback behavior not yet implemented",
+        raises=ValueError,
+    )
+    def test_nagl_charges_fallback_to_charge_increment_model(self, sage):
+        """Test that NAGL falls back to ChargeIncrementModel when molecule contains unsupported elements."""
+        pytest.importorskip("openff.nagl")
+
+        # Create a boron-containing molecule with nonzero formal charge
+        # BF4- anion - boron is not supported by current NAGL models
+        boron_molecule = Molecule.from_smiles("[B-]([F])([F])([F])[F]")
+
+        # Verify formal charges are not all zero
+        formal_charges = [atom.formal_charge.m for atom in boron_molecule.atoms]
+        assert not all(charge == 0 for charge in formal_charges)
+
+        # Create minimal force field with only the needed handlers
+        ff = ForceField()
+
+        # Add Electrostatics handler
+        ff.register_parameter_handler(
+            ElectrostaticsHandler(version="0.4"),
+        )
+
+        # Add NAGLCharges handler
+        ff.register_parameter_handler(
+            NAGLChargesHandler(
+                version="0.3",
+                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            ),
+        )
+
+        # Add ChargeIncrementModel handler with formal_charge method and no increments
+        charge_increment_handler = ChargeIncrementModelHandler(
+            version="0.3",
+            partial_charge_method="formal_charge",
+        )
+        ff.register_parameter_handler(charge_increment_handler)
+
+        # Should succeed despite NAGL not supporting boron
+        interchange = ff.create_interchange(topology=boron_molecule.to_topology())
+
+        # Should have assigned charges to all atoms
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # Assigned charges should match formal charges (fallback to ChargeIncrementModel)
+        expected_charges = [atom.formal_charge.m for atom in boron_molecule.atoms]
+        numpy.testing.assert_allclose(assigned_charges.m, expected_charges)
+
+        # Net charge should match molecule's total formal charge
+        assert abs(sum(assigned_charges.m) - boron_molecule.total_charge.m) < 1e-10
+
+    @pytest.mark.xfail(
+        reason="charge assignment handler fallback behavior not yet implemented",
+        raises=ValueError,
+    )
+    def test_nagl_charges_all_handlers_fail_comprehensive_error(self, sage):
+        """Test error reporting when all charge assignment methods fail."""
+        pytest.importorskip("openff.nagl")
+
+        # Create a uranium compound - not supported by any current charge assignment method
+        uranium_molecule = Molecule.from_smiles("[U+4]")
+
+        # Create force field with multiple charge assignment handlers
+        ff = ForceField()
+
+        # Add Electrostatics handler
+        ff.register_parameter_handler(
+            ElectrostaticsHandler(version="0.4"),
+        )
+
+        # Add NAGLCharges handler
+        ff.register_parameter_handler(
+            NAGLChargesHandler(
+                version="0.3",
+                model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            ),
+        )
+
+        # Add ToolkitAM1BCC handler
+        ff.register_parameter_handler(
+            ToolkitAM1BCCHandler(version="0.3"),
+        )
+
+        # Add ChargeIncrementModel handler with gasteiger method
+        charge_increment_handler = ChargeIncrementModelHandler(
+            version="0.3",
+            partial_charge_method="mmff94",
+        )
+        ff.register_parameter_handler(charge_increment_handler)
+
+        # Should fail with comprehensive error message
+        with pytest.raises(RuntimeError) as excinfo:
+            ff.create_interchange(topology=uranium_molecule.to_topology())
+
+        error_message = str(excinfo.value)
+
+        # Error should mention that no charges could be assigned
+        assert "could not be fully assigned charges" in error_message
+
+        # Error should contain information about each handler's failure
+        assert "NAGLCharges" in error_message
+        assert "ToolkitAM1BCC" in error_message
+        assert "ChargeIncrementModel" in error_message
+
+        # Should mention the exceptions raised by various handlers
+        assert "exceptions raised by various handlers" in error_message
+
+
+class TestNAGLChargesPrecedence:
+    """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
+
+    def test_nagl_charges_precedence_over_am1bcc(self, sage_nagl, hexane_diol):
+        """Test that NAGLCharges takes precedence over ToolkitAM1BCC."""
+        sage_nagl.get_parameter_handler("ToolkitAM1BCC", {"version": "0.3"})
+        # Get reference charges from NAGL
+        hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        nagl_charges = [c.m for c in hexane_diol.partial_charges]
+
+        # Get reference charges from AM1BCC
+        hexane_diol.assign_partial_charges("am1bcc")
+        am1bcc_charges = [c.m for c in hexane_diol.partial_charges]
+
+        # Ensure they're different
+        assert not numpy.allclose(nagl_charges, am1bcc_charges)
+
+        interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # Should match NAGL charges, not AM1BCC
+        numpy.testing.assert_allclose(assigned_charges, nagl_charges)
+
+    def test_library_charges_precedence_over_nagl(self, sage_nagl, methane):
+        """Test that LibraryCharges takes precedence over NAGLCharges."""
+
+        sage_nagl["LibraryCharges"].add_parameter(
+            {
+                "smirks": "[#6X4:1]-[#1:2]",
+                "charge1": -0.2 * unit.elementary_charge,
+                "charge2": 0.05 * unit.elementary_charge,
+            },
+        )
+
+        interchange = sage_nagl.create_interchange(topology=methane.to_topology())
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # Should match library charges
+        expected_charges = [-0.2, 0.05, 0.05, 0.05, 0.05]
+        numpy.testing.assert_allclose(assigned_charges, expected_charges)
+
+    def test_nagl_charges_precedence_over_charge_increments(self, sage_nagl, hexane_diol):
+        """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
+
+        # Get reference charges from NAGL
+        hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        nagl_charges = [c.m for c in hexane_diol.partial_charges]
+
+        # Add ChargeIncrementModel handler (should provide base charges, not increments)
+        increment_handler = ChargeIncrementModelHandler(
+            version=0.3,
+            partial_charge_method="formal_charge",
+        )
+        sage_nagl.register_parameter_handler(increment_handler)
+
+        interchange = sage_nagl.create_interchange(topology=hexane_diol.to_topology())
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # Should match NAGL charges, not formal charges
+        numpy.testing.assert_allclose(assigned_charges, nagl_charges)
+
+
+class TestNAGLChargesIntegration:
+    """Test NAGLCharges integration with other handlers."""
+
+    def test_nagl_charges_multi_molecule_topology(self, sage_nagl):
+        """Test NAGLCharges with multiple molecules in topology."""
+        methane = Molecule.from_smiles("C")
+        ethane = Molecule.from_smiles("CC")
+
+        topology = Topology.from_molecules([methane, ethane])
+
+        interchange = sage_nagl.create_interchange(topology=topology)
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # Each molecule should have approximately zero net charge
+        methane_charge_sum = sum(assigned_charges[: methane.n_atoms])
+        ethane_charge_sum = sum(assigned_charges[methane.n_atoms :])
+
+        assert abs(methane_charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs(ethane_charge_sum) < 1e-10 * unit.elementary_charge
+
+    def test_nagl_charges_with_virtual_sites(self, sage_with_bond_charge):
+        """Test NAGLCharges compatibility with virtual sites."""
+
+        # Create a molecule that would have virtual sites
+        molecule = Molecule.from_smiles("[Cl]CCO")
+
+        # Add NAGLCharges to the force field
+        sage_with_bond_charge.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                "version": "0.3",
+            },
+        )
+
+        # Should not raise an error
+        interchange = sage_with_bond_charge.create_interchange(
+            topology=molecule.to_topology(),
+        )
+
+        # Should have charges for real atoms
+        assigned_charges = interchange["Electrostatics"]._get_charges()
+        assert len(assigned_charges.values()) - 1 == molecule.n_atoms
+
+        # Net charge should be approximately zero
+        all_particle_charge_sum = sum(assigned_charges.values())
+        assert abs(all_particle_charge_sum) < 1e-10 * unit.elementary_charge
+        # Charge without the vsite should be nonzero
+        atom_charge_sum = sum([charge for tk, charge in assigned_charges.items() if tk.atom_indices is not None])
+        assert abs(atom_charge_sum - (0.123 * unit.elementary_charge)) < 1e-10 * unit.elementary_charge
+
+    def test_nagl_charges_force_field_creation_complete(self, hexane_diol):
+        """Test complete interchange creation with NAGLCharges."""
+
+        ff = ForceField("openff-2.1.0.offxml")
+        ff.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                "version": "0.3",
+            },
+        )
+
+        # Should create complete interchange without errors
+        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
+
+        # Should have all expected collections
+        expected_collections = ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions", "vdW", "Electrostatics"]
+        for collection_name in expected_collections:
+            assert collection_name in interchange.collections
+
+        # Electrostatics should have charges
+        charges = interchange["Electrostatics"].get_charge_array()
+        assert len(charges) == hexane_diol.n_atoms
+
+        # Net charge should be approximately zero
+        total_charge = sum(charge.m for charge in charges)
+        assert abs(total_charge) < 1e-10
+
+    def test_nagl_charges_identical_molecules_same_charges(self):
+        """Test that identical molecules get identical charges from NAGLCharges."""
+
+        # Create topology with two identical molecules
+        molecule1 = Molecule.from_smiles("CCO")
+        molecule2 = Molecule.from_smiles("CCO")
+        topology = Topology.from_molecules([molecule1, molecule2])
+
+        ff = ForceField("openff-2.1.0.offxml")
+        ff.get_parameter_handler(
+            "NAGLCharges",
+            {
+                "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+                "version": "0.3",
+            },
+        )
+
+        interchange = ff.create_interchange(topology=topology)
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # First molecule charges
+        mol1_charges = assigned_charges[: molecule1.n_atoms]
+        # Second molecule charges
+        mol2_charges = assigned_charges[molecule1.n_atoms :]
+
+        # Should be identical
+        numpy.testing.assert_allclose(mol1_charges, mol2_charges)
+
+    def test_nagl_charges_with_charge_from_molecules(self, sage_nagl, hexane_diol):
+        """Test that charge_from_molecules takes precedence over NAGLCharges."""
+        # Assign preset charges using a different method
+        hexane_diol.assign_partial_charges("gasteiger")
+        preset_charges = [c.m for c in hexane_diol.partial_charges]
+
+        # Create interchange with charge_from_molecules - should use preset charges
+        interchange = sage_nagl.create_interchange(
+            topology=hexane_diol.to_topology(),
+            charge_from_molecules=[hexane_diol],
+        )
+
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # Should match preset charges, not NAGL charges
+        numpy.testing.assert_allclose(assigned_charges.m, preset_charges)
+
+        # Verify NAGL would give different charges
+        hexane_diol_copy = Molecule.from_smiles(hexane_diol.to_smiles())
+        hexane_diol_copy.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        nagl_charges = [c.m for c in hexane_diol_copy.partial_charges]
+
+        # Preset and NAGL charges should be different
+        assert not numpy.allclose(preset_charges, nagl_charges, atol=1e-3)
+
+    def test_nagl_charges_with_mixed_charge_sources(self, sage_nagl):
+        """Test NAGLCharges with some molecules having preset charges and others not."""
+        # Create molecules
+        ethanol = Molecule.from_smiles("CCO")
+        methanol = Molecule.from_smiles("CO")
+
+        # Assign preset charges to only one molecule
+        ethanol.assign_partial_charges("gasteiger")
+        preset_ethanol_charges = [c.m for c in ethanol.partial_charges]
+
+        topology = Topology.from_molecules([ethanol, methanol])
+
+        # Create interchange with preset charges for ethanol only
+        interchange = sage_nagl.create_interchange(
+            topology=topology,
+            charge_from_molecules=[ethanol],
+        )
+
+        assigned_charges = interchange["Electrostatics"].get_charge_array()
+
+        # First molecule (ethanol) should match preset charges
+        ethanol_charges = assigned_charges[: ethanol.n_atoms]
+        numpy.testing.assert_allclose(ethanol_charges.m, preset_ethanol_charges)
+
+        # Second molecule (methanol) should get NAGL charges
+        methanol_charges = assigned_charges[ethanol.n_atoms :]
+
+        # Get reference NAGL charges for methanol
+        methanol_copy = Molecule.from_smiles("CO")
+        methanol_copy.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
+        nagl_methanol_charges = [c.m for c in methanol_copy.partial_charges]
+
+        numpy.testing.assert_allclose(methanol_charges.m, nagl_methanol_charges)
+
+    @pytest.mark.slow
+    def test_nagl_charges_large_molecule_performance(self, sage_nagl):
+        """Test that NAGL charge assignment completes in reasonable time for large molecules."""
+        import time
+
+        # Create a very large molecule
+        large_molecule = Molecule.from_smiles("C" * 200)  # 200-carbon alkane chain
+
+        start_time = time.time()
+
+        # Should complete without error
+        interchange = sage_nagl.create_interchange(topology=large_molecule.to_topology())
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Should complete within reasonable time (less than 30 seconds)
+        assert execution_time < 30.0, f"NAGL charge assignment took {execution_time:.2f}s, which is too long"
+
+        # Net charge should be approximately zero
+        charges = interchange["Electrostatics"].get_charge_array()
+        total_charge = sum(charges.m)
+        assert abs(total_charge) < 1e-10
+
+    @pytest.mark.slow
+    def test_nagl_charges_multiple_large_molecules_performance(self, sage_nagl):
+        """Test performance with multiple large molecules in topology."""
+        import time
+
+        # Create multiple copies of medium-sized molecules
+        base_molecules = [
+            Molecule.from_smiles("C" * 20),  # 20-carbon chain
+            Molecule.from_smiles("C" * 25),  # 25-carbon chain
+            Molecule.from_smiles("C" * 30),  # 30-carbon chain
+        ]
+
+        # Create 20 copies of each
+        molecules = []
+        for _ in range(20):
+            for base_mol in base_molecules:
+                molecules.append(base_mol)
+
+        topology = Topology.from_molecules(molecules)
+
+        start_time = time.time()
+
+        # Should complete without error
+        interchange = sage_nagl.create_interchange(topology=topology)
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Should complete within reasonable time
+        assert execution_time < 30.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
+
+        # Each molecule should have approximately zero net charge
+        charges = interchange["Electrostatics"].get_charge_array()
+        start_idx = 0
+        for molecule in molecules:
+            mol_charges = charges[start_idx : start_idx + molecule.n_atoms]
+            mol_total_charge = sum(mol_charges.m)
+            assert abs(mol_total_charge) < 1e-10
+            start_idx += molecule.n_atoms
 
     @pytest.mark.skip(
         reason="Turn on if toolkit ever allows non-standard scale12/13/15",

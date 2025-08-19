@@ -69,7 +69,7 @@ def _check_supported_handlers(force_field: ForceField):
     unsupported = list()
 
     for handler_name in force_field.registered_parameter_handlers:
-        if handler_name in {"ToolkitAM1BCC"}:
+        if handler_name in {"ToolkitAM1BCC", "NAGLCharges"}:
             continue
         if handler_name not in _SUPPORTED_PARAMETER_HANDLERS:
             unsupported.append(handler_name)
@@ -348,6 +348,7 @@ def _electrostatics(
                         force_field._parameter_handlers.get(name, None)
                         for name in [
                             "Electrostatics",
+                            "NAGLCharges",
                             "ChargeIncrementModel",
                             "ToolkitAM1BCC",
                             "LibraryCharges",
