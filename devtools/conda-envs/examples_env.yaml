@@ -36,5 +36,5 @@ dependencies:
   - openmmforcefields
   - jax
   - pdbfixer
-  - openeye-toolkits =2024.1.0
+  - openeye-toolkits =2025
   - rich
