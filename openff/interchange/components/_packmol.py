@@ -72,9 +72,7 @@ def _find_packmol() -> str | None:
 
     Returns
     -------
-    packmol_path
-        The path to the packmol binary if it could be found, otherwise
-        `None`.
+    The path to the packmol binary if it could be found, otherwise `None`.
 
     """
     return shutil.which("packmol")
