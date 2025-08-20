@@ -48,12 +48,12 @@ def _get_per_atom_exclusion_lists(
 
     Parameters
     ----------
-    topology: Topology
+    topology
         OpenFF Topology
 
     Returns
     -------
-    per_atom_exclusions: dict[int, list[int]]
+    per_atom_exclusions
         keys: atom indices (OpenFF atoms, zero-indexed)
         values: defaultdict[int, list[int]]
             list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom,
@@ -101,7 +101,7 @@ def _get_exclusion_lists(
 
     Parameters
     ----------
-    per_atom_exclusions: dict[int, list[int]]
+    per_atom_exclusions
         keys: atom indices (OpenFF atoms, zero-indexed)
         values: list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom
 
@@ -109,9 +109,9 @@ def _get_exclusion_lists(
 
     Returns
     -------
-    number_excluded_atoms: list[int]
+    number_excluded_atoms
         Number of excluded atoms for each atom (OpenFF atoms, zero-indexed)
-    excluded_atoms_list: list[int]
+    excluded_atoms_list
         Flattened list of per-atom exclusions (Amber atoms, one-indexed).
         See EXCLUDED_ATOMS_LIST in https://ambermd.org/prmtop.pdf
 

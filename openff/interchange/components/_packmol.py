@@ -339,7 +339,7 @@ def _box_from_density(
 
     Returns
     -------
-    box_vectors: openff.units.Quantity
+    box_vectors
         The unit cell box vectors. Array with shape (3, 3)
 
     """

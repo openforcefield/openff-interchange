@@ -75,7 +75,7 @@ def _virtual_site_parent_molecule_mapping(
 
     Returns
     -------
-    mapping: dict[VirtualSiteKey, int]
+    mapping
         A dictionary mapping virtual site keys to the index of the molecule they belong to.
 
     """

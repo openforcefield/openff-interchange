@@ -84,7 +84,7 @@ def _run_sander(
 
     Returns
     -------
-    energies: dict[str, Quantity]
+    energies
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
