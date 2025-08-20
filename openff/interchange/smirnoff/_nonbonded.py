@@ -48,7 +48,11 @@ from openff.interchange.warnings import ForceFieldModificationWarning
 logger = logging.getLogger(__name__)
 
 ElectrostaticsHandlerType = (
-    ElectrostaticsHandler | ToolkitAM1BCCHandler | ChargeIncrementModelHandler | LibraryChargeHandler | NAGLChargesHandler
+    ElectrostaticsHandler
+    | ToolkitAM1BCCHandler
+    | ChargeIncrementModelHandler
+    | LibraryChargeHandler
+    | NAGLChargesHandler
 )
 
 _ZERO_CHARGE = Quantity(0.0, "elementary_charge")
