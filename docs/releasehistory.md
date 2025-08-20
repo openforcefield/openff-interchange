@@ -11,11 +11,19 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## 0.4.5 - 2025-08-19
+## 0.4.5 - 2025-08-20
 
 ### New features
 
 * #1206 Support `<NAGLCharges>` tags in SMIRNOFF force fields.
+
+### Bug fixes
+
+* #1275 Fix JSON deserialization with preset charges
+
+### Documentation improvements
+
+* #1294 Fix `box_shape` docstring.
 
 ## 0.4.4 - 2025-07-29
 
