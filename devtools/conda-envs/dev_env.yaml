@@ -7,19 +7,18 @@ dependencies:
   - python
   - pip
   - versioningit
-  - pip
   - numpy <2.3
   - pydantic =2
   # OpenFF stack
-  - openff-toolkit-base ~=0.16.6
+  - openff-toolkit-base =0.17
   - openff-units
   - ambertools =23
   # Optional features
   - openmm =8.2
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
-  - openff-nagl ~=0.5
-  - openff-nagl-models ~=0.3
+  - openff-nagl
+  - openff-nagl-models
   - mbuild ~=0.18
   - foyer =1
   - gmso ~=0.12
@@ -34,7 +33,7 @@ dependencies:
   # Testing
   - mdtraj
   - intermol
-  - openeye-toolkits >=2023.2
+  - openeye-toolkits >=2025
   - pytest
   - pytest-cov
   - pytest-xdist
