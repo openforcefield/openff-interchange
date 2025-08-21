@@ -144,7 +144,14 @@ class MDConfig(_BaseModel):
             electrostatics.cutoff = self.coul_cutoff
 
     def write_mdp_file(self, mdp_file: str = "auto_generated.mdp") -> None:
-        """Write a GROMACS `.mdp` file for running single-point energies."""
+        """
+        Write a GROMACS `.mdp` file for running single-point energies.
+
+        Parameters
+        ----------
+        mdp_file
+            The name of the file to write the input to, defaults to `auto_generated.mdp`.
+        """
         # Construct the MDP file in memory so nothing is written to disk if an
         # error is encountered.
         with StringIO() as mdp:
@@ -215,7 +222,18 @@ class MDConfig(_BaseModel):
         input_file: str = "run.in",
         data_file: str = "out.lmp",
     ) -> None:
-        """Write a LAMMPS input file for running single-point energies."""
+        """
+        Write a LAMMPS input file for running single-point energies.
+
+        Parameters
+        ----------
+        interchange
+            The `Interchange` used when preparing this LAMMPS input.
+        input_file
+            The name of the file to write the input to, defaults to `run.in`.
+        data_file
+            The name of the file to write the data to, defaults to `out.lmp`.
+        """
         # TODO: Get constrained angles
         # TODO: Process rigid water
 
@@ -389,8 +407,19 @@ class MDConfig(_BaseModel):
             # No errors, safe to write to disk!
             Path(input_file).write_text(lmp.getvalue())
 
-    def write_sander_input_file(self, input_file: str = "run.in") -> None:
-        """Write a Sander input file for running single-point energies."""
+    def write_sander_input_file(
+        self,
+        input_file: str = "run.in",
+    ) -> None:
+        """
+        Write a Sander input file for running single-point energies.
+
+        Parameters
+        ----------
+        input_file
+            The name of the file to write the input to, defaults to `run.in`.
+
+        """
         # Construct the file in memory so nothing is written to disk if an
         # error is encountered.
         with StringIO() as sander:
@@ -478,7 +507,20 @@ def _infer_constraints(interchange: "Interchange") -> str:
 
 
 def get_smirnoff_defaults(periodic: bool = False) -> MDConfig:
-    """Return an `MDConfig` object that matches settings used in SMIRNOFF force fields (through Sage)."""
+    """
+    Return an `MDConfig` object that matches settings used in SMIRNOFF force fields (through Sage).
+
+    Parameters
+    ----------
+    periodic
+        Whether to use periodic boundary conditions.
+
+    Returns
+    -------
+    config
+        An `MDConfig` object with settings that match those used in SMIRNOFF force fields.
+
+    """
     return MDConfig(
         periodic=periodic,
         constraints="h-bonds",
@@ -504,12 +546,12 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
 
     Parameters
     ----------
-    periodic: bool, default=False
+    periodic
         Whether to use periodic boundary conditions.
 
     Returns
     -------
-    config: MDConfig
+    config
         An `MDConfig` object with settings that match those used in InterMol tests.
 
     """

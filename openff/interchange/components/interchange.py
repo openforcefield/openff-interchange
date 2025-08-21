@@ -116,8 +116,8 @@ class Interchange(_BaseModel):
         cls,
         force_field: "ForceField",
         topology: Topology | list[Molecule],
-        box=None,
-        positions=None,
+        box: Quantity | None = None,
+        positions: Quantity | None = None,
         charge_from_molecules: list[Molecule] | None = None,
         partial_bond_orders_from_molecules: list[Molecule] | None = None,
         allow_nonintegral_charges: bool = False,
@@ -127,28 +127,28 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        force_field : `openff.toolkit.ForceField`
+        force_field
             The force field to parameterize the topology with.
-        topology : `openff.toolkit.Topology` or `list[openff.toolkit.Molecule]`
+        topology
             The topology to parameterize, or a list of molecules to construct a
             topology from and parameterize.
-        box : `openff.units.Quantity`, optional
+        box
             The box vectors associated with the ``Interchange``. If ``None``,
             box vectors are taken from the topology, if present.
-        positions : `openff.units.Quantity`, optional
+        positions
             The positions associated with atoms in the input topology. If ``None``,
             positions are taken from the molecules in topology, if present on all molecules.
-        charge_from_molecules : `list[openff.toolkit.molecule.Molecule]`, optional
+        charge_from_molecules
             If specified, partial charges for any molecules isomorphic to those
             given will be taken from the given molecules' `partial_charges`
             attribute instead of being determined by the force field. All
             molecules in this list must have partial charges assigned and must
             not be isomorphic with any other molecules in the list. For all values
             of this argument, charges on the input topology are ignored.
-        partial_bond_orders_from_molecules : list[openff.toolkit.molecule.Molecule], optional
+        partial_bond_orders_from_molecules
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
-        allow_nonintegral_charges : bool, optional, default=False
+        allow_nonintegral_charges
             If True, allow molecules to have approximately non-integral charges.
 
         Notes
@@ -202,14 +202,14 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        backend : str, default="nglview"
+        backend
             The backend to use for visualization. Currently only "nglview" is supported.
-        include_virtual_sites : bool, default=False
+        include_virtual_sites
             Whether or not to include virtual sites in the visualization.
 
         Returns
         -------
-        widget : nglview.NGLWidget
+        widget
             The NGLWidget containing the visualization.
 
         """
@@ -260,7 +260,7 @@ class Interchange(_BaseModel):
         """
         Visualize the system using NGLView via a PDB file.
 
-        include_virtual_sites : bool, default=False
+        include_virtual_sites
             Whether or not to include virtual sites in the visualization.
         """
         import nglview
@@ -308,11 +308,11 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        engine : str, default="openmm"
+        engine
             The engine to use for minimization. Currently only "openmm" is supported.
-        force_tolerance : openff.units.Quantity, default=10.0 kJ / mol / nm
+        force_tolerance
             The force tolerance to run until during energy minimization.
-        max_iterations : int, default=10_000
+        max_iterations
             The maximum number of iterations to run during energy minimization.
 
         """
@@ -334,12 +334,12 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        include_virtual_sites : bool, default=True
+        include_virtual_sites
             Include virtual sites in the returned positions.
 
         Returns
         -------
-        positions : openff.units.Quantity
+        positions
             The positions of the atoms in the system.
 
         """
@@ -360,19 +360,19 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        prefix: str
+        prefix
             The prefix to use for the GROMACS topology and coordinate files, i.e. "foo" will produce
             "foo.top", "foo.gro", and "foo_pointenergy.mdp".
-        decimal: int, default=3
+        decimal
             The number of decimal places to use when writing the GROMACS coordinate file.
-        hydrogen_mass : PositiveFloat, default=1.007947
+        hydrogen_mass
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
-        monolithic: bool, default=False
+        monolithic
             Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
             these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
-        _merge_atom_types: bool, default = False
+        _merge_atom_types
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
 
@@ -437,14 +437,14 @@ class Interchange(_BaseModel):
         ----------
         file_path
             The path to the GROMACS topology file to write.
-        hydrogen_mass : PositiveFloat, default=1.007947
+        hydrogen_mass
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters and is unsupported when virtual sites are present.
-        monolithic: bool, default=False
+        monolithic
             Whether the topology file should be monolithic (True) or reference individual .itp files (False). Note that
             these individual .itp files rely on ad hoc atom types and cannot be transferred between systems.
-        _merge_atom_types: book, default=False
+        _merge_atom_types
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
 
@@ -472,9 +472,9 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        file_path: Path | str
+        file_path
             The path to the GROMACS coordinate file to write.
-        decimal: int, default=3
+        decimal
             The number of decimal places to use when writing the GROMACS coordinate file.
 
         Notes
@@ -507,11 +507,11 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        prefix: str
+        prefix
             The prefix to use for the LAMMPS data and run input files. For
             example, "foo" will produce files named "foo.lmp" and
             "foo_pointenergy.in".
-        include_type_labels: bool
+        include_type_labels
             If True, this will include the SMIRKS strings as LAMMPS type labels
             in the LAMMPS data file.
         """
@@ -569,23 +569,23 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        combine_nonbonded_forces : bool, default=True
+        combine_nonbonded_forces
             If True, an attempt will be made to combine all non-bonded interactions into a single
             openmm.NonbondedForce.
             If False, non-bonded interactions will be split across multiple forces.
-        add_constrained_forces : bool, default=False,
+        add_constrained_forces
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
-        ewald_tolerance : float, default=1e-4
+        ewald_tolerance
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : PositiveFloat, default=1.007947
+        hydrogen_mass
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters.
 
         Returns
         -------
-        system : openmm.System
+        system
             The OpenMM System object.
 
         Notes
@@ -665,22 +665,22 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        integrator : subclass of openmm.Integrator
+        integrator
             The integrator to use for the simulation.
-        combine_nonbonded_forces : bool, default=False
+        combine_nonbonded_forces
             If True, an attempt will be made to combine all non-bonded interactions into a single
             openmm.NonbondedForce.
             If False, non-bonded interactions will be split across multiple forces.
-        add_constrained_forces : bool, default=False,
+        add_constrained_forces
             If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
             on a bond or angle that is fully constrained.
-        ewald_tolerance : float, default=1e-4
+        ewald_tolerance
             The value passed to `NonbondedForce.setEwaldErrorTolerance`
-        hydrogen_mass : PositiveFloat, default=1.007947
+        hydrogen_mass
             The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
             than the default value, mass will be transferred from neighboring heavy atoms. Note that this is currently
             not applied to any waters.
-        additional_forces : Iterable[openmm.Force], default=tuple()
+        additional_forces
             Additional forces to be added to the system, e.g. barostats, that are not
             added by the force field.
         **kwargs
@@ -689,7 +689,7 @@ class Interchange(_BaseModel):
 
         Returns
         -------
-        simulation : openmm.app.Simulation
+        simulation
             The OpenMM simulation object, possibly with positions set.
 
         Examples
@@ -800,7 +800,7 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        prefix: str
+        prefix
             The prefix to use for the Amber parameter/topology, coordinate, and run files, i.e.
             "foo" will produce "foo.top", "foo.gro", and "foo_pointenergy.in".
 
@@ -896,14 +896,14 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        topology_file : Path | str
+        topology_file
             The path to a GROMACS topology file.
-        gro_file : Path | str
+        gro_file
             The path to a GROMACS coordinate file.
 
         Returns
         -------
-        interchange : Interchange
+        interchange
             An Interchange object representing the contents of the GROMACS files.
 
         Notes
@@ -973,18 +973,18 @@ class Interchange(_BaseModel):
 
         Parameters
         ----------
-        system : openmm.System
+        system
             The OpenMM system.
-        topology : openmm.app.Topology
+        topology
             The OpenMM topology.
-        positions : openmm.unit.Quantity or openff.units.Quantity, optional
+        positions
             The positions of particles in this system and/or topology.
-        box_vectors : openmm.unit.Quantity or openff.units.Quantity, optional
+        box_vectors
             The vectors of the simulation box associated with this system and/or topology.
 
         Returns
         -------
-        interchange : Interchange
+        interchange
             An Interchange object representing the contents of the OpenMM objects.
 
         Notes
