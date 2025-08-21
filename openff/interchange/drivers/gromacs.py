@@ -59,20 +59,20 @@ def get_gromacs_energies(
 
     Parameters
     ----------
-    interchange : openff.interchange.Interchange
+    interchange
         An OpenFF Interchange object to compute the single-point energy of
-    mdp : str, default="cutoff"
+    mdp
         A string key identifying the GROMACS `.mdp` file to be used. See `_get_mdp_file`.
-    round_positions: int, default=8
+    round_positions
         A decimal precision for the positions in the `.gro` file.
-    detailed : bool, default=False
+    detailed
         If True, return a detailed report containing the energies of each term.
-    _merge_atom_types: bool, default=False
+    _merge_atom_types
         If True, energy should be computed with merging atom types.
 
     Returns
     -------
-    report : EnergyReport
+    report
         An `EnergyReport` object containing the single-point energies.
 
     """
@@ -131,18 +131,18 @@ def _run_gmx_energy(
 
     Parameters
     ----------
-    top_file : str or pathlib.Path
+    top_file
         The path to a GROMACS topology (`.top`) file.
-    gro_file : str or pathlib.Path
+    gro_file
         The path to a GROMACS coordinate (`.gro`) file.
-    mdp_file : str or pathlib.Path
+    mdp_file
         The path to a GROMACS molecular dynamics parameters (`.mdp`) file.
-    maxwarn : int, default=1
+    maxwarn
         The number of warnings to allow when `gmx grompp` is called (via the `-maxwarn` flag).
 
     Returns
     -------
-    energies: dict[str, Quantity]
+    energies
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """

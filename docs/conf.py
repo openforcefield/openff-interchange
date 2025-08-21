@@ -86,8 +86,9 @@ autosummary_context = {
 }
 autosummary_ignore_module_all = False
 napoleon_google_docstring = False
-napoleon_use_param = False
+napoleon_use_param = True
 napoleon_use_ivar = True
+napoleon_use_rtype = False
 
 autodoc_mock_imports = ["jax"]
 autodoc_default_options = {
@@ -98,7 +99,10 @@ autodoc_default_options = {
 }
 autodoc_preserve_defaults = True
 autodoc_inherit_docstrings = False
+autodoc_typehints = "both"
 autodoc_typehints_format = "short"
+autodoc_typehints_description_target = "documented"  # ADDED
+
 # Workaround for autodoc_typehints_format not working for attributes
 # see https://github.com/sphinx-doc/sphinx/issues/10290#issuecomment-1079740009
 python_use_unqualified_type_names = True

@@ -40,7 +40,7 @@ def to_interchange(
 
     Parameters
     ----------
-    system: GROMACSSystem
+    system
         The GROMACS system to convert.
 
     Returns
