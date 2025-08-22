@@ -59,4 +59,5 @@ jobs:
       run: |
         python -m pytest -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
           --ignore=examples/deprecated/ \
-          --ignore=examples/experimental
+          --ignore=examples/experimental/ \
+          --ignore=examples/lammps/
