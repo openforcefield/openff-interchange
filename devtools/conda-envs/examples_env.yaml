@@ -12,7 +12,7 @@ dependencies:
   # OpenFF stack
   - openff-toolkit-base =0.17
   - openff-units
-  - ambertools =23
+  - ambertools
   # Optional features
   - openff-nagl
   - openff-nagl-models
