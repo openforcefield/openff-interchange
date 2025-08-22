@@ -107,10 +107,10 @@ class EnergyReport(_BaseModel):
 
         Parameters
         ----------
-        other: EnergyReport
+        other
             The other `EnergyReport` to compare energies against
 
-        tolerances: dict of str: Quantity
+        tolerances
             Per-key allowed differences in energies
 
         """
@@ -154,12 +154,12 @@ class EnergyReport(_BaseModel):
 
         Parameters
         ----------
-        other: EnergyReport
+        other
             The other `EnergyReport` to compare energies against
 
         Returns
         -------
-        energy_differences : dict of str: Quantity
+        energy_differences
             Per-key energy differences
 
         """
