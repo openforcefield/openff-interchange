@@ -22,7 +22,7 @@ dependencies:
   # Drivers
   - openmm =8.2
   - gromacs
-  - lammps
+  # lammps
   - pyedr
   # Testing
   - mdtraj

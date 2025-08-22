@@ -27,7 +27,7 @@ dependencies:
   - nglview
   # Drivers
   - gromacs
-  - lammps
+  # lammps
   - pyedr
   # Testing
   - mdtraj
