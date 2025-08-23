@@ -5,7 +5,7 @@ dependencies:
   # Core
   - python
   - versioningit
-  - numpy =2.2
+  - numpy <2.3
   - pydantic =2
   # OpenFF stack
   - openff-toolkit-base =0.17
