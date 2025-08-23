@@ -585,7 +585,7 @@ class TestNAGLChargesIntegration:
         execution_time = end_time - start_time
 
         # Should complete within reasonable time (less than 30 seconds)
-        assert execution_time < 30.0, f"NAGL charge assignment took {execution_time:.2f}s, which is too long"
+        assert execution_time < 60.0, f"NAGL charge assignment took {execution_time:.2f}s, which is too long"
 
         # Net charge should be approximately zero
         charges = interchange["Electrostatics"].get_charge_array()

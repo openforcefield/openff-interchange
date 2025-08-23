@@ -5,16 +5,14 @@ dependencies:
   # Core
   - python
   - versioningit
-  - numpy <2.3
+  - numpy =2.2
   - pydantic =2
   # OpenFF stack
   - openff-toolkit-base =0.17
-  - openff-units =0.3
+  - openff-units
   - ambertools =24
-  # Needs to be explicitly listed to not be dropped when AmberTools is removed
-  - rdkit
   # Optional features
-  - openmm =8.2
+  - openmm
   - openff-nagl
   - openff-nagl-models
   - nglview

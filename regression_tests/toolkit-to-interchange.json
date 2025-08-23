@@ -25,6 +25,6 @@
     "openmm_path": "openmmVersion",
     "deepdiff_path": null,
     "old_value": "8.1.2",
-    "new_value": "8.2.0"
+    "new_value": "8.3.1"
   }
 ]

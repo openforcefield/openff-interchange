@@ -4,36 +4,32 @@ channels:
   - openeye
 dependencies:
   # Core
-  - python
-  - pip
+  - python =3.12
   - versioningit
-  - numpy <2.3
+  - numpy =2.2
   - pydantic =2
   # OpenFF stack
   - openff-toolkit-base =0.17
   - openff-units
-  - ambertools =23
+  - ambertools =24
   # Optional features
-  - openmm =8.2
+  - openmm
   # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl
   - openff-nagl-models
-  - mbuild ~=0.18
+  - mbuild =1
   - foyer =1
   - gmso ~=0.12
   - nglview
   # Drivers
-  - gromacs =2024
-  - lammps >=2023.08.02
+  - gromacs
+  # lammps
   - pyedr
-  # shim for a build issue that's probably localized to conda-forge
-  # https://github.com/conda-forge/lammps-feedstock/issues/207
-  - openmpi =4
   # Testing
   - mdtraj
   - intermol
-  - openeye-toolkits >=2025
+  - openeye-toolkits =2025
   - pytest
   - pytest-cov
   - pytest-xdist
