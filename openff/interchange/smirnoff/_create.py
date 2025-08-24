@@ -156,50 +156,50 @@ def _create_interchange(
             PresetChargesAndVirtualSitesWarning,
         )
 
-    # interchange = Interchange(topology=topology)
-    # or maybe
-    interchange = Interchange(topology=validate_topology(topology))
+    interchange = Interchange()
 
-    interchange.positions = _infer_positions(interchange.topology, positions)
+    validated_topology = validate_topology(topology)
 
-    interchange.box = interchange.topology.box_vectors if box is None else box
+    interchange._topology = validated_topology
+
+    interchange.positions = _infer_positions(validated_topology, positions)
+
+    interchange.box = validated_topology.box_vectors if box is None else box
 
     _bonds(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         partial_bond_orders_from_molecules,
     )
     _constraints(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
     )
-    _angles(interchange, force_field, interchange.topology)
+    _angles(interchange, force_field, validated_topology)
     _propers(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         partial_bond_orders_from_molecules,
     )
-    _impropers(interchange, force_field, interchange.topology)
+    _impropers(interchange, force_field, validated_topology)
 
-    _vdw(interchange, force_field, interchange.topology)
+    _vdw(interchange, force_field, validated_topology)
     _electrostatics(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         molecules_with_preset_charges,
         allow_nonintegral_charges,
     )
-    _plugins(interchange, force_field, interchange.topology)
+    _plugins(interchange, force_field, validated_topology)
 
-    _virtual_sites(interchange, force_field, interchange.topology)
+    _virtual_sites(interchange, force_field, validated_topology)
 
-    _gbsa(interchange, force_field, interchange.topology)
-
-    interchange.topology = interchange.topology
+    _gbsa(interchange, force_field, validated_topology)
 
     return interchange
 

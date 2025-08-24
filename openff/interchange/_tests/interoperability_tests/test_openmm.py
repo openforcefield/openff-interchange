@@ -960,14 +960,14 @@ class TestToOpenMMTopology:
 
 @skip_if_missing("openmm")
 class TestToOpenMMPositions:
-    def test_missing_positions(self):
+    def test_missing_positions(self, sage):
         with pytest.raises(
             MissingPositionsError,
             match=r"are required.*\.positions=None",
         ):
             # dummy topology, since it's required now
             to_openmm_positions(
-                Interchange(topology=Molecule.from_smiles("CCO").to_topology()),
+                sage.create_interchange(Molecule.from_smiles("CCO").to_topology()),
             )
 
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
