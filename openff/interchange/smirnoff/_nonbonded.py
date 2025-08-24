@@ -3,7 +3,7 @@ import functools
 import logging
 import warnings
 from collections.abc import Iterable
-from typing import Literal, Union
+from typing import Literal, Self
 
 import numpy
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -18,7 +18,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.toolkit.utils.exceptions import MissingPackageError
 from pydantic import Field, PrivateAttr, computed_field
-from typing_extensions import Self
 
 from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
@@ -48,13 +47,13 @@ from openff.interchange.warnings import ForceFieldModificationWarning
 
 logger = logging.getLogger(__name__)
 
-ElectrostaticsHandlerType = Union[
-    ElectrostaticsHandler,
-    NAGLChargesHandler,
-    ToolkitAM1BCCHandler,
-    ChargeIncrementModelHandler,
-    LibraryChargeHandler,
-]
+ElectrostaticsHandlerType = (
+    ElectrostaticsHandler
+    | ToolkitAM1BCCHandler
+    | ChargeIncrementModelHandler
+    | LibraryChargeHandler
+    | NAGLChargesHandler
+)
 
 _ZERO_CHARGE = Quantity(0.0, "elementary_charge")
 

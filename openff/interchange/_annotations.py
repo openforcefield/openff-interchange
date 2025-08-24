@@ -202,7 +202,7 @@ def _is_positions_shape(quantity: Quantity) -> Quantity:
 
 def _duck_to_nanometer(value: Any):
     """Cast list or ndarray without units to Quantity[ndarray] of nanometer."""
-    if isinstance(value, (list, numpy.ndarray)):
+    if isinstance(value, list | numpy.ndarray):
         return Quantity(value, "nanometer")
     else:
         return value

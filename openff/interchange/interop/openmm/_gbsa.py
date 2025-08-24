@@ -22,9 +22,7 @@ def _process_gbsa(
         return
 
     existing_forces = [
-        force
-        for force in system.getForces()
-        if isinstance(force, (openmm.NonbondedForce, openmm.CustomNonbondedForce))
+        force for force in system.getForces() if isinstance(force, openmm.NonbondedForce | openmm.CustomNonbondedForce)
     ]
 
     if len(existing_forces) != 1:
