@@ -440,13 +440,9 @@ def _build_collection(
 
     kwargs["topology"] = topology
 
-    try:
-        from smirnoff_plugins.collections.vsites import _VsitePlugin  # type: ignore[import-not-found]
-    except ImportError:
-        _VsitePlugin = None
-
-    # VirtualSite collections need vdW + Electrostatics
-    if _VsitePlugin is not None and issubclass(collection_class, _VsitePlugin):
+    # VirtualSite collections need vdW + Electrostatics collections, and we can identify
+    # them by the allowed_vdw_parameter_handlers class method.
+    if hasattr(collection_class, "allowed_vdw_parameter_handlers"):
         vdw_tagnames = [x._TAGNAME for x in collection_class.allowed_vdw_parameter_handlers()]  # type: ignore[attr-defined]
 
         if (n_vdw_tagnames := len(vdw_tagnames)) != 1:
