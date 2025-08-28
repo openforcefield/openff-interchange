@@ -99,7 +99,8 @@ class TestInterchange:
         assert out["Electrostatics"].cutoff == 7.89 * unit.angstrom
 
     def test_box_setter(self):
-        tmp = Interchange(topology=Molecule.from_smiles("O").to_topology())
+        tmp = Interchange()
+        tmp._topology = Molecule.from_smiles("O").to_topology()
 
         with pytest.raises(ValidationError):
             tmp.box = [2, 2, 3, 90, 90, 90]
@@ -167,7 +168,8 @@ class TestInterchange:
         topology = _simple_topology_from_openmm(
             Molecule.from_smiles("CCO").to_topology().to_openmm(),
         )
-        Interchange(topology=topology)
+        out = Interchange()
+        out._topology = topology
 
     def test_from_sage_molecule_list(self, sage):
         out = Interchange.from_smirnoff(
