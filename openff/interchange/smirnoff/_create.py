@@ -423,6 +423,39 @@ def _virtual_sites(
     interchange.collections.update({"VirtualSites": virtual_site_handler})
 
 
+def _build_collection(
+    collection_class: type[SMIRNOFFCollection],
+    handler_classes: list[type[ParameterHandler]],
+    interchange: Interchange,
+    force_field: ForceField,
+    topology: Topology,
+):
+    kwargs = {}
+
+    # Always attach handlers
+    if len(handler_classes) == 1:
+        kwargs["parameter_handler"] = force_field[handler_classes[0]._TAGNAME]
+    else:
+        kwargs["parameter_handler"] = [force_field[cls._TAGNAME] for cls in handler_classes]
+
+    kwargs["topology"] = topology
+
+    # VirtualSite collections need vdW + Electrostatics collections, and we can identify
+    # them by the allowed_vdw_parameter_handlers class method.
+    if hasattr(collection_class, "allowed_vdw_parameter_handlers"):
+        vdw_tagnames = [x._TAGNAME for x in collection_class.allowed_vdw_parameter_handlers()]  # type: ignore[attr-defined]
+
+        if (n_vdw_tagnames := len(vdw_tagnames)) != 1:
+            raise NotImplementedError(
+                f"Collection {collection_class} requires {n_vdw_tagnames} vdW handlers, but only one is supported.",
+            )
+
+        kwargs["vdw_collection"] = interchange[vdw_tagnames[0]]
+        kwargs["electrostatics_collection"] = interchange["Electrostatics"]
+
+    return collection_class.create(**kwargs)
+
+
 def _plugins(
     interchange: Interchange,
     force_field: ForceField,
@@ -442,49 +475,7 @@ def _plugins(
         if len(handler_classes) == 0:
             continue
 
-        if len(handler_classes) == 1:
-            handler_class = handler_classes[0]
-            try:
-                collection = collection_class.create(
-                    parameter_handler=force_field[handler_class._TAGNAME],
-                    topology=topology,
-                )
-            except TypeError:
-                tagnames = [x._TAGNAME for x in collection_class.allowed_parameter_handlers()]
-
-                if len(tagnames) > 1:
-                    raise NotImplementedError(
-                        f"Collection {collection} requires multiple handlers, but only one was provided.",
-                    )
-
-                try:
-                    collection = collection_class.create(  # type: ignore[call-arg]
-                        parameter_handler=force_field[handler_class._TAGNAME],
-                        topology=topology,
-                        vdw_collection=interchange[tagnames[0]],
-                        electrostatics_collection=interchange["Electrostatics"],
-                    )
-                except TypeError:
-                    collection = collection_class.create(  # type: ignore[call-arg]
-                        parameter_handler=force_field[handler_class._TAGNAME],
-                        topology=topology,
-                        vdw_collection=interchange[tagnames[0]],
-                        electrostatics_collection=interchange["Electrostatics"],
-                    )
-        else:
-            # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
-            handlers: list[ParameterHandler] = [
-                force_field[handler_class._TAGNAME] for handler_class in _PLUGIN_CLASS_MAPPING.keys()
-            ]
-
-            collection = collection_class.create(
-                parameter_handler=handlers,
-                topology=topology,
-            )
+        collection = _build_collection(collection_class, handler_classes, interchange, force_field, topology)
 
         # No matter if this collection takes one or multiple handlers, key it by its own name
-        interchange.collections.update(
-            {
-                collection.type: collection,
-            },
-        )
+        interchange.collections[collection.type] = collection
