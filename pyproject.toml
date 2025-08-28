@@ -1,22 +1,72 @@
 [build-system]
-requires = [
-    "setuptools",
-    "versioningit",
-]
 build-backend = "setuptools.build_meta"
 
+requires = [
+  "setuptools",
+  "versioningit",
+]
+
 [project]
-name="openff-interchange"
+name = "openff-interchange"
 description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
 readme = "README.md"
-authors = [{name = "Open Force Field Initiative", email = "info@openforcefield.org"}]
-license = {text = "MIT"}
-dynamic = ["version"]
+license = { text = "MIT" }
+authors = [ { name = "Open Force Field Initiative", email = "info@openforcefield.org" } ]
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dynamic = [ "version" ]
 
 [tool.setuptools.packages]
 find = {}
 
-[tool.versioningit]
+[tool.ruff]
+line-length = 119
+namespace-packages = [ "openff/interchange/" ]
+
+lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+lint.ignore = [ "D105", "D107", "D200", "D203", "D212", "E721" ]
+lint.per-file-ignores."openff/interchange/**/__init__.py" = [ "F401" ]
+lint.per-file-ignores."openff/interchange/*_pydantic.py" = [ "F401" ]
+lint.per-file-ignores."openff/interchange/_tests/*" = [ "RUF015" ]
+lint.per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
+lint.per-file-ignores."openff/interchange/_tests/unit_tests/test_types.py" = [ "F821" ]
+lint.per-file-ignores."openff/interchange/components/*.py" = [ "F821" ]
+lint.per-file-ignores."openff/interchange/components/interchange.py" = [ "F821" ]
+lint.per-file-ignores."openff/interchange/foyer/_guard.py" = [ "F401" ]
+lint.per-file-ignores."openff/interchange/foyer/_nonbonded.py" = [ "F821" ]
+lint.per-file-ignores."openff/interchange/smirnoff/_*.py" = [ "RUF015" ]
+lint.per-file-ignores."openff/interchange/smirnoff/_gbsa.py" = [ "F821" ]
+lint.per-file-ignores."openff/interchange/smirnoff/_nonbonded.py" = [ "F821" ]
+lint.per-file-ignores."openff/interchange/smirnoff/_virtual_sites.py" = [ "F821" ]
+lint.per-file-ignores."plugins/*" = [ "INP001" ]
+lint.isort.known-first-party = [ "openff.interchange" ]
+# can't find a clean way to get Rust's globset to handle this via regex ...
+lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
+lint.pydocstyle.property-decorators = [ "validator" ]
+
+[tool.pytest.ini_options]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+addopts = "--cov=openff/interchange --cov-report=xml"
+
+[tool.coverage.run]
+omit = [
+  "*/*/_tests/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "@overload",
+]
 
 [tool.mypy]
 mypy_path = "stubs/"
@@ -29,37 +79,33 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = [
-    "pandas",
-    "networkx",
-    "openmm",
-    "openmm.app",
-    "openmm.app.element",
-    "openmm.unit",
-    "intermol.*",
-    "rdkit",
-    "openff.toolkit.*",
-    "openff.units.*",
-    "openff.utilities.*",
-    "openff.recharge.*",
-    "parmed",
-    "parmed.amber",
-    "pmdtest.utils",
-    "pytest",
-    "pint",
-    "unyt",
-    "openeye",
-    "jax",
-    "scipy.spatial",
-    "nonbonded_plugins.*",
-    "lammps",
+  "pandas",
+  "networkx",
+  "openmm",
+  "openmm.app",
+  "openmm.app.element",
+  "openmm.unit",
+  "intermol.*",
+  "rdkit",
+  "openff.toolkit.*",
+  "openff.units.*",
+  "openff.utilities.*",
+  "openff.recharge.*",
+  "parmed",
+  "parmed.amber",
+  "pmdtest.utils",
+  "pytest",
+  "pint",
+  "unyt",
+  "openeye",
+  "jax",
+  "scipy.spatial",
+  "nonbonded_plugins.*",
+  "lammps",
 ]
 ignore_missing_imports = true
 
-[tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
-addopts = "--cov=openff/interchange --cov-report=xml"
+[tool.versioningit]
 
 [tool.interrogate]
 ignore-init-method = true
@@ -72,50 +118,5 @@ ignore-module = false
 ignore-nested-functions = false
 ignore-nested-classes = true
 ignore-setters = true
-ignore-regex = ["^Test.*", "test_.*", "^_.*"]
+ignore-regex = [ "^Test.*", "test_.*", "^_.*" ]
 fail-under = 90
-
-[tool.ruff]
-line-length = 119
-namespace-packages = ["openff/interchange/"]
-
-[tool.ruff.lint]
-ignore = ["E721","D105","D107","D200","D203","D212"]
-select = ["F", "E", "W", "NPY", "UP", "RUF", "I"]
-
-[tool.ruff.lint.per-file-ignores]
-"openff/interchange/**/__init__.py" = ["F401"]
-"openff/interchange/smirnoff/_nonbonded.py" = ["F821"]
-"openff/interchange/*_pydantic.py" = ["F401"]
-"openff/interchange/smirnoff/_gbsa.py" = ["F821"]
-"openff/interchange/smirnoff/_virtual_sites.py" = ["F821"]
-"plugins/*" = ["INP001"]
-"openff/interchange/components/interchange.py" = ["F821"]
-"openff/interchange/components/*.py" = ["F821"]
-"openff/interchange/_tests/unit_tests/test_types.py" = ["F821"]
-"openff/interchange/foyer/_guard.py" = ["F401"]
-"openff/interchange/foyer/_nonbonded.py" = ["F821"]
-"openff/interchange/_tests/data/*" = ["INP001"]
-"openff/interchange/_tests/*" = ["RUF015"]
-"openff/interchange/smirnoff/_*.py" = ["RUF015"]
-
-[tool.ruff.lint.isort]
-# can't find a clean way to get Rust's globset to handle this via regex ...
-known-third-party = ["openff.toolkit", "openff.utilities", "openff.units"]
-known-first-party = ["openff.interchange"]
-
-[tool.ruff.lint.pydocstyle]
-property-decorators=["validator"]
-
-[tool.coverage.run]
-omit = [
-    "*/*/_tests/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "@overload",
-]

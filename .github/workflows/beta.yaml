@@ -55,7 +55,7 @@ jobs:
     - name: Install and license OpenEye Toolkits
       if: ${{ matrix.openeye == true }}
       run: |
-        micromamba install "openeye-toolkits >=2025" -c openeye/label/beta -c openeye
+        micromamba install "openeye-toolkits =2025" -c openeye/label/beta -c openeye
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
