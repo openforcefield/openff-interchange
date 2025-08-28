@@ -165,7 +165,7 @@ def _to_pdb(
 
     # Deal with the possibility of `StringIO`
     manager: nullcontext[TextIO] | TextIO  # MyPy needs some help here
-    if isinstance(file_path, (str, Path)):
+    if isinstance(file_path, str | Path):
         manager = open(file_path, "w")
     else:
         manager = nullcontext(file_path)

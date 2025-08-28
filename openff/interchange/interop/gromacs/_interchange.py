@@ -263,7 +263,7 @@ def to_interchange(
 
                 if isinstance(
                     dihedral,
-                    (PeriodicProperDihedral, PeriodicImproperDihedral),
+                    PeriodicProperDihedral | PeriodicImproperDihedral,
                 ):
                     potential = Potential(
                         parameters={

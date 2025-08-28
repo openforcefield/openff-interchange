@@ -1,5 +1,5 @@
 import abc
-from typing import TypeVar
+from typing import Self, TypeVar
 
 from openff.toolkit import Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -9,7 +9,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
-from typing_extensions import Self
 
 from openff.interchange.components.potentials import Collection
 from openff.interchange.exceptions import (
@@ -91,7 +90,7 @@ def _check_all_valence_terms_assigned(
             exception_class = UnassignedBondError
         elif isinstance(handler, AngleHandler):
             exception_class = UnassignedAngleError
-        elif isinstance(handler, (ProperTorsionHandler, ImproperTorsionHandler)):
+        elif isinstance(handler, ProperTorsionHandler | ImproperTorsionHandler):
             exception_class = UnassignedTorsionError
         else:
             raise RuntimeError(

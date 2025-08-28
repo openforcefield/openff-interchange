@@ -475,7 +475,7 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
         non_bonded_forces = [
             force
             for force in system.getForces()
-            if isinstance(force, (openmm.NonbondedForce, openmm.CustomNonbondedForce))
+            if isinstance(force, openmm.NonbondedForce | openmm.CustomNonbondedForce)
         ]
 
         if len(non_bonded_forces) != 1:
