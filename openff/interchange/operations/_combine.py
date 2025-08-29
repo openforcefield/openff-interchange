@@ -1,6 +1,7 @@
 """The logic behind `Interchange.combine`."""
 
 import copy
+import logging
 import warnings
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,9 @@ from openff.interchange.warnings import InterchangeCombinationWarning
 
 if TYPE_CHECKING:
     from openff.interchange.components.interchange import Interchange
+
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CUTOFF_TOLERANCE = Quantity("1e-6 nanometer")
 
@@ -146,6 +150,15 @@ def _combine(
                 while _tmp_pot_key in self_collection.potentials:
                     _tmp_pot_key.mult = _mult
                     _mult += 1
+
+            if new_top_key in self_collection.key_map:
+                raise UnsupportedCombinationError(
+                    "Key collision detected, please raise an issue",
+                )
+
+            if _tmp_pot_key in self_collection.potentials:
+                logging.info(f"Key collision, fixing. Key is {_tmp_pot_key}")
+                _tmp_pot_key.id = _tmp_pot_key.id + "_DUPLICATE"
 
             self_collection.key_map.update({new_top_key: _tmp_pot_key})
             if collection_name == "Constraints":
