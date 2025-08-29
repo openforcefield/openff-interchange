@@ -151,11 +151,6 @@ def _combine(
                     _tmp_pot_key.mult = _mult
                     _mult += 1
 
-            if new_top_key in self_collection.key_map:
-                raise UnsupportedCombinationError(
-                    "Key collision detected, please raise an issue",
-                )
-
             if _tmp_pot_key in self_collection.potentials:
                 logging.info(f"Key collision, fixing. Key is {_tmp_pot_key}")
                 _tmp_pot_key.id = _tmp_pot_key.id + "_DUPLICATE"
