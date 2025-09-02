@@ -11,6 +11,19 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.4.6 - 2025-09-02
+
+### Bug fixes
+
+* #1312 Fix handling of `DoubleExponentialVirtualSites`
+* #1315 Fixes a bug in which `Interchange.combine` did not properly process constraint distances.
+
+### Maintenance
+
+* #1297 Do not duplicate type annotations in docstrings
+* #1304 Automatically format `pyproject.toml`
+* #1306 Declare minimum Python version in project metadata
+
 ## 0.4.5 - 2025-08-20
 
 ### New features
