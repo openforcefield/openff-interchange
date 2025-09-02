@@ -192,8 +192,9 @@ class TestCombine:
             )
 
     @pytest.mark.parametrize("flip_order", [False, True])
-    def test_constraint_key_collision(self, parsley, sage, ethanol, flip_order):
-        """Test that key collisions in constraints are handled."""
+    @pytest.mark.parametrize("handler_name", ["Constraints", "Bonds", "Angles", "ProperTorsions"])
+    def test_constraint_key_collision(self, parsley, sage, ethanol, flip_order, handler_name):
+        """Test that key collisions in constraints and valence terms are handled."""
         interchanges = [
             parsley.create_interchange(
                 ethanol.to_topology(),
@@ -207,12 +208,14 @@ class TestCombine:
         if flip_order:
             interchanges.reverse()
 
-        constraint_arrays = [interchange["Constraints"].get_system_parameters() for interchange in interchanges]
+        arrays_before = [interchange[handler_name].get_system_parameters() for interchange in interchanges]
 
-        array_after_combine = interchanges[0].combine(interchanges[1])["Constraints"].get_system_parameters()
+        numpy.testing.assert_raises(AssertionError, numpy.testing.assert_allclose, *arrays_before)
+
+        array_after_combine = interchanges[0].combine(interchanges[1])[handler_name].get_system_parameters()
 
         # check that the contents of the combined Interchange contains each input, without mushing
         numpy.testing.assert_allclose(
-            numpy.asarray(constraint_arrays).reshape((12, 1)),
+            numpy.vstack(arrays_before),
             array_after_combine,
         )
