@@ -697,6 +697,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         if handler_name == "NAGLChargesHandler":
             from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, NAGLToolkitWrapper
+
             from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
 
             partial_charge_method = parameter_handler.model_file
