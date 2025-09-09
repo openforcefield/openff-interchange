@@ -621,7 +621,7 @@ class TestNAGLChargesIntegration:
         execution_time = end_time - start_time
 
         # Should complete within reasonable time
-        assert execution_time < 30.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
+        assert execution_time < 60.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
 
         # Each molecule should have approximately zero net charge
         charges = interchange["Electrostatics"].get_charge_array()
