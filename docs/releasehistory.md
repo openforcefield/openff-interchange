@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bug fixes
+
+* #1321 OpenFF NAGL is treated as an optional dependency.
+
 ## 0.4.6 - 2025-09-02
 
 ### Bug fixes
