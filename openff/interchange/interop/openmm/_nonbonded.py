@@ -375,12 +375,18 @@ def _create_single_nonbonded_force(
         partial_charges = data.electrostatics_collection.charges
 
         if not has_virtual_sites:
-            atomic_partial_charges: dict[int:float] = {
-                openff_openmm_particle_map[openff_index]: partial_charge
-                for openff_index, partial_charge in enumerate(
-                    data.electrostatics_collection.get_charge_array().m,
+            try:
+                atomic_partial_charges: dict[int:float] = {
+                    openff_openmm_particle_map[openff_index]: partial_charge
+                    for openff_index, partial_charge in enumerate(
+                        data.electrostatics_collection.get_charge_array().m,
+                    )
+                }
+            except KeyError as error:
+                print(
+                    f"{data.electrostatics_collection.get_charge_array().m=}, {openff_openmm_particle_map=}",
                 )
-            }
+                raise KeyError from error
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
