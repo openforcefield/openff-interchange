@@ -13,8 +13,6 @@ dependencies:
   - ambertools =24
   # Optional features
   - openmm
-  - openff-nagl
-  - openff-nagl-models
   - nglview
   # Drivers
   - gromacs

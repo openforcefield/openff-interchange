@@ -669,7 +669,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         dict[PotentialKey, Potential],
     ]:
         """Construct a slot and potential map for a charge model based parameter handler."""
-        from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
 
         unique_molecule = copy.deepcopy(unique_molecule)
         reference_smiles = unique_molecule.to_smiles(
@@ -682,6 +681,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         if handler_name == "NAGLChargesHandler":
             from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, NAGLToolkitWrapper
+
+            from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
 
             partial_charge_method = parameter_handler.model_file
             if NAGLToolkitWrapper not in {type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits}:

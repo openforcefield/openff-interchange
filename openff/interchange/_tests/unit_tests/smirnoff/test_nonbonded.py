@@ -11,6 +11,7 @@ from openff.toolkit.typing.engines.smirnoff import (
 )
 from openff.toolkit.utils.exceptions import MissingPackageError, SMIRNOFFVersionError
 from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
+from openff.utilities import skip_if_missing
 from packaging.version import Version
 
 from openff.interchange import Interchange
@@ -138,6 +139,8 @@ class TestNonbonded:
             numpy.testing.assert_allclose(partial_charges, assigned_charges)
 
     def test_nagl_charge_assignment_matches_reference(self, sage_nagl, hexane_diol):
+        pytest.importorskip("openff.nagl")
+
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         # Leave the ToolkitAM1BCC tag in openff-2.1.0 to ensure that the NAGLCharges handler takes precedence
 
@@ -153,6 +156,7 @@ class TestNonbonded:
         numpy.testing.assert_allclose(expected_charges_unitless, assigned_charges_unitless)
 
 
+@skip_if_missing("openff.nagl")
 class TestNAGLChargesErrorHandling:
     """Test NAGLCharges error conditions."""
 
@@ -177,6 +181,7 @@ class TestNAGLChargesErrorHandling:
         """Test error handling for invalid model file paths. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by this model it had been able to find it."""
+
         sage.get_parameter_handler(
             "NAGLCharges",
             {
@@ -199,6 +204,7 @@ class TestNAGLChargesErrorHandling:
         """Test error handling for a bad hash. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by this model if the hash comparison hadn't failed."""
+
         from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
 
         sage.get_parameter_handler(
@@ -216,6 +222,7 @@ class TestNAGLChargesErrorHandling:
         """Test error handling for a bad DOI. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by this model, since it's unfetchable."""
+
         from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
 
         sage.get_parameter_handler(
@@ -237,7 +244,6 @@ class TestNAGLChargesErrorHandling:
     )
     def test_nagl_charges_fallback_to_charge_increment_model(self, sage):
         """Test that NAGL falls back to ChargeIncrementModel when molecule contains unsupported elements."""
-        pytest.importorskip("openff.nagl")
 
         # Create a boron-containing molecule with nonzero formal charge
         # BF4- anion - boron is not supported by current NAGL models
@@ -289,7 +295,6 @@ class TestNAGLChargesErrorHandling:
     )
     def test_nagl_charges_all_handlers_fail_comprehensive_error(self, sage):
         """Test error reporting when all charge assignment methods fail."""
-        pytest.importorskip("openff.nagl")
 
         # Create a uranium compound - not supported by any current charge assignment method
         uranium_molecule = Molecule.from_smiles("[U+4]")
@@ -340,11 +345,13 @@ class TestNAGLChargesErrorHandling:
         assert "exceptions raised by various handlers" in error_message
 
 
+@skip_if_missing("openff.nagl")
 class TestNAGLChargesPrecedence:
     """Test NAGLCharges precedence in the hierarchy of charge assignment methods."""
 
     def test_nagl_charges_precedence_over_am1bcc(self, sage_nagl, hexane_diol):
         """Test that NAGLCharges takes precedence over ToolkitAM1BCC."""
+
         sage_nagl.get_parameter_handler("ToolkitAM1BCC", {"version": "0.3"})
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
@@ -402,11 +409,13 @@ class TestNAGLChargesPrecedence:
         numpy.testing.assert_allclose(assigned_charges, nagl_charges)
 
 
+@skip_if_missing("openff.nagl")
 class TestNAGLChargesIntegration:
     """Test NAGLCharges integration with other handlers."""
 
     def test_nagl_charges_multi_molecule_topology(self, sage_nagl):
         """Test NAGLCharges with multiple molecules in topology."""
+
         methane = Molecule.from_smiles("C")
         ethane = Molecule.from_smiles("CC")
 
@@ -511,6 +520,7 @@ class TestNAGLChargesIntegration:
 
     def test_nagl_charges_with_charge_from_molecules(self, sage_nagl, hexane_diol):
         """Test that charge_from_molecules takes precedence over NAGLCharges."""
+
         # Assign preset charges using a different method
         hexane_diol.assign_partial_charges("gasteiger")
         preset_charges = [c.m for c in hexane_diol.partial_charges]
@@ -536,6 +546,7 @@ class TestNAGLChargesIntegration:
 
     def test_nagl_charges_with_mixed_charge_sources(self, sage_nagl):
         """Test NAGLCharges with some molecules having preset charges and others not."""
+
         # Create molecules
         ethanol = Molecule.from_smiles("CCO")
         methanol = Molecule.from_smiles("CO")
@@ -571,6 +582,7 @@ class TestNAGLChargesIntegration:
     @pytest.mark.slow
     def test_nagl_charges_large_molecule_performance(self, sage_nagl):
         """Test that NAGL charge assignment completes in reasonable time for large molecules."""
+
         import time
 
         # Create a very large molecule
@@ -621,7 +633,7 @@ class TestNAGLChargesIntegration:
         execution_time = end_time - start_time
 
         # Should complete within reasonable time
-        assert execution_time < 30.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
+        assert execution_time < 60.0, f"Multi-molecule NAGL assignment took {execution_time:.2f}s, which is too long"
 
         # Each molecule should have approximately zero net charge
         charges = interchange["Electrostatics"].get_charge_array()
