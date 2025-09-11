@@ -86,7 +86,7 @@ def _convert(
     unique_molecule_map: dict[
         int,
         list,
-    ] = interchange.topology.identical_molecule_groups
+    ] = interchange.get_topology().identical_molecule_groups
 
     virtual_site_molecule_map: dict[
         BaseVirtualSiteKey,
@@ -115,7 +115,7 @@ def _convert(
         raise UnsupportedExportError("Plugins not implemented.")
 
     for unique_molecule_index in unique_molecule_map:
-        unique_molecule = interchange.topology.molecule(unique_molecule_index)
+        unique_molecule = interchange.get_topology().molecule(unique_molecule_index)
 
         # If this molecule doesn't have a name ("^$", empty string), name it MOL0 incrementing
         # Also rename it if it's already MOL\d+ since that was probably assigned by this function
@@ -139,7 +139,7 @@ def _convert(
 
             # when looking up parameters, use the topology index, not the particle index ...
             # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
-            topology_index = interchange.topology.atom_index(atom)
+            topology_index = interchange.get_topology().atom_index(atom)
             key: TopologyKey | BaseVirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(
                 atom_indices=(topology_index,),
             )
@@ -158,7 +158,7 @@ def _convert(
                 epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
             )
 
-        for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
+        for virtual_site_key in molecule_virtual_site_map[interchange.get_topology().molecule_index(unique_molecule)]:
             atom_type_name = f"{unique_molecule.name}_{particle_map[virtual_site_key]}"
             _atom_atom_type_map[virtual_site_key] = atom_type_name
 
@@ -189,10 +189,10 @@ def _convert(
         else:
             raise RuntimeError()
 
-    _ordered_molecules = [None] * interchange.topology.n_molecules
+    _ordered_molecules = [None] * interchange.get_topology().n_molecules
 
     for unique_molecule_index in unique_molecule_map:
-        unique_molecule = interchange.topology.molecule(unique_molecule_index)
+        unique_molecule = interchange.get_topology().molecule(unique_molecule_index)
 
         if unique_molecule.name == "":
             unique_molecule.name = "MOL" + str(unique_molecule_index)
@@ -214,7 +214,7 @@ def _convert(
         for atom in unique_molecule.atoms:
             name = SYMBOLS[atom.atomic_number] if getattr(atom, "name", "") == "" else atom.name
 
-            charge = _partial_charges[interchange.topology.atom_index(atom)]
+            charge = _partial_charges[interchange.get_topology().atom_index(atom)]
 
             molecule.atoms.append(
                 GROMACSAtom(
@@ -313,7 +313,7 @@ def _convert_bonds(
         return
 
     # if this is slow, pass it among valence converters
-    atom_indices_in_this_molecule = {interchange.topology.atom_index(a) for a in unique_molecule.atoms}
+    atom_indices_in_this_molecule = {interchange.get_topology().atom_index(a) for a in unique_molecule.atoms}
 
     offset = min(atom_indices_in_this_molecule)
 
@@ -360,7 +360,7 @@ def _convert_angles(
         return
 
     # If this is slow, pass it among valence converters
-    atom_indices_in_this_molecule = {interchange.topology.atom_index(a) for a in unique_molecule.atoms}
+    atom_indices_in_this_molecule = {interchange.get_topology().atom_index(a) for a in unique_molecule.atoms}
 
     offset = min(atom_indices_in_this_molecule)
 
@@ -411,7 +411,7 @@ def _convert_dihedrals(
         None,
     )
 
-    atom_indices_in_this_molecule = {interchange.topology.atom_index(a) for a in unique_molecule.atoms}
+    atom_indices_in_this_molecule = {interchange.get_topology().atom_index(a) for a in unique_molecule.atoms}
 
     offset = min(atom_indices_in_this_molecule)
 
@@ -448,7 +448,7 @@ def _convert_dihedrals(
     if improper_torsion_handler:
         # Molecule/Topology.impropers lists the central atom **second** ...
         for improper in unique_molecule.smirnoff_impropers:
-            topology_indices = tuple(interchange.topology.atom_index(a) for a in improper)
+            topology_indices = tuple(interchange.get_topology().atom_index(a) for a in improper)
             # ... so the tuple must be modified to list the central atom **first**,
             # which is how the improper handler's slot map is built up
             indices_to_match = (
@@ -548,7 +548,7 @@ def _convert_virtual_sites(
     if len(molecule_virtual_site_map) == 0:
         return
 
-    for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
+    for virtual_site_key in molecule_virtual_site_map[interchange.get_topology().molecule_index(unique_molecule)]:
         from openff.interchange.smirnoff._virtual_sites import (
             _create_virtual_site_object,
         )
@@ -633,7 +633,7 @@ def _convert_settles(
             "if you would benefit from this assumption changing.",
         )
 
-    topology_atom_indices = [interchange.topology.atom_index(atom) for atom in unique_molecule.atoms]
+    topology_atom_indices = [interchange.get_topology().atom_index(atom) for atom in unique_molecule.atoms]
 
     constraint_lengths = set()
 
