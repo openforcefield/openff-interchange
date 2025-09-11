@@ -296,8 +296,12 @@ class TestProcessTopology:
             positions=basic_top.get_positions().to_openmm(),
         )
 
-        assert with_openff.topology.n_atoms == with_openmm.topology.n_atoms
-        assert with_openff.topology.n_bonds == with_openmm.topology.n_bonds
+        assert with_openff.topology.n_atoms == with_openmm.topology.n_atoms == 5
+        assert with_openff.topology.n_bonds == with_openmm.topology.n_bonds == 4
+
+        print(basic_top._particle_map)
+        print(with_openff.topology._particle_map)
+        print(with_openmm.topology._particle_map)
 
         get_openmm_energies(
             with_openff,
