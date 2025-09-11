@@ -105,7 +105,7 @@ def _process_nonbonded_forces(
         molecule_virtual_site_map = defaultdict(list)
 
     # Mapping between OpenFF "particles" and OpenMM particles (via index). OpenFF objects
-    # (keys) are either atom indices (if atoms) or `VirtualSiteKey`s if virtual sites
+    # (keys) are either atom indices (if atoms) 0-indexed or `VirtualSiteKey`s if virtual sites
     # openff_openmm_particle_map: dict[Union[int, VirtualSiteKey], int] = dict()
     openff_openmm_particle_map = _add_particles_to_system(
         interchange,
@@ -386,6 +386,7 @@ def _create_single_nonbonded_force(
                 print(
                     f"{data.electrostatics_collection.get_charge_array().m=}, {openff_openmm_particle_map=}",
                 )
+                assert len(data.electrostatics_collection.get_charge_array().m) == len(openff_openmm_particle_map)
                 raise KeyError from error
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
