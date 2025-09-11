@@ -145,6 +145,12 @@ def _process_nonbonded_forces(
 
     _data = _prepare_input_data(interchange)
 
+    assert interchange.topology.n_atoms == len(_data.electrostatics_collection.get_charge_array()), (
+        "More atoms than charges?"
+        f"\t{interchange.topology.n_atoms=}"
+        f"\t{_data.electrostatics_collection.get_charge_array()=}"
+    )
+
     if combine_nonbonded_forces:
         _func = _create_single_nonbonded_force
     else:
