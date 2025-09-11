@@ -148,6 +148,7 @@ def _process_nonbonded_forces(
     assert interchange.topology.n_atoms == len(_data.electrostatics_collection.get_charge_array()), (
         "More atoms than charges?"
         f"\t{interchange.topology.n_atoms=}"
+        f"\t{openff_openmm_particle_map=}"
         f"\t{_data.electrostatics_collection.get_charge_array()=}"
     )
 
