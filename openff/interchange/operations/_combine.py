@@ -126,7 +126,7 @@ def _combine(
     for collection_name, collection in input2.collections.items():
         # TODO: Actually specify behavior in this case
         try:
-            self_collection = result.collections[collection_name]
+            new_collection = result.collections[collection_name]
         except KeyError:
             result.collections[collection_name] = collection
             warnings.warn(
@@ -147,30 +147,30 @@ def _combine(
             # If interchange was not created with SMIRNOFF, we need avoid merging potentials with same key
             if pot_key.associated_handler == "ExternalSource":
                 _mult = 0
-                while _tmp_pot_key in self_collection.potentials:
+                while _tmp_pot_key in new_collection.potentials:
                     _tmp_pot_key.mult = _mult
                     _mult += 1
 
-            if _tmp_pot_key in self_collection.potentials:
+            if _tmp_pot_key in input1[collection_name].potentials:
                 logging.info(f"Key collision, fixing. Key is {_tmp_pot_key}")
                 _tmp_pot_key.id = _tmp_pot_key.id + "_DUPLICATE"
 
-            self_collection.key_map.update({new_top_key: _tmp_pot_key})
+            new_collection.key_map.update({new_top_key: _tmp_pot_key})
             if collection_name == "Constraints":
-                self_collection.potentials.update(
+                new_collection.potentials.update(
                     {_tmp_pot_key: collection.potentials[pot_key]},
                 )
             else:
-                self_collection.potentials.update(
+                new_collection.potentials.update(
                     {_tmp_pot_key: collection.potentials[pot_key]},
                 )
 
         # Ensure the charge cache is rebuilt
         if collection_name == "Electrostatics":
-            self_collection._charges_cached = False  # type: ignore[attr-defined]
-            self_collection._get_charges()  # type: ignore[attr-defined]
+            new_collection._charges_cached = False  # type: ignore[attr-defined]
+            new_collection._get_charges()  # type: ignore[attr-defined]
 
-        result.collections[collection_name] = self_collection
+        result.collections[collection_name] = new_collection
 
     if result.positions is not None and input2.positions is not None:
         result.positions = numpy.vstack([result.positions, input2.positions])
