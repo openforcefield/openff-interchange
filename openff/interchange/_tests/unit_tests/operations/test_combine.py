@@ -245,6 +245,7 @@ class TestCombine:
 
     def test_DUPLICATE_key_already_exists(self, methane, ethanol):
         import numpy as np
+
         # use unconstrained FFs to ensure bond parameters aren't overwritten by constraints
         ff1 = ForceField("openff_unconstrained-1.2.1.offxml")
         ff2 = ForceField("openff_unconstrained-2.2.1.offxml")
@@ -252,13 +253,15 @@ class TestCombine:
         ic2 = ff2.create_interchange(ethanol.to_topology())
         ic3 = ic1.combine(ic2.combine(ic1))
 
-        individual_params = np.concatenate([ic1['Bonds'].get_system_parameters(),
-                                            ic2['Bonds'].get_system_parameters(),
-                                            ic1['Bonds'].get_system_parameters()
-                                            ],
-                                           axis=0
-                                           )
+        individual_params = np.concatenate(
+            [
+                ic1["Bonds"].get_system_parameters(),
+                ic2["Bonds"].get_system_parameters(),
+                ic1["Bonds"].get_system_parameters(),
+            ],
+            axis=0,
+        )
 
-        combined_params = ic3['Bonds'].get_system_parameters()
+        combined_params = ic3["Bonds"].get_system_parameters()
         for idx, (p1, p2) in enumerate(zip(individual_params, combined_params)):
             assert np.allclose(p1, p2), f"mismatch at bond {idx=}"
