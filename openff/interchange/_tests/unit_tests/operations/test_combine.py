@@ -192,6 +192,29 @@ class TestCombine:
             )
 
     @pytest.mark.parametrize("flip_order", [False, True])
+    def test_no_unnecessary_duplicate_tags(self, water_dimer, tip3p, sage, ethanol, flip_order):
+        """Check that the '_DUPLICATE' hack is only used when necessary. See Issue #1324."""
+        interchanges = [
+            tip3p.create_interchange(
+                water_dimer,
+            ),
+            sage.create_interchange(
+                ethanol.to_topology(),
+            ),
+        ]
+
+        if flip_order:
+            interchanges.reverse()
+
+        combined = interchanges[0].combine(interchanges[1])
+
+        for collection_name in ["vdW", "Bonds", "Angles", "ProperTorsions", "Constraints"]:
+            for potential_key in combined[collection_name].key_map.values():
+                assert "_DUPLICATE" not in potential_key.id, (
+                    f"Failed sanity check with {potential_key.id} in {collection_name}"
+                )
+
+    @pytest.mark.parametrize("flip_order", [False, True])
     @pytest.mark.parametrize("handler_name", ["Constraints", "Bonds", "Angles", "ProperTorsions"])
     def test_constraint_key_collision(self, parsley, sage, ethanol, flip_order, handler_name):
         """Test that key collisions in constraints and valence terms are handled."""
