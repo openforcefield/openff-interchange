@@ -48,7 +48,7 @@ class TestEnergyReport:
         assert report.total_energy == report["Total"]
 
     def test_bad_constructor(self):
-        with pytest.raises(InvalidEnergyError, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood"):
             EnergyReport(
                 energies={
                     "foo": 1 * kj_mol,
@@ -77,7 +77,7 @@ class TestEnergyReport:
         assert report["Bond"].m_as(kj_mol) == pytest.approx(55.55)
 
     def test_bad_update(self, report):
-        with pytest.raises(InvalidEnergyError, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood"):
             report.update({"foo": 1 * kj_mol})
 
     def test_sub(self):
@@ -167,7 +167,7 @@ class TestEnergyReport:
 
         with pytest.raises(
             EnergyError,
-            match="Bond.*Torsion.*vdW",
+            match=r"Bond.*Torsion.*vdW",
         ):
             report.compare(other)
 

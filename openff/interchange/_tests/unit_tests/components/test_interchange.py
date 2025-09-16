@@ -245,7 +245,7 @@ class TestInterchange:
 
         with pytest.raises(
             MissingPositionsError,
-            match="Cannot visualize system without positions.",
+            match="Cannot visualize system without positions",
         ):
             out.visualize()
 
@@ -322,7 +322,7 @@ class TestUnimplementedSMIRNOFFCases:
         sage.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError,
-            match="not implemented in Interchange:.*bogus",
+            match=r"not implemented in Interchange:.*bogus",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -338,7 +338,7 @@ class TestBadExports:
         # with pytest.raises(ValidationError):
         with pytest.raises(
             InvalidTopologyError,
-            match="Could not process topology argument.*openmm.*",
+            match=r"Could not process topology argument.*openmm.*",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -502,12 +502,12 @@ class TestWrappedCalls:
             benzene.box = Quantity([4, 4, 4], unit.nanometer)
             benzene.to_gromacs(prefix="benzene")
 
-            with pytest.raises(InvalidPositionsError, match="12.*9"):
+            with pytest.raises(InvalidPositionsError, match=r"12.*9"):
                 eth.set_positions_from_gro(gro_file="benzene.gro")
 
             with pytest.raises(
                 InvalidPositionsError,
-                match="9.*12",
+                match=r"9.*12",
             ):
                 benzene.set_positions_from_gro(gro_file="ethanol.gro")
 
