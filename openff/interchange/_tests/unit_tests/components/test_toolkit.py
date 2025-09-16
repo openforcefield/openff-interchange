@@ -187,7 +187,7 @@ def test_lookup_virtual_site_parameter(
 
     with pytest.raises(
         ValueError,
-        match="No VirtualSiteType found with .*EP3",
+        match=r"No VirtualSiteType found with .*EP3",
     ):
         _lookup_virtual_site_parameter(
             sage_with_two_virtual_sites_same_smirks["VirtualSites"],

@@ -74,7 +74,7 @@ def test_mass_is_positive(sage):
 
     with pytest.raises(
         NegativeMassError,
-        match="Particle with index 0 would have a negative mass after.*5.0",
+        match=r"Particle with index 0 would have a negative mass after.*5.0",
     ):
         sage.create_interchange(Molecule.from_smiles("C").to_topology()).to_openmm(hydrogen_mass=5.0)
 

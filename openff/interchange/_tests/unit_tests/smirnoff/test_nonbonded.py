@@ -1,3 +1,5 @@
+import re
+
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
@@ -817,7 +819,7 @@ def test_nonintegral_molecule_charge_error(sage, water):
 
     with pytest.raises(
         NonIntegralMoleculeChargeError,
-        match="net charge of -5.5 compared to a total formal charge of 0.0",
+        match=re.escape("net charge of -5.5 compared to a total formal charge of 0.0"),
     ):
         sage.create_interchange(water.to_topology(), charge_from_molecules=[water])
 
