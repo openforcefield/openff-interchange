@@ -242,7 +242,7 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
         "Vir-XZ",
     ]
 
-    all_energies, all_names, times = read_edr(edr_path, verbose=False)
+    all_energies, all_names, _ = read_edr(edr_path, verbose=False)
     parsed_energies = {}
 
     for idx, name in enumerate(all_names):

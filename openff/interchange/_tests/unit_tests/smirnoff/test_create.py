@@ -248,7 +248,7 @@ class TestPresetCharges:
 
         with pytest.raises(
             PresetChargesError,
-            match="All.*must have partial charges",
+            match=r"All.*must have partial charges",
         ):
             sage.create_interchange(
                 topology,
@@ -262,7 +262,7 @@ class TestPresetCharges:
 
         with pytest.raises(
             PresetChargesError,
-            match="All molecules.*isomorphic.*unique",
+            match=r"All molecules.*isomorphic.*unique",
         ):
             sage.create_interchange(
                 topology,

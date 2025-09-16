@@ -154,7 +154,7 @@ class TestOpenMM:
 
         openff_sys["vdW"].mixing_rule = "foo"
 
-        with pytest.raises(UnsupportedExportError, match="only supports L.*foo"):
+        with pytest.raises(UnsupportedExportError, match=r"only supports L.*foo"):
             openff_sys.to_openmm(combine_nonbonded_forces=True)
 
     def test_geometric_mixing_rule(self):
