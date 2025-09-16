@@ -503,6 +503,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             molecules_with_preset_charges=molecules_with_preset_charges,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
+
         handler._charges = dict()
 
         return handler
@@ -1014,40 +1015,34 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             self.key_map[new_key] = matches[key]
 
-        topology_charges = [0.0] * topology.n_atoms
+        # this logic is all only to satisfy the allow_nonintegral_charges argument - could be more performant
+        # to do it while assignment is happening
+        if not allow_nonintegral_charges:
+            topology_charges = [0.0] * topology.n_atoms
 
-        for key, val in self.charges.items():
-            topology_charges[key.atom_indices[0]] = val.m
+            for key, val in self.charges.items():
+                topology_charges[key.atom_indices[0]] = val.m
 
-        # TODO: Better data structures in Topology.identical_molecule_groups will make this
-        #       cleaner and possibly more performant
-        for molecule in topology.molecules:
-            molecule_charges = [0.0] * molecule.n_atoms
+            # TODO: Better data structures in Topology.identical_molecule_groups will make this
+            #       cleaner and possibly more performant
+            for molecule in topology.molecules:
+                molecule_charges = [0.0] * molecule.n_atoms
 
-            for atom in molecule.atoms:
-                molecule_index = molecule.atom_index(atom)
-                topology_index = topology.atom_index(atom)
+                for atom in molecule.atoms:
+                    molecule_index = molecule.atom_index(atom)
+                    topology_index = topology.atom_index(atom)
 
-                molecule_charges[molecule_index] = topology_charges[topology_index]
+                    molecule_charges[molecule_index] = topology_charges[topology_index]
 
-            charge_sum = sum(molecule_charges)
-            formal_sum = molecule.total_charge.m
+                charge_sum = sum(molecule_charges)
+                formal_sum = molecule.total_charge.m
 
-            if abs(charge_sum - formal_sum) > 0.01:
-                if allow_nonintegral_charges:
-                    # TODO: Is it worth communicating this as a warning, or would it simply be bloat?
-                    pass
-                else:
+                if abs(charge_sum - formal_sum) > 0.01:
                     raise NonIntegralMoleculeChargeError(
                         f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
                         f"a net charge of {charge_sum} compared to a total formal charge of "
                         f"{formal_sum}.",
                     )
-
-            molecule.partial_charges = Quantity(
-                molecule_charges,
-                unit.elementary_charge,
-            )
 
     def store_potentials(
         self,
