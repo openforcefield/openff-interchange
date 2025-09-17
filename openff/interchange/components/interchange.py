@@ -1,5 +1,6 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
+import pathlib
 import tempfile
 import warnings
 from collections.abc import Iterable
@@ -916,7 +917,7 @@ class Interchange(_BaseModel):
         from openff.interchange.interop.gromacs._import._import import _read_coordinates
 
         # should already be in nm, might not be necessary
-        coordinates = _read_coordinates(gro_file).to(unit.nanometer)
+        coordinates = _read_coordinates(pathlib.Path(gro_file)).to(unit.nanometer)
 
         if coordinates.shape != (self.topology.n_atoms, 3):
             raise InvalidPositionsError(

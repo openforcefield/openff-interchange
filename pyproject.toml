@@ -76,10 +76,11 @@ warn_unused_configs = true
 warn_unused_ignores = true
 warn_incomplete_stub = true
 show_error_codes = true
+exclude = 'openff/interchange/_tests'
 
 [[tool.mypy.overrides]]
 module = [
-  "pandas",
+  "pyedr",
   "networkx",
   "openmm",
   "openmm.app",
@@ -91,6 +92,7 @@ module = [
   "openff.units.*",
   "openff.utilities.*",
   "openff.recharge.*",
+  "openff.nagl_models.*",
   "parmed",
   "parmed.amber",
   "pmdtest.utils",

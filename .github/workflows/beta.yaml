@@ -69,7 +69,6 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
-      continue-on-error: true
       run: mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Run all tests
