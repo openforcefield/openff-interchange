@@ -49,8 +49,8 @@ def _check_nonbonded_compatibility(
 
     for key in ["vdW", "Electrostatics"]:
         if not _are_almost_equal(
-            interchange1[key].cutoff,
-            interchange2[key].cutoff,
+            interchange1[key].cutoff,  # type: ignore[attr-defined]
+            interchange2[key].cutoff,  # type: ignore[attr-defined]
             DEFAULT_CUTOFF_TOLERANCE,
         ):
             raise CutoffMismatchError(

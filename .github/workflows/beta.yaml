@@ -1,6 +1,12 @@
 name: Tests against betas
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
@@ -48,6 +54,7 @@ jobs:
               - conda-forge
         create-args: >-
           python=${{ matrix.python-version }}
+          rdkit
 
     - name: Install package
       run: python -m pip install . plugins/
@@ -62,7 +69,6 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
-      continue-on-error: true
       run: mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Run all tests
