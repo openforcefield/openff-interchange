@@ -348,7 +348,7 @@ def _box_from_density(
     return _scale_box(box_shape, volume)
 
 
-def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quantity:
+def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float=1.0) -> Quantity:
     """
     Scale the parallelepiped spanned by ``box`` to the given volume.
 
@@ -372,6 +372,9 @@ def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quanti
         3x3 matrix in angstroms.
 
     """
+    if box_scaleup_factor == 1.0:
+        return box
+
     final_volume = volume.m_as("angstrom ** 3")
 
     initial_volume = numpy.abs(numpy.linalg.det(box))
@@ -462,8 +465,7 @@ def _build_input_file(
         The path to the structure to solvate.
     box_size
         The lengths of each side of the box we want to fill. This is the box
-        size of the rectangular brick representation of the simulation box; the
-        packmol box will be shrunk by the tolerance.
+        size of the rectangular brick representation of the simulation box
     tolerance
         The packmol convergence tolerance.
 
@@ -475,7 +477,7 @@ def _build_input_file(
         The path to the output file.
 
     """
-    box_size = (box_size - tolerance).m_as("angstrom")
+    box_size = box_size.m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
 
     # Add the global header options.
@@ -633,14 +635,10 @@ def pack_box(
 
     Notes
     -----
-    Returned topologies may have smaller or larger box vectors than what would be defined by the
-    target density if the box vectors are determined by `target_density`. When calling Packmol, each
-    linear dimension of the box is scaled up by 10%.  However, Packmol by default adds a small
-    buffer (defined by the `tolerance` argument which otherwise defines the minimum distance,
-    default 2 Angstrom) at the end of the packed box, which causes small voids when tiling copies of
-    each periodic image. This void is removed in hopes of faster equilibration times but the box
-    density is slightly increased as a result. These changes may cancel each other out or result in
-    larger or smaller densities than the target density, depending on argument values.
+    Packmol places molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subject to energy minimization and equilibration
+    routines before being used in production simulations.
 
     """
     # Make sure packmol can be found.
@@ -876,8 +874,10 @@ def solvate_topology(
 
     Notes
     -----
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Packmol places solvent molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subject to energy minimization and equilibration
+    routines before being used in production simulations.
 
     Returned topologies may have ion concentrations higher than the value of the
     the `nacl_conc` argument.
@@ -1040,6 +1040,11 @@ def solvate_topology_nonwater(
 
     Notes
     -----
+    Packmol places solvent molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subject to energy minimization and equilibration
+    routines before being used in production simulations.
+
     Returned topologies may have larger box vectors than what would be defined
     by the target density.
     """
