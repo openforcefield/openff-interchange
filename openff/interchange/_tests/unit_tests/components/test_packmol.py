@@ -497,7 +497,7 @@ class TestPackmolWrapper:
 
         topology = solvate_topology(
             solute.to_topology(),
-            target_density= Quantity(0.8, "gram / milliliter"),
+            target_density=Quantity(0.8, "gram / milliliter"),
             nacl_conc=1e-3 * unit.molar,
             padding=2 * unit.nm,
         )
