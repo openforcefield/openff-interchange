@@ -55,7 +55,10 @@ class TestPackmolWrapper:
     @pytest.mark.parametrize(
         "factor",
         [
-            0.9, 1.0, 1.1, 2.0,
+            0.9,
+            1.0,
+            1.1,
+            2.0,
         ],
     )
     def test_scale_box(self, box, volume, factor):
@@ -494,6 +497,7 @@ class TestPackmolWrapper:
 
         topology = solvate_topology(
             solute.to_topology(),
+            target_density= Quantity(0.8, "gram / milliliter"),
             nacl_conc=1e-3 * unit.molar,
             padding=2 * unit.nm,
         )

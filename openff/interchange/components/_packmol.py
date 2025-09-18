@@ -348,7 +348,7 @@ def _box_from_density(
     return _scale_box(box_shape, volume)
 
 
-def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float=1.0) -> Quantity:
+def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float = 1.0) -> Quantity:
     """
     Scale the parallelepiped spanned by ``box`` to the given volume.
 
