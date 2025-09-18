@@ -372,9 +372,6 @@ def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float=1.0) ->
         3x3 matrix in angstroms.
 
     """
-    if box_scaleup_factor == 1.0:
-        return box
-
     final_volume = volume.m_as("angstrom ** 3")
 
     initial_volume = numpy.abs(numpy.linalg.det(box))
