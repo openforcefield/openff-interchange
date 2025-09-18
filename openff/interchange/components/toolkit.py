@@ -207,7 +207,7 @@ def _simple_topology_from_openmm(
 
         topology._molecule_virtual_site_map[molecule_index].append(particle)
 
-    topology._particle_map = openmm_openff_particle_map
+    topology._particle_map = {val: key for key, val in openmm_openff_particle_map.items()}
 
     return topology
 
