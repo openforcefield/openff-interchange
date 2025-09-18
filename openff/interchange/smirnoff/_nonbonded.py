@@ -18,6 +18,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.toolkit.utils.exceptions import MissingPackageError
 from pydantic import Field, PrivateAttr, computed_field
+from typing_extensions import TypeAliasType, TypeVar
 
 from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
@@ -26,7 +27,6 @@ from openff.interchange.common._nonbonded import (
     vdWCollection,
 )
 from openff.interchange.components.potentials import Potential
-from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingPartialChargesError,
@@ -47,13 +47,28 @@ from openff.interchange.warnings import ForceFieldModificationWarning
 
 logger = logging.getLogger(__name__)
 
-ElectrostaticsHandlerType = (
+"""
+    type ListOrSet[T] = list[T] | set[T]
+
+    T = TypeVar("T")
+    ListOrSet = TypeAliasType("ListOrSet", list[T] | set[T], type_params=(T,))
+
+"""
+
+# would be much simpler with Python 3.12+
+# type ElectrostaticsHandlerType = ...
+# https://docs.python.org/3/library/typing.html#type-aliases
+EHT = TypeVar("EHT")
+ElectrostaticsHandlerType = TypeAliasType(
+    "ElectrostaticsHandlerType",
     ElectrostaticsHandler
     | ToolkitAM1BCCHandler
     | ChargeIncrementModelHandler
     | LibraryChargeHandler
-    | NAGLChargesHandler
+    | NAGLChargesHandler,
+    type_params=(EHT,),
 )
+
 
 _ZERO_CHARGE = Quantity(0.0, "elementary_charge")
 
@@ -262,17 +277,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(
-        _PME,
-    )  # type: ignore[assignment]
+    ] = Field("Ewald3D-ConductingBoundary")
     nonperiodic_potential: Literal[
         "Coulomb",
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(
-        "Coulomb",
-    )  # type: ignore[assignment]
+    ] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges: dict[
@@ -415,6 +426,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         )
 
                 elif parameter_key == "charge_increment":
+                    assert type(topology_key) is ChargeIncrementTopologyKey
                     assert len(topology_key.atom_indices) == 1
 
                     atom_index = topology_key.atom_indices[0]
@@ -425,7 +437,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     )
 
                     logger.info(
-                        "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
+                        "Charge section ChargeIncrementModel, applying charge increment from atom "
                         f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
                     )
 
@@ -520,7 +532,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
-        additional_args = {i: j for i, j in additional_args}
+        additional_args: dict[str, str] = {i: j for i, j in additional_args}  # type: ignore[no-redef]
         molecule = copy.deepcopy(molecule)
         GLOBAL_TOOLKIT_REGISTRY.call(
             "assign_partial_charges",
@@ -672,7 +684,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
             potentials.update(parameter_potentials)
 
-        return matches, potentials
+        return matches, potentials  # type: ignore[return-value]
 
     @classmethod
     def _find_charge_model_matches(
@@ -705,13 +717,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     "The force field has a NAGLCharges section, but the NAGL software isn't "
                     "present in GLOBAL_TOOLKIT_REGISTRY",
                 )
-            exception_types_to_raise = (
+            exception_types_to_raise: tuple = (
                 FileNotFoundError,
                 MissingPackageError,
                 HashComparisonFailedException,
                 UnableToParseDOIException,
             )
-            additional_args = (
+            additional_args: tuple = (
                 ("doi", parameter_handler.digital_object_identifier),
                 ("file_hash", parameter_handler.model_file_hash),
             )
