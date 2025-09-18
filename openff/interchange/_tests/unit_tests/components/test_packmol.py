@@ -55,7 +55,10 @@ class TestPackmolWrapper:
     @pytest.mark.parametrize(
         "factor",
         [
-            0.9, 1.0, 1.1, 2.0,
+            0.9,
+            1.0,
+            1.1,
+            2.0,
         ],
     )
     def test_scale_box(self, box, volume, factor):
