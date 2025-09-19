@@ -3,6 +3,7 @@ Units tests for openff.interchange.components._packmol
 """
 
 import pathlib
+import re
 
 import numpy
 import pytest
@@ -160,7 +161,7 @@ class TestPackmolWrapper:
     def test_packmol_underspecified(self, molecules):
         """Too few arguments are provided."""
 
-        with pytest.raises(PACKMOLValueError, match="One of.*must be"):
+        with pytest.raises(PACKMOLValueError, match=r"One of.*must be"):
             pack_box(
                 molecules,
                 number_of_copies=[1],
@@ -541,8 +542,10 @@ class TestPackmolWrapper:
         # no box, no padding should raise an error
         with pytest.raises(
             PACKMOLValueError,
-            match="Incompatible inputs: input topology has no box vectors and a solvent padding "
-            "distance was not specified.",
+            match=re.escape(
+                "Incompatible inputs: input topology has no box vectors and a solvent padding "
+                "distance was not specified",
+            ),
         ):
             solvation_function(*args, padding=None, box_shape=UNIT_CUBE)
 
@@ -551,8 +554,8 @@ class TestPackmolWrapper:
         # with box, default padding should raise an error
         with pytest.raises(
             PACKMOLValueError,
-            match="Incompatible inputs.*input topology has defined box vectors and a "
-            "solvent padding distance was also specified",
+            match=r"Incompatible inputs.*input topology has defined box vectors and a solvent "
+            "padding distance was also specified",
         ):
             solvation_function(*args)
 

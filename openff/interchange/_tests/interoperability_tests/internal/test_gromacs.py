@@ -302,7 +302,7 @@ class TestGROMACSVirtualSites:
 
         with pytest.raises(
             VirtualSiteTypeNotImplementedError,
-            match="MonovalentLonePair not implemented.",
+            match=r"MonovalentLonePair not implemented.",
         ):
             # TODO: Sanity-check reported energies
             get_gromacs_energies(out)

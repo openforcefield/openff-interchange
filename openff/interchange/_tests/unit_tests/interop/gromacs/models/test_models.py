@@ -66,7 +66,7 @@ class TestModels:
     def test_massless_atom_error(self):
         with pytest.raises(
             ValidationError,
-            match="Particle type.*D.*V.*if massless",
+            match=r"Particle type.*D.*V.*if massless",
         ):
             GROMACSAtomType(
                 name="foo",
@@ -80,7 +80,7 @@ class TestModels:
     def test_massive_virtual_site_error(self):
         with pytest.raises(
             ValidationError,
-            match="Particle type.*A.*if it has mass",
+            match=r"Particle type.*A.*if it has mass",
         ):
             GROMACSAtomType(
                 name="foo",
@@ -182,25 +182,25 @@ class TestAddRemoveMoleculeType:
     def test_clashing_atom_types(self, combined_system, system1, system2):
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL__1 is already present in this system.",
+            match="The molecule type MOL__1 is already present in this system",
         ):
             combined_system.add_molecule_type(system1.molecule_types["MOL__1"], 1)
 
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL__2 is already present in this system.",
+            match="The molecule type MOL__2 is already present in this system",
         ):
             combined_system.add_molecule_type(system2.molecule_types["MOL__2"], 1)
 
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL__1 is already present in this system.",
+            match="The molecule type MOL__1 is already present in this system",
         ):
             system1.add_molecule_type(system1.molecule_types["MOL__1"], 1)
 
         with pytest.raises(
             ValueError,
-            match="The molecule type MOL__2 is already present in this system.",
+            match="The molecule type MOL__2 is already present in this system",
         ):
             system2.add_molecule_type(system2.molecule_types["MOL__2"], 1)
 

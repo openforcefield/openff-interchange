@@ -34,7 +34,7 @@ class TestUnsupportedCases:
 
         with pytest.raises(
             UnsupportedCutoffMethodError,
-            match="does not support.*Consider using",
+            match=r"does not support.*Consider using",
         ):
             interchange.to_openmm(combine_nonbonded_forces=combine)
 

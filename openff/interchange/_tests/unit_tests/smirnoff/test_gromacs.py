@@ -144,7 +144,7 @@ class TestSettles:
         if not use_bundled_tip3p:
             with pytest.raises(
                 RuntimeError,
-                match="Could not find a constraint distance .*0.*1",
+                match=r"Could not find a constraint distance .*0.*1",
             ):
                 # ... and ensure this is an error when there is no bond parameter
                 # to fall back on

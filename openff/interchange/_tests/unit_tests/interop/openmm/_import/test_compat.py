@@ -60,7 +60,7 @@ class TestUnsupportedCases:
 
         with pytest.raises(
             UnsupportedImportError,
-            match="A particle is a virtual site of type.*OutOfPlane.*which is not yet supported.",
+            match=r"A particle is a virtual site of type.*OutOfPlane.*which is not yet supported.",
         ):
             from_openmm(
                 system=system,
