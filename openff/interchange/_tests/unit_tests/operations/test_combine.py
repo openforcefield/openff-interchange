@@ -192,6 +192,29 @@ class TestCombine:
             )
 
     @pytest.mark.parametrize("flip_order", [False, True])
+    def test_no_unnecessary_duplicate_tags(self, water_dimer, tip3p, sage, ethanol, flip_order):
+        """Check that the '_DUPLICATE' hack is only used when necessary. See Issue #1324."""
+        interchanges = [
+            tip3p.create_interchange(
+                water_dimer,
+            ),
+            sage.create_interchange(
+                ethanol.to_topology(),
+            ),
+        ]
+
+        if flip_order:
+            interchanges.reverse()
+
+        combined = interchanges[0].combine(interchanges[1])
+
+        for collection_name in ["vdW", "Bonds", "Angles", "ProperTorsions", "Constraints"]:
+            for potential_key in combined[collection_name].key_map.values():
+                assert "_DUPLICATE" not in potential_key.id, (
+                    f"Failed sanity check with {potential_key.id} in {collection_name}"
+                )
+
+    @pytest.mark.parametrize("flip_order", [False, True])
     @pytest.mark.parametrize("handler_name", ["Constraints", "Bonds", "Angles", "ProperTorsions"])
     def test_constraint_key_collision(self, parsley, sage, ethanol, flip_order, handler_name):
         """Test that key collisions in constraints and valence terms are handled."""
@@ -219,3 +242,30 @@ class TestCombine:
             numpy.vstack(arrays_before),
             array_after_combine,
         )
+
+    def test_DUPLICATE_key_already_exists(self, methane):
+        import numpy as np
+
+        # use unconstrained FFs to ensure bond parameters aren't overwritten by constraints
+        ff1 = ForceField("openff_unconstrained-1.2.1.offxml")
+        ff2 = ForceField("openff_unconstrained-2.2.1.offxml")
+        ic1 = ff1.create_interchange(methane.to_topology())
+        ic2 = ff2.create_interchange(methane.to_topology())
+
+        # Manually compile an array of expected final system params
+        individual_params = np.concatenate(
+            [
+                ic1["Bonds"].get_system_parameters(),
+                ic2["Bonds"].get_system_parameters(),
+                ic1["Bonds"].get_system_parameters(),
+            ],
+            axis=0,
+        )
+
+        # Get the array of system params from and interchange resulting from successive .combine operations
+        ic3 = ic1.combine(ic2.combine(ic1))
+        combined_params = ic3["Bonds"].get_system_parameters()
+
+        # Test the arrays for equality
+        for idx, (p1, p2) in enumerate(zip(individual_params, combined_params)):
+            assert np.allclose(p1, p2), f"mismatch at bond {idx=}"
