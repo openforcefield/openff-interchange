@@ -149,7 +149,12 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
                 term = line[r[0] : r[1]]
                 if "=" in term:
                     energy_type, energy_value = term.strip().split("=")
-                    energy_value = float(energy_value) * unit.kilocalories_per_mole
+                    try:
+                        energy_value = float(energy_value) * unit.kilocalories_per_mole
+                    except ValueError as error:
+                        raise AmberError(
+                            f"Found bad energy value '{energy_value}' associated with energy type '{energy_type}'",
+                        ) from error
                     potential += energy_value
                     energy_type = energy_type.rstrip()
                     e_out[energy_type] = energy_value
