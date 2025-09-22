@@ -130,8 +130,8 @@ def _combine(
         except KeyError:
             result.collections[collection_name] = collection
             warnings.warn(
-                f"'other' Interchange object has collection with name {collection_name} not "
-                f"found in 'self,' but it has now been added.",
+                f"One Interchange object has collection with name {collection_name} not "
+                f"found in the other Interchange object, but it has now been added."
             )
             continue
 
@@ -183,7 +183,7 @@ def _combine(
 
     if not numpy.all(result.box == result.box):
         raise UnsupportedCombinationError(
-            "Combination with unequal box vectors is not curretnly supported",
+            "Combination with unequal box vectors is not currently supported",
         )
 
     return result
