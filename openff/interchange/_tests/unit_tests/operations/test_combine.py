@@ -296,3 +296,39 @@ class TestCombine:
             match="already have _DUPLICATE appended",
         ):
             ic2.combine(ic2.combine(ic1))
+
+    def test_combine_twice(self, sage, methane, ethanol, water_dimer):
+        """Test that combining more than two Interchanges works as expected."""
+
+        # another good test would be to do this with three separate FFs, and then ...
+        ic1 = sage.create_interchange(methane.to_topology())
+        ic2 = sage.create_interchange(ethanol.to_topology())
+        ic3 = sage.create_interchange(water_dimer)
+
+        ic4 = ic1.combine(ic2).combine(ic3)
+        # ... make ic5 out of ForceField("ff1.offxml", "ff2.offxml", "ff3.offxml")
+        # and a combined topology, and compare the parameters (and more?) there
+
+        for collection_name in ["vdW", "Bonds", "Angles", "Constraints"]:
+            numpy.testing.assert_allclose(
+                numpy.vstack(
+                    [
+                        ic1[collection_name].get_system_parameters(),
+                        ic2[collection_name].get_system_parameters(),
+                        ic3[collection_name].get_system_parameters(),
+                    ],
+                ),
+                ic4[collection_name].get_system_parameters(),
+            )
+
+        # vstack is basically concatenation in 2D, but these are 1D arrays
+        numpy.testing.assert_allclose(
+            numpy.concatenate(
+                [
+                    ic1["Electrostatics"].get_charge_array(),
+                    ic2["Electrostatics"].get_charge_array(),
+                    ic3["Electrostatics"].get_charge_array(),
+                ],
+            ),
+            ic4["Electrostatics"].get_charge_array(),
+        )
