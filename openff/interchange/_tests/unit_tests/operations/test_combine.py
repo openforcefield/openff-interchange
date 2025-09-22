@@ -243,29 +243,56 @@ class TestCombine:
             array_after_combine,
         )
 
-    def test_DUPLICATE_key_already_exists(self, methane):
-        import numpy as np
+    def test_same_keys_same_physics_combines_without_error(self, sage, methane, ethanol):
+        """Test that PotentialKey collisions are only corrected when the associated parameters differ."""
+        ic1 = sage.create_interchange(methane.to_topology())
+        ic2 = sage.create_interchange(ethanol.to_topology())
 
-        # use unconstrained FFs to ensure bond parameters aren't overwritten by constraints
-        ff1 = ForceField("openff_unconstrained-1.2.1.offxml")
-        ff2 = ForceField("openff_unconstrained-2.2.1.offxml")
-        ic1 = ff1.create_interchange(methane.to_topology())
-        ic2 = ff2.create_interchange(methane.to_topology())
+        # should not error no matter the order of combination
+        ic3 = ic1.combine(ic2)
+        ic4 = ic2.combine(ic1)
 
-        # Manually compile an array of expected final system params
-        individual_params = np.concatenate(
-            [
-                ic1["Bonds"].get_system_parameters(),
-                ic2["Bonds"].get_system_parameters(),
-                ic1["Bonds"].get_system_parameters(),
-            ],
-            axis=0,
+        # should not have shim _DUPLICATE keys
+        for interchange in [ic3, ic4]:
+            for name, collection in interchange.collections.items():
+                if name == "Constraints":
+                    continue
+                for key in collection.potentials.keys():
+                    assert "_DUPLICATE" not in key.id, f"Unexpected _DUPLICATE in {key.id}"
+
+        numpy.testing.assert_allclose(
+            numpy.vstack(
+                [
+                    ic1["vdW"].get_system_parameters(),
+                    ic2["vdW"].get_system_parameters(),
+                ],
+            ),
+            ic3["vdW"].get_system_parameters(),
         )
 
-        # Get the array of system params from and interchange resulting from successive .combine operations
-        ic3 = ic1.combine(ic2.combine(ic1))
-        combined_params = ic3["Bonds"].get_system_parameters()
+        numpy.testing.assert_allclose(
+            numpy.vstack(
+                [
+                    ic2["vdW"].get_system_parameters(),
+                    ic1["vdW"].get_system_parameters(),
+                ],
+            ),
+            ic4["vdW"].get_system_parameters(),
+        )
 
-        # Test the arrays for equality
-        for idx, (p1, p2) in enumerate(zip(individual_params, combined_params)):
-            assert np.allclose(p1, p2), f"mismatch at bond {idx=}"
+    def test_shim_duplicate_key_already_exists(self, parsley, sage, methane, ethanol):
+        ic1 = parsley.create_interchange(methane.to_topology())
+        ic2 = sage.create_interchange(ethanol.to_topology())
+
+        # should error no matter the order of combination
+        with pytest.raises(
+            UnsupportedCombinationError,
+            match="already have _DUPLICATE appended",
+        ):
+            ic1.combine(ic2.combine(ic1))
+
+        with pytest.raises(
+            UnsupportedCombinationError,
+            match="already have _DUPLICATE appended",
+        ):
+            ic2.combine(ic2.combine(ic1))

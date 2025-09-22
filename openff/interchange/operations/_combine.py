@@ -123,6 +123,15 @@ def _combine(
         input2["Electrostatics"]._charges = dict()
         input2["Electrostatics"]._charges_cached = False
 
+    for collection in input2.collections.values():
+        for potential_key in collection.potentials:
+            if "_DUPLICATE" in potential_key.id:
+                raise UnsupportedCombinationError(
+                    f"Combination failed due to key collision on {potential_key}. "
+                    "Some keys already have _DUPLICATE appended to their ID. "
+                    "Please report this issue if you need this functionality.",
+                )
+
     for collection_name, collection in input2.collections.items():
         # TODO: Actually specify behavior in this case
         try:
@@ -131,7 +140,7 @@ def _combine(
             result.collections[collection_name] = collection
             warnings.warn(
                 f"One Interchange object has collection with name {collection_name} not "
-                f"found in the other Interchange object, but it has now been added."
+                f"found in the other Interchange object, but it has now been added.",
             )
             continue
 
@@ -152,18 +161,23 @@ def _combine(
                     _mult += 1
 
             if _tmp_pot_key in input1[collection_name].potentials:
-                logging.info(f"Key collision, fixing. Key is {_tmp_pot_key}")
-                _tmp_pot_key.id = _tmp_pot_key.id + "_DUPLICATE"
+                # if the potential key and parameters are identical, no action needed
+                if (
+                    collection.potentials[_tmp_pot_key] == input1[collection_name].potentials[_tmp_pot_key]
+                ) and collection_name != "Constraints":
+                    pass
 
-            new_collection.key_map.update({new_top_key: _tmp_pot_key})
-            if collection_name == "Constraints":
-                new_collection.potentials.update(
-                    {_tmp_pot_key: collection.potentials[pot_key]},
-                )
-            else:
-                new_collection.potentials.update(
-                    {_tmp_pot_key: collection.potentials[pot_key]},
-                )
+                else:
+                    logging.info(f"Key collision with different parameters, fixing. Key is {_tmp_pot_key}")
+                    _tmp_pot_key.id += "_DUPLICATE"
+
+            new_collection.key_map.update(
+                {new_top_key: _tmp_pot_key},
+            )
+
+            new_collection.potentials.update(
+                {_tmp_pot_key: collection.potentials[pot_key]},
+            )
 
         # Ensure the charge cache is rebuilt
         if collection_name == "Electrostatics":
