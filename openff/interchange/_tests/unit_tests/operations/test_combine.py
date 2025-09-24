@@ -219,3 +219,21 @@ class TestCombine:
             numpy.vstack(arrays_before),
             array_after_combine,
         )
+
+    @pytest.mark.parametrize("flip_order", [False, True])
+    def test_charge_cache_behavior(self, sage, ethanol, caffeine, flip_order):
+        int1 = sage.create_interchange(ethanol.to_topology())
+        int2 = sage.create_interchange(caffeine.to_topology())
+
+        for interchange_ in (int1, int2):
+            assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
+
+        if flip_order:
+            int3 = int2.combine(int1)
+        else:
+            int3 = int1.combine(int2)
+
+        assert int3["Electrostatics"]._charges_cached is False
+
+        for interchange_ in (int1, int2):
+            assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
