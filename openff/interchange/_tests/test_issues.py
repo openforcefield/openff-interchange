@@ -158,10 +158,11 @@ def test_issue_1209(sage, ethanol):
         ),
     )
 
+
 def test_issue_1337(water):
     """Reproduce Issue #1337."""
     ff14sb_tip3p = ForceField("ff14sb_off_impropers_0.0.3.offxml", "tip3p.offxml")
 
-    out = ff14sb_tip3p.create_interchange(water.to_topology())
+    ff14sb_tip3p.create_interchange(water.to_topology())
 
     # TODO: which exports should crash?

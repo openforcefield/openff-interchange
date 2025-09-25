@@ -33,7 +33,6 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import (
     SMIRNOFFCollection,
-    _check_all_valence_terms_assigned,
 )
 from openff.interchange.warnings import ForceFieldModificationWarning
 
@@ -172,15 +171,6 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             )
 
             self.key_map[topology_key] = potential_key
-
-        valence_terms = self.valence_terms(topology)
-
-        _check_all_valence_terms_assigned(
-            handler=parameter_handler,
-            topology=topology,
-            assigned_terms=matches,
-            valence_terms=valence_terms,
-        )
 
     def store_potentials(self, parameter_handler: BondHandler) -> None:
         """
@@ -483,6 +473,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
         """Return a list of names of parameters included in each potential in this colletion."""
         return ["k", "periodicity", "phase", "idivf"]
 
+    @classmethod
+    def valence_terms(cls, topology):
+        """Return all (proper) torsions in this topology."""
+        return list(topology.propers)
+
     def store_matches(
         self,
         parameter_handler: ProperTorsionHandler,
@@ -537,13 +532,6 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                 )
 
                 self.key_map[topology_key] = potential_key
-
-        _check_all_valence_terms_assigned(
-            handler=parameter_handler,
-            topology=topology,
-            assigned_terms=matches,
-            valence_terms=list(topology.propers),
-        )
 
     def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
         """

@@ -1,7 +1,7 @@
 import warnings
 
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
-from openff.toolkit.typing.engines.smirnoff import ParameterHandler
+from openff.toolkit.typing.engines.smirnoff import AngleHandler, BondHandler, ParameterHandler, ProperTorsionHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from packaging.version import Version
 
@@ -14,7 +14,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
-from openff.interchange.smirnoff._base import SMIRNOFFCollection
+from openff.interchange.smirnoff._base import SMIRNOFFCollection, _check_all_valence_terms_assigned
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -49,17 +49,15 @@ _PLUGIN_CLASS_MAPPING: dict[
     type["SMIRNOFFCollection"],
 ] = dict()
 
-for collection_plugin in load_smirnoff_plugins():
-    parameter_handlers: list[type["ParameterHandler"]] = collection_plugin.allowed_parameter_handlers()
-
-    for parameter_handler in parameter_handlers:
-        if parameter_handler in load_handler_plugins():
-            _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handler._TAGNAME)
-            _PLUGIN_CLASS_MAPPING[parameter_handler] = collection_plugin
+for _collection_plugin in load_smirnoff_plugins():
+    for _parameter_handler in _collection_plugin.allowed_parameter_handlers():
+        if _parameter_handler in load_handler_plugins():
+            _SUPPORTED_PARAMETER_HANDLERS.add(_parameter_handler._TAGNAME)
+            _PLUGIN_CLASS_MAPPING[_parameter_handler] = _collection_plugin
         else:
             raise ValueError(
-                f"`SMIRNOFFCollection` plugin {collection_plugin} supports `ParameterHandler` "
-                f"plugin {parameter_handler}, but it was not found in the `openff.toolkit.plugins` "
+                f"`SMIRNOFFCollection` plugin {_collection_plugin} supports `ParameterHandler` "
+                f"plugin {_parameter_handler}, but it was not found in the `openff.toolkit.plugins` "
                 "entry point. If this collection can use this handler but does not require it, "
                 "please raise an issue on GitHub describing your use case.",
             )
@@ -176,7 +174,17 @@ def _create_interchange(
         interchange.topology,
         bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
     )
+    if "Bonds" in force_field.registered_parameter_handlers:
+        _check_all_valence_terms_assigned(
+            handler_class=BondHandler,
+            topology=interchange.topology,
+            assigned_atom_indices=[
+                *{tuple(key.atom_indices) for key in interchange["Bonds"].key_map},
+            ],
+            valence_terms=interchange["Bonds"].valence_terms(interchange.topology),
+        )
     _angles(interchange, force_field, interchange.topology)
+
     _propers(
         interchange,
         force_field,
@@ -184,6 +192,20 @@ def _create_interchange(
         partial_bond_orders_from_molecules,
     )
     _impropers(interchange, force_field, interchange.topology)
+
+    for handler_name, handler_class in zip(
+        ["Angles", "ProperTorsions"],
+        [AngleHandler, ProperTorsionHandler],
+    ):
+        if handler_name in force_field.registered_parameter_handlers:
+            _check_all_valence_terms_assigned(
+                handler_class=handler_class,
+                topology=interchange.topology,
+                assigned_atom_indices=[
+                    *{tuple(key.atom_indices) for key in interchange[handler_name].key_map},
+                ],
+                valence_terms=interchange[handler_name].valence_terms(interchange.topology),  # type: ignore[attr-defined]
+            )
 
     _vdw(interchange, force_field, interchange.topology)
     _electrostatics(
