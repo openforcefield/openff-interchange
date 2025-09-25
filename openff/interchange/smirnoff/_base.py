@@ -33,7 +33,7 @@ TP = TypeVar("TP", bound="ParameterHandler")
 # openff/toolkit/typing/engines/smirnoff/parameters.py#L2318
 def _check_all_valence_terms_assigned(
     handler_class: type,
-    assigned_atom_indices: list[tuple[int, ...]],
+    assigned_atom_indices: set[tuple[int, ...]],
     topology: Topology,
     valence_terms: list[tuple[Atom, ...]],
 ):
@@ -59,9 +59,8 @@ def _check_all_valence_terms_assigned(
     # Raise an error if there are unassigned terms.
     err_msg = ""
 
+    unassigned_atom_tuples = []
     if len(unassigned_terms) > 0:
-        unassigned_atom_tuples = []
-
         unassigned_str = ""
         for unassigned_tuple in unassigned_terms:
             unassigned_str += "\n- Topology indices " + str(unassigned_tuple)

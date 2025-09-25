@@ -175,15 +175,55 @@ def _create_interchange(
         bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
     )
     if "Bonds" in force_field.registered_parameter_handlers:
+        assigned_bond_indices = {tuple(key.atom_indices) for key in interchange["Bonds"].key_map}
+
+        # need to filter the list of _all_ constraints to those that are bond-like, since constraints
+        # can also be used to freeze i-k atoms in angles and other things, and we don't want those to
+        # be interpreted as over-assigned bond terms
+        topological_bond_indices = {
+            (
+                interchange.topology.atom_index(bond.atom1),
+                interchange.topology.atom_index(bond.atom2),
+            )
+            for bond in interchange.topology.bonds
+        }
+        all_assigned_constraint_indices = {tuple(key.atom_indices) for key in interchange["Constraints"].key_map}
+        bond_like_assigned_constraint_indices = {
+            constraint for constraint in all_assigned_constraint_indices if constraint in topological_bond_indices
+        }
+
         _check_all_valence_terms_assigned(
             handler_class=BondHandler,
             topology=interchange.topology,
-            assigned_atom_indices=[
-                *{tuple(key.atom_indices) for key in interchange["Bonds"].key_map},
-            ],
+            assigned_atom_indices=assigned_bond_indices.union(bond_like_assigned_constraint_indices),
             valence_terms=interchange["Bonds"].valence_terms(interchange.topology),
         )
+
     _angles(interchange, force_field, interchange.topology)
+
+    if "Angles" in force_field.registered_parameter_handlers:
+        assigned_angle_indices = {tuple(key.atom_indices) for key in interchange["Angles"].key_map}
+
+        # need to filter the list of angles whose i-k atoms are convered by constraints
+        topological_angle_indices = {
+            (
+                interchange.topology.atom_index(angle[0]),
+                interchange.topology.atom_index(angle[1]),
+                interchange.topology.atom_index(angle[2]),
+            )
+            for angle in interchange.topology.angles
+        }
+        all_assigned_constraint_indices = {tuple(key.atom_indices) for key in interchange["Constraints"].key_map}
+        angles_mimicked_by_constraints = {
+            pair for pair in topological_angle_indices if tuple((pair[0], pair[2])) in all_assigned_constraint_indices
+        }
+
+        _check_all_valence_terms_assigned(
+            handler_class=AngleHandler,
+            topology=interchange.topology,
+            assigned_atom_indices=assigned_angle_indices.union(angles_mimicked_by_constraints),
+            valence_terms=interchange["Angles"].valence_terms(interchange.topology),
+        )
 
     _propers(
         interchange,
@@ -194,16 +234,16 @@ def _create_interchange(
     _impropers(interchange, force_field, interchange.topology)
 
     for handler_name, handler_class in zip(
-        ["Angles", "ProperTorsions"],
-        [AngleHandler, ProperTorsionHandler],
+        ["ProperTorsions"],
+        [ProperTorsionHandler],
     ):
         if handler_name in force_field.registered_parameter_handlers:
             _check_all_valence_terms_assigned(
                 handler_class=handler_class,
                 topology=interchange.topology,
-                assigned_atom_indices=[
+                assigned_atom_indices={
                     *{tuple(key.atom_indices) for key in interchange[handler_name].key_map},
-                ],
+                },
                 valence_terms=interchange[handler_name].valence_terms(interchange.topology),  # type: ignore[attr-defined]
             )
 
