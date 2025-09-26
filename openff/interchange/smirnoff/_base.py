@@ -2,6 +2,7 @@ import abc
 from typing import Self, TypeVar
 
 from openff.toolkit import Topology
+from openff.toolkit.topology import Atom, ValenceDict
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -31,24 +32,26 @@ TP = TypeVar("TP", bound="ParameterHandler")
 # https://github.com/openforcefield/openff-toolkit/blob/0133414d3ab51e1af0996bcebe0cc1bdddc6431b/
 # openff/toolkit/typing/engines/smirnoff/parameters.py#L2318
 def _check_all_valence_terms_assigned(
-    handler,
-    assigned_terms,
-    topology,
-    valence_terms,
+    handler_class: type,
+    assigned_atom_indices: set[tuple[int, ...]],
+    topology: Topology,
+    valence_terms: list[tuple[Atom, ...]],
 ):
     """Check that all valence terms have been assigned."""
-    if len(assigned_terms) == len(valence_terms):
+    if len(assigned_atom_indices) == len(valence_terms):
         return
 
     # Convert the valence term to a valence dictionary to make sure
     # the order of atom indices doesn't matter for comparison.
-    valence_terms_dict = assigned_terms.__class__()
+    valence_terms_dict = (
+        ValenceDict()
+    )  # might be some cases in which a subclass is used, but we're only using this for key ordering ...
     for atoms in valence_terms:
         atom_indices = (topology.atom_index(a) for a in atoms)
-        valence_terms_dict[atom_indices] = atoms
+        valence_terms_dict[atom_indices] = None
 
     # Check that both valence dictionaries have the same keys (i.e. terms).
-    assigned_terms_set = set(assigned_terms.keys())
+    assigned_terms_set = set(assigned_atom_indices)
     valence_terms_set = set(valence_terms_dict.keys())
     unassigned_terms = valence_terms_set.difference(assigned_terms_set)
     not_found_terms = assigned_terms_set.difference(valence_terms_set)
@@ -56,9 +59,8 @@ def _check_all_valence_terms_assigned(
     # Raise an error if there are unassigned terms.
     err_msg = ""
 
+    unassigned_atom_tuples = []
     if len(unassigned_terms) > 0:
-        unassigned_atom_tuples = []
-
         unassigned_str = ""
         for unassigned_tuple in unassigned_terms:
             unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
@@ -72,34 +74,37 @@ def _check_all_valence_terms_assigned(
                 unassigned_atoms.append(atom)
                 unassigned_str += f"({atom.name} {atom.symbol}), "
             unassigned_atom_tuples.append(tuple(unassigned_atoms))
+
         err_msg += (
-            f"{handler.__class__.__name__} was not able to find parameters for the "
+            f"{handler_class.__name__} was not able to find parameters for the "
             f"following valence terms:\n{unassigned_str}"
         )
+
     if len(not_found_terms) > 0:
         if err_msg != "":
             err_msg += "\n"
         not_found_str = "\n- ".join([str(x) for x in not_found_terms])
-        err_msg += (
-            f"{handler.__class__.__name__} assigned terms that were not found in the topology:\n- {not_found_str}"
-        )
+        err_msg += f"{handler_class.__name__} assigned terms that were not found in the topology:\n- {not_found_str}"
     if err_msg:
         err_msg += "\n"
 
-        if isinstance(handler, BondHandler):
-            exception_class = UnassignedBondError
-        elif isinstance(handler, AngleHandler):
-            exception_class = UnassignedAngleError
-        elif isinstance(handler, ProperTorsionHandler | ImproperTorsionHandler):
-            exception_class = UnassignedTorsionError
-        else:
+        class_exception_map = {
+            BondHandler: UnassignedBondError,
+            AngleHandler: UnassignedAngleError,
+            ProperTorsionHandler: UnassignedTorsionError,
+            ImproperTorsionHandler: UnassignedTorsionError,
+        }
+
+        try:
+            exception = class_exception_map[handler_class](err_msg)
+        except KeyError:
             raise RuntimeError(
-                f"Could not find an exception class for handler {handler}",
+                f"Could not find an exception class for handler with class {handler_class}",
             )
 
-        exception = exception_class(err_msg)
-        exception.unassigned_topology_atom_tuples = unassigned_atom_tuples
-        exception.handler_class = handler.__class__
+        exception.unassigned_topology_atom_tuples = unassigned_atom_tuples  # type: ignore[attr-defined]
+        exception.handler_class = handler_class  # type: ignore[attr-defined]
+
         raise exception
 
 
@@ -183,19 +188,6 @@ class SMIRNOFFCollection(Collection, abc.ABC):
             )
 
             self.key_map[topology_key] = potential_key
-
-        if self.__class__.__name__ in [
-            "SMIRNOFFBondCollection",
-            "SMIRNOFFAngleCollection",
-        ]:
-            valence_terms = self.valence_terms(topology)  # type: ignore[attr-defined]
-
-            _check_all_valence_terms_assigned(
-                handler=parameter_handler,
-                assigned_terms=matches,
-                topology=topology,
-                valence_terms=valence_terms,
-            )
 
     def store_potentials(self, parameter_handler: TP):
         """
