@@ -52,7 +52,7 @@ _PLUGIN_CLASS_MAPPING: dict[
 for collection_plugin in load_smirnoff_plugins():
     for parameter_handler in collection_plugin.allowed_parameter_handlers():
         if parameter_handler in load_handler_plugins():
-            _SUPPORTED_PARAMETER_HANDLERS.add(_parameter_handler._TAGNAME)
+            _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handler._TAGNAME)
             _PLUGIN_CLASS_MAPPING[parameter_handler] = collection_plugin
         else:
             raise ValueError(
