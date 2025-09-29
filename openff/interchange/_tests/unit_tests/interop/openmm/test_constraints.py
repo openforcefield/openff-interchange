@@ -3,13 +3,15 @@ from openff.toolkit import Quantity
 from openff.toolkit.topology import ValenceDict
 from openff.toolkit.typing.engines.smirnoff.parameters import ConstraintHandler
 
+from openff.interchange.exceptions import MissingParametersError
+
 
 @pytest.fixture
 def distanceless_constraints():
     handler = ConstraintHandler(version=0.3)
     handler.add_parameter(
         {
-            "smirks": "[#1:1]~[*:2]",
+            "smirks": "[*:1]~[*:2]",  # all bonds!
             "id": "distanceless",
         },
     )
@@ -54,7 +56,7 @@ class TestConstraints:
         # than looking up what they *should* be
         system = sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
 
-        assert system.getNumConstraints() == 6
+        assert system.getNumConstraints() == ethanol.n_bonds
 
         constraint_distances = ValenceDict()
         bond_distances = ValenceDict()
@@ -109,3 +111,47 @@ class TestConstraints:
                 _, _, length, _ = force.getBondParameters(bond_index)
 
                 assert "0.12345678" not in str(length)
+
+    def test_distanceless_constraints_without_bonds_error(
+        self,
+        sage,
+        distanceless_constraints,
+        ethanol,
+    ):
+        """When constraints are speicifed without distances, but no bonds are present, error."""
+        sage.deregister_parameter_handler("Constraints")
+        sage.register_parameter_handler(distanceless_constraints)
+        sage.deregister_parameter_handler("Bonds")
+
+        # this test short-circuits before anything OpenMM is called, so it could live elsewhere
+        with pytest.raises(
+            MissingParametersError,
+            match=r"The distance of this constraint is not specified.",
+        ):
+            sage.create_openmm_system(ethanol.to_topology())
+
+    def test_constraints_with_distances_without_bonds(
+        self,
+        sage,
+        constraints_with_distance,
+        ethanol,
+    ):
+        """When constraints are speicifed with distances, but no bonds are present, still sets constraints."""
+        openmm = pytest.importorskip("openmm")
+
+        sage.deregister_parameter_handler("Constraints")
+        sage.register_parameter_handler(constraints_with_distance)
+        sage.deregister_parameter_handler("Bonds")
+
+        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system()
+
+        assert system.getNumConstraints() == ethanol.n_bonds
+
+        for constraint_index in range(system.getNumConstraints()):
+            _, _, distance = system.getConstraintParameters(constraint_index)
+
+            assert "0.12345678" in str(distance)
+
+        for force in system.getForces():
+            if type(force) is openmm.HarmonicBondForce:
+                raise Exception("there should not be a bond force")
