@@ -662,6 +662,21 @@ def no_charges() -> ForceField:
 
 
 @pytest.fixture
+def sage_charge_increment_handler(sage):
+    sage.deregister_parameter_handler("ToolkitAM1BCC")
+    sage.register_parameter_handler(
+        ChargeIncrementModelHandler(version=0.3, partial_charge_method="gasteiger"),
+    )
+
+    return sage
+
+
+@pytest.fixture
+def sage_230():
+    return ForceField("openff-2.3.0-rc1.offxml")
+
+
+@pytest.fixture
 def default_integrator():
     try:
         import openmm
