@@ -2,17 +2,18 @@ import pytest
 from openff.toolkit import Quantity
 from openff.toolkit.topology import ValenceDict
 from openff.toolkit.typing.engines.smirnoff.parameters import ConstraintHandler
+from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
 
 from openff.interchange.exceptions import MissingParametersError
 
 
 @pytest.fixture
-def distanceless_constraints():
+def distanceless_bond_constraints():
     handler = ConstraintHandler(version=0.3)
     handler.add_parameter(
         {
             "smirks": "[*:1]~[*:2]",  # all bonds!
-            "id": "distanceless",
+            "id": "distanceless_bond",
         },
     )
 
@@ -20,12 +21,12 @@ def distanceless_constraints():
 
 
 @pytest.fixture
-def constraints_with_distance():
+def bond_constraints_with_distance():
     handler = ConstraintHandler(version=0.3)
     handler.add_parameter(
         {
             "smirks": "[*:1]~[*:2]",
-            "id": "distanceless",
+            "id": "bond_with_distance",
             "distance": Quantity("0.123456789 nm"),
         },
     )
@@ -34,23 +35,44 @@ def constraints_with_distance():
 
 
 @pytest.fixture
-def force_field_with_distanceless_constraints(sage):
-    """Force field with very different parameters for some particular bonds, angles, and constraints."""
-    sage.dereg
+def distanceless_angle_constraints():
+    handler = ConstraintHandler(version=0.3)
+    handler.add_parameter(
+        {
+            "smirks": "[*:1]~[*]~[*:2]",  # all angles!
+            "id": "distanceless_angle",
+        },
+    )
+
+    return handler
+
+
+@pytest.fixture
+def angle_constraints_with_distance():
+    handler = ConstraintHandler(version=0.3)
+    handler.add_parameter(
+        {
+            "smirks": "[*:1]~[*]~[*:2]",  # all angles!
+            "id": "angle_with_distance",
+            "distance": Quantity("0.22222222 nm"),
+        },
+    )
+
+    return handler
 
 
 class TestConstraints:
     def test_with_bonds_with_distanceless_constraints(
         self,
         sage,
-        distanceless_constraints,
+        distanceless_bond_constraints,
         ethanol,
     ):
         """Bonds specified, constraints without distance, length taken from bonds."""
         openmm = pytest.importorskip("openmm")
 
         sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(distanceless_constraints)
+        sage.register_parameter_handler(distanceless_bond_constraints)
 
         # add in bond parameters which are also constrained, since it's easier and a little safer
         # than looking up what they *should* be
@@ -84,14 +106,14 @@ class TestConstraints:
     def test_constraint_distances_override_bond_distances(
         self,
         sage,
-        constraints_with_distance,
+        bond_constraints_with_distance,
         ethanol,
     ):
         """Bonds specified, constraints without distance, length taken from bonds."""
         openmm = pytest.importorskip("openmm")
 
         sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(constraints_with_distance)
+        sage.register_parameter_handler(bond_constraints_with_distance)
 
         # add in bond parameters which are also constrained, since it's easier and a little safer
         # than looking up what they *should* be
@@ -115,12 +137,12 @@ class TestConstraints:
     def test_distanceless_constraints_without_bonds_error(
         self,
         sage,
-        distanceless_constraints,
+        distanceless_bond_constraints,
         ethanol,
     ):
         """When constraints are speicifed without distances, but no bonds are present, error."""
         sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(distanceless_constraints)
+        sage.register_parameter_handler(distanceless_bond_constraints)
         sage.deregister_parameter_handler("Bonds")
 
         # this test short-circuits before anything OpenMM is called, so it could live elsewhere
@@ -133,14 +155,14 @@ class TestConstraints:
     def test_constraints_with_distances_without_bonds(
         self,
         sage,
-        constraints_with_distance,
+        bond_constraints_with_distance,
         ethanol,
     ):
         """When constraints are speicifed with distances, but no bonds are present, still sets constraints."""
         openmm = pytest.importorskip("openmm")
 
         sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(constraints_with_distance)
+        sage.register_parameter_handler(bond_constraints_with_distance)
         sage.deregister_parameter_handler("Bonds")
 
         system = sage.create_interchange(ethanol.to_topology()).to_openmm_system()
@@ -155,3 +177,73 @@ class TestConstraints:
         for force in system.getForces():
             if type(force) is openmm.HarmonicBondForce:
                 raise Exception("there should not be a bond force")
+
+    @pytest.mark.parametrize("remove_angles", [True, False])
+    def test_angles_with_distanceless_constraints(
+        self,
+        distanceless_angle_constraints,
+        sage,
+        ethanol,
+        remove_angles,
+    ):
+        """
+        Test that angle-like constraints without specified distance raise an error,
+        whether or not there are angle parameters.
+        """
+        sage.deregister_parameter_handler("Constraints")
+        sage.register_parameter_handler(distanceless_angle_constraints)
+
+        if remove_angles:
+            sage.deregister_parameter_handler("Angles")
+
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match=r"0, 2.*unsupported in the SMIRNOFF specification",
+        ):
+            sage.create_openmm_system(ethanol.to_topology())
+
+    def test_constraint_distances_override_angle_geometry(
+        self,
+        sage,
+        ethanol,
+        angle_constraints_with_distance,
+    ):
+        sage.deregister_parameter_handler("Constraints")
+        sage.register_parameter_handler(angle_constraints_with_distance)
+
+        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
+
+        assert system.getNumConstraints() == ethanol.n_angles
+
+        for constraint_index in range(system.getNumConstraints()):
+            _, _, distance = system.getConstraintParameters(constraint_index)
+
+            assert "0.222222" in str(distance)
+
+        # angle parameters don't store 1-3 distance, so can't cleanly compare geometries vs. constraint distance
+
+    def test_constraints_with_distances_without_angles(
+        self,
+        sage,
+        ethanol,
+        angle_constraints_with_distance,
+    ):
+        """When constraints are speicifed with distances, but no angles are present, still sets constraints."""
+        openmm = pytest.importorskip("openmm")
+
+        sage.deregister_parameter_handler("Constraints")
+        sage.register_parameter_handler(angle_constraints_with_distance)
+        sage.deregister_parameter_handler("Angles")
+
+        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system()
+
+        assert system.getNumConstraints() == ethanol.n_angles
+
+        for constraint_index in range(system.getNumConstraints()):
+            _, _, distance = system.getConstraintParameters(constraint_index)
+
+            assert "0.222222" in str(distance)
+
+        for force in system.getForces():
+            if type(force) is openmm.HarmonicAngleForce:
+                raise Exception("there should not be an angle force")

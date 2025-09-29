@@ -10,6 +10,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
+from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
 from packaging.version import Version
 
 from openff.interchange.common._valence import (
@@ -390,8 +391,17 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                         "of this constraint is not specified.",
                     )
 
-                # ... so use the same PotentialKey instance as the BondHandler to look up the distance
-                potential_key = bonds.key_map[topology_key]  # type: ignore[union-attr]
+                try:
+                    # ... so use the same PotentialKey instance as the BondHandler to look up the distance
+                    potential_key = bonds.key_map[topology_key]  # type: ignore[union-attr]
+                except KeyError:
+                    raise SMIRNOFFSpecError(
+                        "Error while processing a constraint with no distance specified and no harmonic "
+                        f"bond parameters associated with atoms {topology_key.atom_indices=}. This is "
+                        "unsupported in the SMIRNOFF specification. Consider adding a distance to the "
+                        "constraint parameter or instead constraining other atoms which are bonded and "
+                        "have harmonic bond parameters.",
+                    )
 
                 self.key_map[topology_key] = potential_key
 
