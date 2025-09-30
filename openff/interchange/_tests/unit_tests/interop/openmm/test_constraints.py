@@ -112,8 +112,8 @@ class TestConstraints:
         """Bonds specified, constraints without distance, length taken from bonds."""
         openmm = pytest.importorskip("openmm")
 
-        # replace original constraints with a single wildcard constraint, since it's 
-        # easier and a little safer than looking up what each distance  *should* be 
+        # replace original constraints with a single wildcard constraint, since it's
+        # easier and a little safer than looking up what each distance  *should* be
 
         sage.deregister_parameter_handler("Constraints")
         sage.register_parameter_handler(bond_constraints_with_distance)
