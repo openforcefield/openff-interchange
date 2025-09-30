@@ -229,6 +229,8 @@ class TestFromOpenMM:
         assert len(imported["Bonds"].key_map) == imported.topology.n_bonds == 4
         assert len(imported["Angles"].key_map) == imported.topology.n_angles == 2
 
+        assert len(imported["Electrostatics"].get_charge_array()) == water_dimer.n_atoms
+
         # Mostly just ensure GROMACS evaluation doesn't crash
         get_openmm_energies(imported, combine_nonbonded_forces=False).compare(
             get_gromacs_energies(imported),
@@ -280,6 +282,12 @@ class TestProcessTopology:
     def test_with_openff_topology(self, sage, basic_top):
         system = sage.create_openmm_system(basic_top)
 
+        assert system.getNumParticles() == 5
+
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                assert force.getNumParticles() == 5
+
         basic_top._molecule_virtual_site_map = defaultdict(list)
         basic_top._particle_map = {index: index for index in range(basic_top.n_atoms)}
 
@@ -296,8 +304,15 @@ class TestProcessTopology:
             positions=basic_top.get_positions().to_openmm(),
         )
 
-        assert with_openff.topology.n_atoms == with_openmm.topology.n_atoms
-        assert with_openff.topology.n_bonds == with_openmm.topology.n_bonds
+        assert len(with_openmm["Electrostatics"].get_charge_array()) == basic_top.n_atoms
+        assert len(with_openff["Electrostatics"].get_charge_array()) == basic_top.n_atoms
+
+        assert with_openff.topology.n_atoms == with_openmm.topology.n_atoms == 5
+        assert with_openff.topology.n_bonds == with_openmm.topology.n_bonds == 4
+
+        print(basic_top._particle_map)
+        print(with_openff.topology._particle_map)
+        print(with_openmm.topology._particle_map)
 
         get_openmm_energies(
             with_openff,

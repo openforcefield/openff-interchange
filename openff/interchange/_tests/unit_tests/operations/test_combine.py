@@ -27,7 +27,8 @@ class TestCombine:
         interchange.box = [4, 4, 4] * numpy.eye(3)
 
         # Copy and translate atoms by [1, 1, 1]
-        other = Interchange(topology=copy.deepcopy(interchange.topology))
+        other = Interchange()
+        other._topology = copy.deepcopy(interchange.topology)
         other = copy.deepcopy(interchange)
         other.positions += Quantity("1.0 nanometer")
 

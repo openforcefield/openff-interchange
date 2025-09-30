@@ -7,6 +7,7 @@ from packaging.version import Version
 
 from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
+from openff.interchange.common._topology import validate_topology
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
@@ -80,23 +81,6 @@ def _check_supported_handlers(force_field: ForceField):
         )
 
 
-def validate_topology(value):
-    """Validate a topology-like argument, spliced from a previous validator."""
-    from openff.interchange.exceptions import InvalidTopologyError
-
-    if value is None:
-        return None
-    if isinstance(value, Topology):
-        return Topology(other=value)
-    elif isinstance(value, list):
-        return Topology.from_molecules(value)
-    else:
-        raise InvalidTopologyError(
-            "Could not process topology argument, expected openff.toolkit.Topology. "
-            f"Found object of type {type(value)}.",
-        )
-
-
 def _preprocess_preset_charges(
     molecules_with_preset_charges: list[Molecule] | None,
 ) -> list[Molecule] | None:
@@ -156,50 +140,50 @@ def _create_interchange(
             PresetChargesAndVirtualSitesWarning,
         )
 
-    # interchange = Interchange(topology=topology)
-    # or maybe
-    interchange = Interchange(topology=validate_topology(topology))
+    interchange = Interchange()
 
-    interchange.positions = _infer_positions(interchange.topology, positions)
+    validated_topology = validate_topology(topology)
 
-    interchange.box = interchange.topology.box_vectors if box is None else box
+    interchange._topology = validated_topology
+
+    interchange.positions = _infer_positions(validated_topology, positions)
+
+    interchange.box = validated_topology.box_vectors if box is None else box
 
     _bonds(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         partial_bond_orders_from_molecules,
     )
     _constraints(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
     )
-    _angles(interchange, force_field, interchange.topology)
+    _angles(interchange, force_field, validated_topology)
     _propers(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         partial_bond_orders_from_molecules,
     )
-    _impropers(interchange, force_field, interchange.topology)
+    _impropers(interchange, force_field, validated_topology)
 
-    _vdw(interchange, force_field, interchange.topology)
+    _vdw(interchange, force_field, validated_topology)
     _electrostatics(
         interchange,
         force_field,
-        interchange.topology,
+        validated_topology,
         molecules_with_preset_charges,
         allow_nonintegral_charges,
     )
-    _plugins(interchange, force_field, interchange.topology)
+    _plugins(interchange, force_field, validated_topology)
 
-    _virtual_sites(interchange, force_field, interchange.topology)
+    _virtual_sites(interchange, force_field, validated_topology)
 
-    _gbsa(interchange, force_field, interchange.topology)
-
-    interchange.topology = interchange.topology
+    _gbsa(interchange, force_field, validated_topology)
 
     return interchange
 
