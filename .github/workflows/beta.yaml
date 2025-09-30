@@ -48,6 +48,7 @@ jobs:
               - conda-forge
         create-args: >-
           python=${{ matrix.python-version }}
+          rdkit
 
     - name: Install package
       run: python -m pip install . plugins/
@@ -62,7 +63,6 @@ jobs:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Run mypy
-      continue-on-error: true
       run: mypy --show-error-codes --namespace-packages -p "openff.interchange"
 
     - name: Run all tests

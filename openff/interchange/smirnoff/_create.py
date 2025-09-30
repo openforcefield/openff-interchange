@@ -443,7 +443,7 @@ def _build_collection(
     # VirtualSite collections need vdW + Electrostatics collections, and we can identify
     # them by the allowed_vdw_parameter_handlers class method.
     if hasattr(collection_class, "allowed_vdw_parameter_handlers"):
-        vdw_tagnames = [x._TAGNAME for x in collection_class.allowed_vdw_parameter_handlers()]  # type: ignore[attr-defined]
+        vdw_tagnames = [x._TAGNAME for x in collection_class.allowed_vdw_parameter_handlers()]
 
         if (n_vdw_tagnames := len(vdw_tagnames)) != 1:
             raise NotImplementedError(

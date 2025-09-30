@@ -49,8 +49,8 @@ def _check_nonbonded_compatibility(
 
     for key in ["vdW", "Electrostatics"]:
         if not _are_almost_equal(
-            interchange1[key].cutoff,
-            interchange2[key].cutoff,
+            interchange1[key].cutoff,  # type: ignore[attr-defined]
+            interchange2[key].cutoff,  # type: ignore[attr-defined]
             DEFAULT_CUTOFF_TOLERANCE,
         ):
             raise CutoffMismatchError(
@@ -114,24 +114,24 @@ def _combine(
 
     _check_nonbonded_compatibility(input1, input2)
 
-    # TODO: Test that charge cache is invalidated in each of these cases
-    if "Electrostatics" in input1.collections:
-        input1["Electrostatics"]._charges = dict()
-        input1["Electrostatics"]._charges_cached = False
-
-    if "Electrostatics" in input2.collections:
-        input2["Electrostatics"]._charges = dict()
-        input2["Electrostatics"]._charges_cached = False
+    for collection in input2.collections.values():
+        for potential_key in collection.potentials:
+            if "_DUPLICATE" in potential_key.id:
+                raise UnsupportedCombinationError(
+                    f"Combination failed due to key collision on {potential_key}. "
+                    "Some keys already have _DUPLICATE appended to their ID. "
+                    "Please report this issue if you need this functionality.",
+                )
 
     for collection_name, collection in input2.collections.items():
         # TODO: Actually specify behavior in this case
         try:
-            self_collection = result.collections[collection_name]
+            new_collection = result.collections[collection_name]
         except KeyError:
             result.collections[collection_name] = collection
             warnings.warn(
-                f"'other' Interchange object has collection with name {collection_name} not "
-                f"found in 'self,' but it has now been added.",
+                f"One Interchange object has collection with name {collection_name} not "
+                f"found in the other Interchange object, but it has now been added.",
             )
             continue
 
@@ -147,30 +147,35 @@ def _combine(
             # If interchange was not created with SMIRNOFF, we need avoid merging potentials with same key
             if pot_key.associated_handler == "ExternalSource":
                 _mult = 0
-                while _tmp_pot_key in self_collection.potentials:
+                while _tmp_pot_key in new_collection.potentials:
                     _tmp_pot_key.mult = _mult
                     _mult += 1
 
-            if _tmp_pot_key in self_collection.potentials:
-                logging.info(f"Key collision, fixing. Key is {_tmp_pot_key}")
-                _tmp_pot_key.id = _tmp_pot_key.id + "_DUPLICATE"
+            if _tmp_pot_key in input1[collection_name].potentials:
+                # if the potential key and parameters are identical, no action needed
+                if (
+                    collection.potentials[_tmp_pot_key] == input1[collection_name].potentials[_tmp_pot_key]
+                ) and collection_name != "Constraints":
+                    pass
 
-            self_collection.key_map.update({new_top_key: _tmp_pot_key})
-            if collection_name == "Constraints":
-                self_collection.potentials.update(
-                    {_tmp_pot_key: collection.potentials[pot_key]},
-                )
-            else:
-                self_collection.potentials.update(
-                    {_tmp_pot_key: collection.potentials[pot_key]},
-                )
+                else:
+                    logging.info(f"Key collision with different parameters, fixing. Key is {_tmp_pot_key}")
+                    _tmp_pot_key.id += "_DUPLICATE"
+
+            new_collection.key_map.update(
+                {new_top_key: _tmp_pot_key},
+            )
+
+            new_collection.potentials.update(
+                {_tmp_pot_key: collection.potentials[pot_key]},
+            )
 
         # Ensure the charge cache is rebuilt
         if collection_name == "Electrostatics":
-            self_collection._charges_cached = False  # type: ignore[attr-defined]
-            self_collection._get_charges()  # type: ignore[attr-defined]
+            new_collection._charges_cached = False  # type: ignore[attr-defined]
+            new_collection._get_charges()  # type: ignore[attr-defined]
 
-        result.collections[collection_name] = self_collection
+        result.collections[collection_name] = new_collection
 
     if result.positions is not None and input2.positions is not None:
         result.positions = numpy.vstack([result.positions, input2.positions])
@@ -183,7 +188,7 @@ def _combine(
 
     if not numpy.all(result.box == result.box):
         raise UnsupportedCombinationError(
-            "Combination with unequal box vectors is not curretnly supported",
+            "Combination with unequal box vectors is not currently supported",
         )
 
     return result

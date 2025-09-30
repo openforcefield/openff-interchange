@@ -16,9 +16,6 @@ from openff.interchange.common._valence import (
     ProperTorsionCollection,
 )
 from openff.interchange.exceptions import UnsupportedImportError
-from openff.interchange.interop.openmm._import._nonbonded import (
-    BasicElectrostaticsCollection,
-)
 from openff.interchange.interop.openmm._import._virtual_sites import _convert_virtual_sites
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
 from openff.interchange.models import ImportedVirtualSiteKey
@@ -202,7 +199,7 @@ def _convert_constraints(
 def _convert_nonbonded_force(
     force: "openmm.NonbondedForce",
     particle_map: dict[int, int | ImportedVirtualSiteKey],
-) -> tuple[vdWCollection, BasicElectrostaticsCollection]:
+) -> tuple[vdWCollection, ElectrostaticsCollection]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.components.potentials import Potential
