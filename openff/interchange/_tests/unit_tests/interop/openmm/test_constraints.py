@@ -90,13 +90,12 @@ class TestConstraints:
 
             constraint_distances[(atom1_index, atom2_index)] = distance
 
-        for force in system.getForces():
-            if type(force) is not openmm.HarmonicBondForce:
-                continue
-            for bond_index in range(force.getNumBonds()):
-                atom1_index, atom2_index, length, _ = force.getBondParameters(bond_index)
+        bond_force = next(force for force in system.getForces() if isinstance(force, openmm.HarmonicBondForce))
 
-                bond_distances[(atom1_index, atom2_index)] = length
+        for bond_index in range(bond_force.getNumBonds()):
+            atom1_index, atom2_index, length, _ = bond_force.getBondParameters(bond_index)
+
+            bond_distances[(atom1_index, atom2_index)] = length
 
         # some bonds (C-C, C-O) don't have constraints, so can't compare entire dicts
         # but all constraints should have corresponding bond parameters
