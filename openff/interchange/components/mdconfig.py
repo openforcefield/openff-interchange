@@ -483,7 +483,7 @@ def _infer_constraints(interchange: "Interchange") -> str:
         else:
             from openff.interchange.components.toolkit import _get_num_h_bonds
 
-            num_h_bonds = _get_num_h_bonds(interchange.get_topology())
+            num_h_bonds = _get_num_h_bonds(interchange._topology)
 
             num_bonds = len(interchange["Bonds"].key_map)
             num_angles = len(interchange["Angles"].key_map)
