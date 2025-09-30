@@ -192,6 +192,29 @@ class TestCombine:
             )
 
     @pytest.mark.parametrize("flip_order", [False, True])
+    def test_no_unnecessary_duplicate_tags(self, water_dimer, tip3p, sage, ethanol, flip_order):
+        """Check that the '_DUPLICATE' hack is only used when necessary. See Issue #1324."""
+        interchanges = [
+            tip3p.create_interchange(
+                water_dimer,
+            ),
+            sage.create_interchange(
+                ethanol.to_topology(),
+            ),
+        ]
+
+        if flip_order:
+            interchanges.reverse()
+
+        combined = interchanges[0].combine(interchanges[1])
+
+        for collection_name in ["vdW", "Bonds", "Angles", "ProperTorsions", "Constraints"]:
+            for potential_key in combined[collection_name].key_map.values():
+                assert "_DUPLICATE" not in potential_key.id, (
+                    f"Failed sanity check with {potential_key.id} in {collection_name}"
+                )
+
+    @pytest.mark.parametrize("flip_order", [False, True])
     @pytest.mark.parametrize("handler_name", ["Constraints", "Bonds", "Angles", "ProperTorsions"])
     def test_constraint_key_collision(self, parsley, sage, ethanol, flip_order, handler_name):
         """Test that key collisions in constraints and valence terms are handled."""
@@ -218,4 +241,113 @@ class TestCombine:
         numpy.testing.assert_allclose(
             numpy.vstack(arrays_before),
             array_after_combine,
+        )
+
+    @pytest.mark.parametrize("flip_order", [False, True])
+    def test_charge_cache_behavior(self, sage, ethanol, caffeine, flip_order):
+        int1 = sage.create_interchange(ethanol.to_topology())
+        int2 = sage.create_interchange(caffeine.to_topology())
+
+        for interchange_ in (int1, int2):
+            assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
+
+        if flip_order:
+            int3 = int2.combine(int1)
+        else:
+            int3 = int1.combine(int2)
+
+        assert int3["Electrostatics"]._charges_cached is False
+
+        # Check that the input caches are intact
+        for interchange_ in (int1, int2):
+            assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
+
+    def test_same_keys_same_physics_combines_without_error(self, sage, methane, ethanol):
+        """Test that PotentialKey collisions are only corrected when the associated parameters differ."""
+        ic1 = sage.create_interchange(methane.to_topology())
+        ic2 = sage.create_interchange(ethanol.to_topology())
+
+        # should not error no matter the order of combination
+        ic3 = ic1.combine(ic2)
+        ic4 = ic2.combine(ic1)
+
+        # should not have shim _DUPLICATE keys
+        for interchange in [ic3, ic4]:
+            for name, collection in interchange.collections.items():
+                if name == "Constraints":
+                    continue
+                for key in collection.potentials.keys():
+                    assert "_DUPLICATE" not in key.id, f"Unexpected _DUPLICATE in {key.id}"
+
+        numpy.testing.assert_allclose(
+            numpy.vstack(
+                [
+                    ic1["vdW"].get_system_parameters(),
+                    ic2["vdW"].get_system_parameters(),
+                ],
+            ),
+            ic3["vdW"].get_system_parameters(),
+        )
+
+        numpy.testing.assert_allclose(
+            numpy.vstack(
+                [
+                    ic2["vdW"].get_system_parameters(),
+                    ic1["vdW"].get_system_parameters(),
+                ],
+            ),
+            ic4["vdW"].get_system_parameters(),
+        )
+
+    def test_shim_duplicate_key_already_exists(self, parsley, sage, methane, ethanol):
+        ic1 = parsley.create_interchange(methane.to_topology())
+        ic2 = sage.create_interchange(ethanol.to_topology())
+
+        # should error no matter the order of combination
+        with pytest.raises(
+            UnsupportedCombinationError,
+            match="already have _DUPLICATE appended",
+        ):
+            ic1.combine(ic2.combine(ic1))
+
+        with pytest.raises(
+            UnsupportedCombinationError,
+            match="already have _DUPLICATE appended",
+        ):
+            ic2.combine(ic2.combine(ic1))
+
+    def test_combine_twice(self, sage, methane, ethanol, water_dimer):
+        """Test that combining more than two Interchanges works as expected."""
+
+        # another good test would be to do this with three separate FFs, and then ...
+        ic1 = sage.create_interchange(methane.to_topology())
+        ic2 = sage.create_interchange(ethanol.to_topology())
+        ic3 = sage.create_interchange(water_dimer)
+
+        ic4 = ic1.combine(ic2).combine(ic3)
+        # ... make ic5 out of ForceField("ff1.offxml", "ff2.offxml", "ff3.offxml")
+        # and a combined topology, and compare the parameters (and more?) there
+
+        for collection_name in ["vdW", "Bonds", "Angles", "Constraints"]:
+            numpy.testing.assert_allclose(
+                numpy.vstack(
+                    [
+                        ic1[collection_name].get_system_parameters(),
+                        ic2[collection_name].get_system_parameters(),
+                        ic3[collection_name].get_system_parameters(),
+                    ],
+                ),
+                ic4[collection_name].get_system_parameters(),
+            )
+
+        # vstack is basically concatenation in 2D, but these are 1D arrays
+        numpy.testing.assert_allclose(
+            numpy.concatenate(
+                [
+                    ic1["Electrostatics"].get_charge_array(),
+                    ic2["Electrostatics"].get_charge_array(),
+                    ic3["Electrostatics"].get_charge_array(),
+                ],
+            ),
+            ic4["Electrostatics"].get_charge_array(),
         )
