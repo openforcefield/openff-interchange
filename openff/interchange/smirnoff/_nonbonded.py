@@ -18,6 +18,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.toolkit.utils.exceptions import MissingPackageError
 from pydantic import Field, PrivateAttr, computed_field
+from typing_extensions import TypeAliasType, TypeVar
 
 from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
@@ -26,7 +27,6 @@ from openff.interchange.common._nonbonded import (
     vdWCollection,
 )
 from openff.interchange.components.potentials import Potential
-from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     InvalidParameterHandlerError,
     MissingPartialChargesError,
@@ -47,13 +47,28 @@ from openff.interchange.warnings import ForceFieldModificationWarning
 
 logger = logging.getLogger(__name__)
 
-ElectrostaticsHandlerType = (
+"""
+    type ListOrSet[T] = list[T] | set[T]
+
+    T = TypeVar("T")
+    ListOrSet = TypeAliasType("ListOrSet", list[T] | set[T], type_params=(T,))
+
+"""
+
+# would be much simpler with Python 3.12+
+# type ElectrostaticsHandlerType = ...
+# https://docs.python.org/3/library/typing.html#type-aliases
+EHT = TypeVar("EHT")
+ElectrostaticsHandlerType = TypeAliasType(
+    "ElectrostaticsHandlerType",
     ElectrostaticsHandler
     | ToolkitAM1BCCHandler
     | ChargeIncrementModelHandler
     | LibraryChargeHandler
-    | NAGLChargesHandler
+    | NAGLChargesHandler,
+    type_params=(EHT,),
 )
+
 
 _ZERO_CHARGE = Quantity(0.0, "elementary_charge")
 
@@ -262,17 +277,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(
-        _PME,
-    )  # type: ignore[assignment]
+    ] = Field("Ewald3D-ConductingBoundary")
     nonperiodic_potential: Literal[
         "Coulomb",
         "cutoff",
         "no-cutoff",
         "reaction-field",
-    ] = Field(
-        "Coulomb",
-    )  # type: ignore[assignment]
+    ] = Field("Coulomb")
     exception_potential: Literal["Coulomb"] = Field("Coulomb")
 
     _charges: dict[
@@ -415,6 +426,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         )
 
                 elif parameter_key == "charge_increment":
+                    assert type(topology_key) is ChargeIncrementTopologyKey
                     assert len(topology_key.atom_indices) == 1
 
                     atom_index = topology_key.atom_indices[0]
@@ -425,7 +437,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     )
 
                     logger.info(
-                        "Charge section ChargeIncrementModel, applying charge increment from atom "  # type: ignore[union-attr]
+                        "Charge section ChargeIncrementModel, applying charge increment from atom "
                         f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
                     )
 
@@ -503,6 +515,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             molecules_with_preset_charges=molecules_with_preset_charges,
             allow_nonintegral_charges=allow_nonintegral_charges,
         )
+
         handler._charges = dict()
 
         return handler
@@ -520,7 +533,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
-        additional_args = {i: j for i, j in additional_args}
+        additional_args: dict[str, str] = {i: j for i, j in additional_args}  # type: ignore[no-redef]
         molecule = copy.deepcopy(molecule)
         GLOBAL_TOOLKIT_REGISTRY.call(
             "assign_partial_charges",
@@ -672,7 +685,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
             potentials.update(parameter_potentials)
 
-        return matches, potentials
+        return matches, potentials  # type: ignore[return-value]
 
     @classmethod
     def _find_charge_model_matches(
@@ -696,9 +709,8 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         handler_name = parameter_handler.__class__.__name__
 
         if handler_name == "NAGLChargesHandler":
-            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, NAGLToolkitWrapper
-
             from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
+            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, NAGLToolkitWrapper
 
             partial_charge_method = parameter_handler.model_file
             if NAGLToolkitWrapper not in {type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits}:
@@ -706,13 +718,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     "The force field has a NAGLCharges section, but the NAGL software isn't "
                     "present in GLOBAL_TOOLKIT_REGISTRY",
                 )
-            exception_types_to_raise = (
+            exception_types_to_raise: tuple = (
                 FileNotFoundError,
                 MissingPackageError,
                 HashComparisonFailedException,
                 UnableToParseDOIException,
             )
-            additional_args = (
+            additional_args: tuple = (
                 ("doi", parameter_handler.digital_object_identifier),
                 ("file_hash", parameter_handler.model_file_hash),
             )
@@ -1014,40 +1026,34 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             self.key_map[new_key] = matches[key]
 
-        topology_charges = [0.0] * topology.n_atoms
+        # this logic is all only to satisfy the allow_nonintegral_charges argument - could be more performant
+        # to do it while assignment is happening
+        if not allow_nonintegral_charges:
+            topology_charges = [0.0] * topology.n_atoms
 
-        for key, val in self.charges.items():
-            topology_charges[key.atom_indices[0]] = val.m
+            for key, val in self.charges.items():
+                topology_charges[key.atom_indices[0]] = val.m
 
-        # TODO: Better data structures in Topology.identical_molecule_groups will make this
-        #       cleaner and possibly more performant
-        for molecule in topology.molecules:
-            molecule_charges = [0.0] * molecule.n_atoms
+            # TODO: Better data structures in Topology.identical_molecule_groups will make this
+            #       cleaner and possibly more performant
+            for molecule in topology.molecules:
+                molecule_charges = [0.0] * molecule.n_atoms
 
-            for atom in molecule.atoms:
-                molecule_index = molecule.atom_index(atom)
-                topology_index = topology.atom_index(atom)
+                for atom in molecule.atoms:
+                    molecule_index = molecule.atom_index(atom)
+                    topology_index = topology.atom_index(atom)
 
-                molecule_charges[molecule_index] = topology_charges[topology_index]
+                    molecule_charges[molecule_index] = topology_charges[topology_index]
 
-            charge_sum = sum(molecule_charges)
-            formal_sum = molecule.total_charge.m
+                charge_sum = sum(molecule_charges)
+                formal_sum = molecule.total_charge.m
 
-            if abs(charge_sum - formal_sum) > 0.01:
-                if allow_nonintegral_charges:
-                    # TODO: Is it worth communicating this as a warning, or would it simply be bloat?
-                    pass
-                else:
+                if abs(charge_sum - formal_sum) > 0.01:
                     raise NonIntegralMoleculeChargeError(
                         f"Molecule {molecule.to_smiles(explicit_hydrogens=False)} has "
                         f"a net charge of {charge_sum} compared to a total formal charge of "
                         f"{formal_sum}.",
                     )
-
-            molecule.partial_charges = Quantity(
-                molecule_charges,
-                unit.elementary_charge,
-            )
 
     def store_potentials(
         self,

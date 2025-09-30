@@ -14,7 +14,7 @@ class TestAnnotations:
 
         with pytest.raises(
             ValidationError,
-            match="Dimensionality.*is not compatible with",
+            match=r"Dimensionality.*is not compatible with",
         ):
             Model(mass=Quantity(400.0, "kelvin"))
 

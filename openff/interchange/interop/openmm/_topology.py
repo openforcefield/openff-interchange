@@ -99,7 +99,7 @@ def to_openmm_topology(
                 (
                     (last_residue.name == atom_residue_name),
                     (int(last_residue.id) == int(atom_residue_number)),
-                    (chain.id == last_chain.id),
+                    (chain.id == last_chain.id),  # type: ignore[union-attr]
                 ),
             ):
                 residue = last_residue

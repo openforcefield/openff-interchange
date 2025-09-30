@@ -1,5 +1,6 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
+import pathlib
 import tempfile
 import warnings
 from collections.abc import Iterable
@@ -916,7 +917,7 @@ class Interchange(_BaseModel):
         from openff.interchange.interop.gromacs._import._import import _read_coordinates
 
         # should already be in nm, might not be necessary
-        coordinates = _read_coordinates(gro_file).to(unit.nanometer)
+        coordinates = _read_coordinates(pathlib.Path(gro_file)).to(unit.nanometer)
 
         if coordinates.shape != (self.topology.n_atoms, 3):
             raise InvalidPositionsError(
@@ -1077,7 +1078,33 @@ class Interchange(_BaseModel):
         return self.combine(other)
 
     def combine(self, other: "Interchange") -> "Interchange":
-        """Combine two Interchange objects."""
+        """
+        Combine two Interchange objects.
+
+        Parameters
+        ----------
+        other
+            The other Interchange object to combine with this one.
+
+        Returns
+        -------
+        An Interchange object reprensenting a combination of the inputs. The topology is modified by
+        appending the "other" topology to the "self" topology. No atoms are reorderded.
+
+        Notes
+        -----
+        Interchange object combination is complex and may produce strange
+        results outside of use cases it has been tested in. Use with caution and
+        thoroughly validate results!
+
+        The non-bonded methods (i.e. non-bonded cutoffs, use of a switching
+        function, etc.) must be compatible between the two inputs. Otherwise, an error is raised.
+
+        Some topology and potential keys used in parameter bookkeeping may be
+        modified to work around edge cases in which some parameter values may be
+        mangled.
+
+        """
         from openff.interchange.operations._combine import _combine
 
         return _combine(self, other)

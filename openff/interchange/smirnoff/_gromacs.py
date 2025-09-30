@@ -292,7 +292,7 @@ def _convert(
     else:
         system.positions = interchange.positions
 
-    system.molecules = [(key, len(list(group))) for key, group in itertools.groupby(_ordered_molecules)]
+    system.molecules = [(key, len(list(group))) for key, group in itertools.groupby(_ordered_molecules)]  # type: ignore[misc]
 
     system.box = interchange.box
 

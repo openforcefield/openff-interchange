@@ -26,7 +26,7 @@ def test_parse_bad_characters(monkeypatch):
 
     with pytest.raises(
         GROMACSParseError,
-        match="garbage.*FLAG 8EE0CCA23E",
+        match=r"garbage.*FLAG 8EE0CCA23E",
     ):
         # gro file doesn't need to have contents, crash should happen on the
         # topology file which happens to be parsed first
@@ -60,7 +60,7 @@ def test_parse_invalid_directive_partway_through(monkeypatch):
 
     with pytest.raises(
         GROMACSParseError,
-        match="directive.*flag",
+        match=r"directive.*flag",
     ):
         from_files(
             get_test_file_path("invalid_partway_through.top"),
