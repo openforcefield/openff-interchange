@@ -196,7 +196,7 @@ def _apply_hmr(
 
     _hydrogen_mass = hydrogen_mass * openmm.unit.dalton
 
-    for bond in interchange.get_topology().bonds:
+    for bond in interchange._topology.bonds:
         heavy_atom, hydrogen_atom = bond.atoms
 
         if heavy_atom.atomic_number == 1:
@@ -208,8 +208,8 @@ def _apply_hmr(
             and (heavy_atom.atomic_number != 1)
             and not (_is_water(hydrogen_atom.molecule))
         ):
-            hydrogen_index = interchange.get_topology().atom_index(hydrogen_atom)
-            heavy_index = interchange.get_topology().atom_index(heavy_atom)
+            hydrogen_index = interchange._topology.atom_index(hydrogen_atom)
+            heavy_index = interchange._topology.atom_index(heavy_atom)
             heavy_mass = system.getParticleMass(heavy_index)
 
             # This will need to be wired up through the OpenFF-OpenMM particle index map

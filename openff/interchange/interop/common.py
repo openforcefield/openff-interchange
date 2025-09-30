@@ -53,7 +53,7 @@ def _build_typemap(interchange: Interchange) -> dict[int, str]:
     elements: dict[str, int] = dict()
 
     # TODO: Think about how this logic relates to atom name/type clashes
-    for atom_index, atom in enumerate(interchange.get_topology().atoms):
+    for atom_index, atom in enumerate(interchange._topology.atoms):
         element_symbol = atom.symbol
         # TODO: Use this key to condense, see parmed.openmm._process_nobonded
         # parameters = _get_lj_parameters([*parameters.values()])
@@ -85,23 +85,23 @@ def _build_particle_map(
 
     particle_index = 0
 
-    for molecule in interchange.get_topology().molecules:
+    for molecule in interchange._topology.molecules:
         for atom in molecule.atoms:
-            atom_index = interchange.get_topology().atom_index(atom)
+            atom_index = interchange._topology.atom_index(atom)
 
             particle_map[atom_index] = particle_index
 
             particle_index += 1
 
         if collate:
-            for virtual_site_key in molecule_virtual_site_map[interchange.get_topology().molecule_index(molecule)]:
+            for virtual_site_key in molecule_virtual_site_map[interchange._topology.molecule_index(molecule)]:
                 particle_map[virtual_site_key] = particle_index
 
                 particle_index += 1
 
     if not collate:
-        for molecule in interchange.get_topology().molecules:
-            for virtual_site_key in molecule_virtual_site_map[interchange.get_topology().molecule_index(molecule)]:
+        for molecule in interchange._topology.molecules:
+            for virtual_site_key in molecule_virtual_site_map[interchange._topology.molecule_index(molecule)]:
                 particle_map[virtual_site_key] = particle_index
 
                 particle_index += 1

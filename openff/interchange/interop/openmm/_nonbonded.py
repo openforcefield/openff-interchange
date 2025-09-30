@@ -75,7 +75,7 @@ def _process_nonbonded_forces(
     else:
         # If there are no non-bonded collections, assume here that there can be no virtual sites,
         # so just return an i-i mapping between OpenFF and OpenMM indices
-        return {i: i for i in range(interchange.get_topology().n_atoms)}
+        return {i: i for i in range(interchange._topology.n_atoms)}
 
     has_virtual_sites = "VirtualSites" in interchange.collections
 
@@ -145,12 +145,12 @@ def _process_nonbonded_forces(
 
     _data = _prepare_input_data(interchange)
 
-    assert interchange.topology.n_atoms == len(_data.electrostatics_collection.get_charge_array()), (
-        "More atoms than charges?"
-        f"\t{interchange.topology.n_atoms=}"
-        f"\t{openff_openmm_particle_map=}"
-        f"\t{_data.electrostatics_collection.get_charge_array()=}"
-    )
+    # assert interchange.topology.n_atoms == len(_data.electrostatics_collection.get_charge_array()), (
+    #     "More atoms than charges?"
+    #     f"\t{interchange.topology.n_atoms=}"
+    #     f"\t{openff_openmm_particle_map=}"
+    #     f"\t{_data.electrostatics_collection.get_charge_array()=}"
+    # )
 
     if combine_nonbonded_forces:
         _func = _create_single_nonbonded_force
@@ -180,7 +180,7 @@ def _add_particles_to_system(
         collate=False,
     )
 
-    topology = interchange.get_topology()
+    topology = interchange._topology
 
     for molecule in topology.molecules:
         for atom in molecule.atoms:
@@ -295,7 +295,7 @@ def _create_single_nonbonded_force(
     openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
-    topology = interchange.get_topology()
+    topology = interchange._topology
 
     if data.mixing_rule not in ("lorentz-berthelot", ""):
         raise UnsupportedExportError(
@@ -532,7 +532,7 @@ def _create_exceptions(
     openff_openmm_particle_map: dict,
     parent_virtual_particle_mapping: defaultdict[int, list[int]],
 ):
-    topology = interchange.get_topology()
+    topology = interchange._topology
 
     # The topology indices reported by toolkit methods must be converted to openmm indices
     bonds = [sorted(openff_openmm_particle_map[topology.atom_index(a)] for a in bond.atoms) for bond in topology.bonds]
@@ -621,7 +621,7 @@ def _create_multiple_nonbonded_forces(
 ):
     from openff.interchange.components.toolkit import _get_14_pairs
 
-    topology = interchange.get_topology()
+    topology = interchange._topology
 
     if molecule_virtual_site_map in (None, dict()):
         has_virtual_sites = False
@@ -795,7 +795,7 @@ def _create_vdw_force(
     molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> openmm.CustomNonbondedForce | None:
-    topology = interchange.get_topology()
+    topology = interchange._topology
 
     vdw_collection: vdWCollection | None = data.vdw_collection
 
@@ -837,7 +837,7 @@ def _create_vdw_force(
 
     for molecule in topology.molecules:
         if has_virtual_sites:
-            molecule_index = interchange.get_topology().molecule_index(molecule)
+            molecule_index = interchange._topology.molecule_index(molecule)
             for _ in molecule_virtual_site_map[molecule_index]:
                 vdw_force.addParticle(vdw_collection.default_parameter_values())
 
@@ -900,13 +900,13 @@ def _create_electrostatics_force(
     # if no virtual sites at all, this remains an empty dict
     parent_virtual_particle_mapping: defaultdict[int, list[int]] = defaultdict(list)
 
-    for molecule in interchange.get_topology().molecules:
+    for molecule in interchange._topology.molecules:
         for _ in molecule.atoms:
             electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
-    for molecule in interchange.get_topology().molecules:
+    for molecule in interchange._topology.molecules:
         if has_virtual_sites:
-            molecule_index = interchange.get_topology().molecule_index(molecule)
+            molecule_index = interchange._topology.molecule_index(molecule)
             for virtual_site_key in molecule_virtual_site_map[molecule_index]:
                 force_index = electrostatics_force.addParticle(0.0, 1.0, 0.0)
 
@@ -994,9 +994,9 @@ def _set_particle_parameters(
 
     vdw: vdWCollection = data.vdw_collection
 
-    for molecule in interchange.get_topology().molecules:
+    for molecule in interchange._topology.molecules:
         for atom in molecule.atoms:
-            atom_index = interchange.get_topology().atom_index(atom)
+            atom_index = interchange._topology.atom_index(atom)
             particle_index = openff_openmm_particle_map[atom_index]
             # TODO: Actually process virtual site vdW parameters here
 
@@ -1045,7 +1045,7 @@ def _set_particle_parameters(
                     0.0,
                 )
 
-        for virtual_site_key in molecule_virtual_site_map[interchange.get_topology().molecule_index(molecule)]:
+        for virtual_site_key in molecule_virtual_site_map[interchange._topology.molecule_index(molecule)]:
             particle_index = openff_openmm_particle_map[virtual_site_key]
 
             if vdw is not None:

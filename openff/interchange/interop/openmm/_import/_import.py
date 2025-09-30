@@ -70,9 +70,7 @@ def from_openmm(
             f"Could not process `topology` argument of type {type(topology)=}.",
         )
 
-    interchange = Interchange()
-
-    interchange._topology = openff_topology
+    interchange = Interchange(topology=openff_topology)
 
     try:
         interchange.topology._molecule_virtual_site_map = openff_topology._molecule_virtual_site_map
