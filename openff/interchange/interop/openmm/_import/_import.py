@@ -70,7 +70,9 @@ def from_openmm(
             f"Could not process `topology` argument of type {type(topology)=}.",
         )
 
-    interchange = Interchange(topology=openff_topology)
+    # TODO: Something is wrong - Interchange(topology=openff_topology) produces a 0-atom topology
+    interchange = Interchange()
+    interchange._topology = openff_topology
 
     try:
         interchange.topology._molecule_virtual_site_map = openff_topology._molecule_virtual_site_map
@@ -78,20 +80,19 @@ def from_openmm(
         interchange.topology._molecule_virtual_site_map = defaultdict(list)
 
     # TODO: Actually build up the VirtualSiteCollection, maybe using _molecule_virtual_site_map
-
-    constraints = _convert_constraints(system, particle_map)
+    constraints = _convert_constraints(system, {val: key for key, val in particle_map.items()})
 
     if constraints is not None:
         interchange.collections["Constraints"] = constraints
 
-    virtual_sites = _convert_virtual_sites(system, openff_topology, particle_map)
+    virtual_sites = _convert_virtual_sites(system, openff_topology, {val: key for key, val in particle_map.items()})
 
     if virtual_sites is not None:
         interchange.collections["VirtualSites"] = virtual_sites
 
     for force in system.getForces():
         if isinstance(force, openmm.NonbondedForce):
-            vdw, coul = _convert_nonbonded_force(force, particle_map)
+            vdw, coul = _convert_nonbonded_force(force, {val: key for key, val in particle_map.items()})
             interchange.collections["vdW"] = vdw
             interchange.collections["Electrostatics"] = coul
         elif isinstance(force, openmm.HarmonicBondForce):
@@ -119,8 +120,8 @@ def from_openmm(
     else:
         assert len(positions) == len(particle_map)
 
-        interchange.positions = ensure_quantity(positions, "openff")[  # type: ignore[index]
-            [key for key, val in particle_map.items() if isinstance(val, int)]
+        interchange.positions = ensure_quantity(positions, "openff")[
+            [key for key in particle_map if isinstance(key, int)]
         ]
 
     if box_vectors is not None:
@@ -154,6 +155,17 @@ def _convert_constraints(
     system: "openmm.System",
     particle_map: dict[int, int | ImportedVirtualSiteKey],
 ) -> ConstraintCollection | None:
+    """
+    Convert OpenMM constraints to a ConstraintCollection.
+
+    Parameters
+    ----------
+    system
+        The OpenMM System to convert.
+
+    particle_map
+        A mapping from OpenMM particle indices to OpenFF particle indices.
+    """
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import BondKey, PotentialKey
 
