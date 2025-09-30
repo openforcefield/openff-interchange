@@ -243,6 +243,25 @@ class TestCombine:
             array_after_combine,
         )
 
+    @pytest.mark.parametrize("flip_order", [False, True])
+    def test_charge_cache_behavior(self, sage, ethanol, caffeine, flip_order):
+        int1 = sage.create_interchange(ethanol.to_topology())
+        int2 = sage.create_interchange(caffeine.to_topology())
+
+        for interchange_ in (int1, int2):
+            assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
+
+        if flip_order:
+            int3 = int2.combine(int1)
+        else:
+            int3 = int1.combine(int2)
+
+        assert int3["Electrostatics"]._charges_cached is False
+
+        # Check that the input caches are intact
+        for interchange_ in (int1, int2):
+            assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
+
     def test_same_keys_same_physics_combines_without_error(self, sage, methane, ethanol):
         """Test that PotentialKey collisions are only corrected when the associated parameters differ."""
         ic1 = sage.create_interchange(methane.to_topology())
