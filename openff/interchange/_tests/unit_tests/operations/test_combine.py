@@ -235,5 +235,6 @@ class TestCombine:
 
         assert int3["Electrostatics"]._charges_cached is False
 
+        # Check that the input caches are intact
         for interchange_ in (int1, int2):
             assert len(interchange_["Electrostatics"]._get_charges()) == interchange_.topology.n_atoms
