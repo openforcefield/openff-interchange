@@ -304,8 +304,8 @@ class TestProcessTopology:
             positions=basic_top.get_positions().to_openmm(),
         )
 
-        for imported in (with_openmm, with_openff):
-            assert len(imported["Electrostatics"].get_charge_array()) == basic_top.n_atoms
+        assert len(with_openmm["Electrostatics"].get_charge_array()) == basic_top.n_atoms
+        assert len(with_openff["Electrostatics"].get_charge_array()) == basic_top.n_atoms
 
         assert with_openff.topology.n_atoms == with_openmm.topology.n_atoms == 5
         assert with_openff.topology.n_bonds == with_openmm.topology.n_bonds == 4

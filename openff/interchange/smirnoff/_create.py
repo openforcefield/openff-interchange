@@ -7,6 +7,7 @@ from packaging.version import Version
 
 from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
+from openff.interchange.common._topology import validate_topology
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
     MissingParameterHandlerError,
@@ -77,23 +78,6 @@ def _check_supported_handlers(force_field: ForceField):
     if unsupported:
         raise SMIRNOFFHandlersNotImplementedError(
             f"SMIRNOFF section(s) not implemented in Interchange: {unsupported}",
-        )
-
-
-def validate_topology(value):
-    """Validate a topology-like argument, spliced from a previous validator."""
-    from openff.interchange.exceptions import InvalidTopologyError
-
-    if value is None:
-        return None
-    if isinstance(value, Topology):
-        return Topology(other=value)
-    elif isinstance(value, list):
-        return Topology.from_molecules(value)
-    else:
-        raise InvalidTopologyError(
-            "Could not process topology argument, expected openff.toolkit.Topology. "
-            f"Found object of type {type(value)}.",
         )
 
 

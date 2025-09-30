@@ -19,6 +19,7 @@ from openff.interchange._annotations import (
 )
 from openff.interchange._experimental import experimental
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+from openff.interchange.common._topology import validate_topology
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,
@@ -87,6 +88,25 @@ class Interchange(_BaseModel):
     positions: _PositionsQuantity | None = Field(None)  # Ditto
     velocities: _VelocityQuantity | None = Field(None)  # Ditto
     _topology: Topology = PrivateAttr(default_factory=Topology)
+
+    def __init__(
+        self,
+        topology=None,
+        collections=dict(),
+        mdconfig=None,
+        box=None,
+        positions=None,
+        velocities=None,
+    ):
+        super().__init__(
+            collections=collections,
+            mdconfig=mdconfig,
+            box=box,
+            positions=positions,
+            velocities=velocities,
+        )
+
+        self._topology = validate_topology(topology)
 
     @model_validator(mode="wrap")
     def validate_model_wrap(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
@@ -1174,7 +1194,7 @@ class Interchange(_BaseModel):
 
     def __repr__(self) -> str:
         periodic = self.box is not None
-        n_atoms = self.topology.n_atoms
+        n_atoms = getattr(self.topology, "n_atoms", 0)
         return (
             f"Interchange with {len(self.collections)} collections, "
             f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
