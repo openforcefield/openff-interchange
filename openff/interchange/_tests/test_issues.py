@@ -5,7 +5,7 @@ import random
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
-from openff.utilities import get_data_file_path, skip_if_missing, has_executable
+from openff.utilities import get_data_file_path, has_executable, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, shuffle_topology

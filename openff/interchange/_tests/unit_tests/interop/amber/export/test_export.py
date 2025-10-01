@@ -31,9 +31,9 @@ if has_package("openmm"):
 )
 def test_atom_names_with_padding(molecule):
     # pytest processes fixtures before the decorator can be applied
-    
+
     parmed = pytest.importorskip("parmed")
-    
+
     if molecule.endswith(".pdb"):
         molecule = Topology.from_pdb(
             file_path=get_test_file_path(molecule).as_posix(),
