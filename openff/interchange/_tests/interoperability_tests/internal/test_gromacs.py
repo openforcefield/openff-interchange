@@ -24,7 +24,6 @@ if has_package("openmm"):
     import openmm.unit
 
 
-
 @skip_if_missing("intermol")
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")

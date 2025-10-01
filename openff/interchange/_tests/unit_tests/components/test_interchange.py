@@ -13,11 +13,11 @@ from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
-    needs_sander,
     MoleculeWithConformer,
     get_test_file_path,
     needs_gmx,
     needs_lmp,
+    needs_sander,
 )
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
