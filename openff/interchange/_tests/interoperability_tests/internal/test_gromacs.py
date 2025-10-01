@@ -57,6 +57,7 @@ class TestGROMACSGROFile:
         assert numpy.allclose(box, openmm_box)
 
     @skip_if_missing("intermol")
+    @pytest.mark.skip("don't run parmed tests")
     def test_load_gro_nonstandard_precision(self):
         file = self._INTERMOL_PATH / "lj3_bulk/lj3_bulk.gro"
 
