@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
+    needs_sander,
     MoleculeWithConformer,
     get_test_file_path,
     needs_gmx,
@@ -423,6 +424,7 @@ class TestWrappedCalls:
             box_vectors=box,
         )
 
+    @needs_sander
     def test_to_amber(self, simple_interchange):
         simple_interchange.to_amber(prefix="blargh")
 

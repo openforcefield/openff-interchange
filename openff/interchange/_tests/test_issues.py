@@ -3,10 +3,9 @@
 import random
 
 import numpy
-import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
-from openff.utilities import get_data_file_path, skip_if_missing
+from openff.utilities import get_data_file_path, skip_if_missing, has_executable
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, shuffle_topology
@@ -15,6 +14,7 @@ from openff.interchange.drivers import get_openmm_energies
 
 
 def test_issue_723():
+    parmed = pytest.importorskip("parmed")
     force_field = ForceField("openff-2.1.0.offxml")
 
     molecule = Molecule.from_smiles("C#N")
@@ -25,6 +25,7 @@ def test_issue_723():
     parmed.load_file("_x.top")
 
 
+@pytest.mark.skipif(not has_executable("packmol"), reason="Packmol is not installed")
 @pytest.mark.parametrize("pack", [True, False])
 def test_issue_1022(pack):
     topology = Topology.from_molecules(

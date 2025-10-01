@@ -1,5 +1,4 @@
-import numpy as np
-import parmed
+import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Topology
 from openff.units import unit
@@ -32,6 +31,9 @@ if has_package("openmm"):
 )
 def test_atom_names_with_padding(molecule):
     # pytest processes fixtures before the decorator can be applied
+    
+    parmed = pytest.importorskip("parmed")
+    
     if molecule.endswith(".pdb"):
         molecule = Topology.from_pdb(
             file_path=get_test_file_path(molecule).as_posix(),
@@ -90,6 +92,8 @@ def test_virtual_site_error(tip4p, water):
 class TestAmber:
     @pytest.mark.skip(reason="Need replacement route to reference positions")
     def test_inpcrd(self, sage):
+        parmed = pytest.importorskip("parmed")
+
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
@@ -97,7 +101,7 @@ class TestAmber:
         out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.positions = unit.nanometer * np.round(out.positions.m_as(unit.nanometer), 5)
+        out.positions = unit.nanometer * numpy.round(out.positions.m_as(unit.nanometer), 5)
 
         out.to_inpcrd("internal.inpcrd")
         # This method no longer exists
@@ -106,7 +110,7 @@ class TestAmber:
         coords1 = parmed.load_file("internal.inpcrd").coordinates
         coords2 = parmed.load_file("parmed.inpcrd").coordinates
 
-        np.testing.assert_equal(coords1, coords2)
+        numpy.testing.assert_equal(coords1, coords2)
 
     @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
@@ -185,6 +189,8 @@ class TestAmberResidues:
         ethanol,
         patch_residue_name,
     ):
+        parmed = pytest.importorskip("parmed")
+
         if patch_residue_name:
             for atom in ethanol.atoms:
                 atom.metadata["residue_name"] = "YUP"

@@ -1,7 +1,6 @@
 from importlib import resources
 
 import numpy
-import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
@@ -25,13 +24,18 @@ if has_package("openmm"):
     import openmm.unit
 
 
+
+@skip_if_missing("intermol")
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
 @needs_gmx
 class TestGROMACSGROFile:
-    _INTERMOL_PATH = resources.files(
-        "intermol.tests.gromacs.unit_tests",
-    )
+    try:
+        _INTERMOL_PATH = resources.files(
+            "intermol.tests.gromacs.unit_tests",
+        )
+    except ImportError:
+        _INTERMOL_PATH = None
 
     @skip_if_missing("intermol")
     def test_load_gro(self):
@@ -177,8 +181,9 @@ class TestGROMACS:
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
-        import parmed
         from openff.units.openmm import from_openmm
+
+        parmed = pytest.importorskip("parmed")
 
         protein = get_protein("MainChain_HIE")
 

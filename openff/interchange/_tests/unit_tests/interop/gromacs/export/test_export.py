@@ -3,7 +3,6 @@ from importlib import resources
 from math import exp
 
 import numpy
-import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
@@ -320,8 +319,9 @@ class TestGROMACS(_NeedsGROMACS):
             },
         )
 
-    @skip_if_missing("parmed")
     def test_num_impropers(self, sage):
+        parmed = pytest.importorskip("parmed")
+
         out = Interchange.from_smirnoff(
             sage,
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
@@ -371,8 +371,9 @@ class TestGROMACS(_NeedsGROMACS):
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
-        import parmed
         from openff.units.openmm import from_openmm
+
+        parmed = pytest.importorskip("parmed")
 
         protein = get_protein("MainChain_HIE")
 
