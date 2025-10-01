@@ -488,7 +488,7 @@ class TestGROMACS(_NeedsGROMACS):
 
     @pytest.mark.parametrize("name", ["MOL0", "MOL999", ""])
     def test_exisiting_mol0_names_overwritten(self, name, sage, ethanol, cyclohexane):
-        pytest.importorskip("parmed")
+        parmed = pytest.importorskip("parmed")
 
         ethanol.name = name
         cyclohexane.name = name
@@ -760,7 +760,7 @@ class TestMergeAtomTypes(_NeedsGROMACS):
         molecule_list,
         sage,
     ):
-        pytest.importorskip("parmed")
+        parmed = pytest.importorskip("parmed")
 
         topology = Topology.from_molecules(
             [Molecule.from_smiles(smi) for smi in molecule_list],
