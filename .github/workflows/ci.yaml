@@ -75,7 +75,8 @@ jobs:
     - name: Install RDKit
       if: ${{ matrix.rdkit == true }}
       run: |
-        micromamba install rdkit "ambertools =24" intermol "parmed=4.3.0=*_2" -c conda-forge
+        micromamba install rdkit "ambertools =24" intermol -c conda-forge
+        pip install git+https://github.com//parmed/parmed.git  # probably not getting a release for ... a while?
 
     - name: Install OpenFF NAGL
       if: ${{ matrix.nagl == true }}
