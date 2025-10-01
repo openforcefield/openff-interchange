@@ -76,7 +76,7 @@ jobs:
     - name: Install RDKit
       if: ${{ matrix.rdkit == true }}
       run: |
-        micromamba install rdkit "ambertools =24" intermol -c conda-forge
+        micromamba install rdkit "ambertools =24" intermol "numpy=2.2" -c conda-forge
 
     - name: Install OpenFF NAGL
       if: ${{ matrix.nagl == true }}
