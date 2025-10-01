@@ -129,8 +129,9 @@ class TestGROMACS:
             },
         )
 
-    @skip_if_missing("parmed")
+    @pytest.mark.skip("don't run parmed tests")
     def test_num_impropers(self, sage):
+        parmed = pytest.importorskip("parmed")
         out = Interchange.from_smirnoff(
             sage,
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
@@ -177,6 +178,7 @@ class TestGROMACS:
             interchange.to_top("out.top")
 
     @pytest.mark.slow
+    @pytest.mark.skip("don't run parmed tests")
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
