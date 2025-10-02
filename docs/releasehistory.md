@@ -11,6 +11,13 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bug fixes
+
+* #1325 Fixes some parameter bookkeepping in `Interchange.combine`, particularly when combining similar objects previously created too many `_DUPLICATE` tags.
+* #1334 Improves error reporting when Amber calculates non-numeric energies.
+
 ## 0.4.7 - 2025-09-11
 
 ### Bug fixes
