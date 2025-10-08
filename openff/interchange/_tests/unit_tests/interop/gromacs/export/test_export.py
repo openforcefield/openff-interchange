@@ -822,6 +822,8 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
+        parmed = pytest.importorskip("parmed")
+
         molecule = MoleculeWithConformer.from_smiles("CCl", name="Chloromethane")
 
         out = Interchange.from_smirnoff(
