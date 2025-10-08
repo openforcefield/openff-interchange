@@ -8,7 +8,11 @@ dependencies:
   - python
   - versioningit
   - numpy
+<<<<<<< HEAD
   - pydantic =2,!=2.12
+=======
+  - pydantic =2
+>>>>>>> ecc9ac30 (Fix)
   # OpenFF stack
   - openff-toolkit-base =0.17
   - openff-units

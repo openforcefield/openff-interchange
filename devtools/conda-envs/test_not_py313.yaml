@@ -5,12 +5,11 @@ dependencies:
   # Core
   - python
   - versioningit
-  - numpy <2.3
+  - numpy
   - pydantic =2,!=2.12
   # OpenFF stack
   - openff-toolkit-base =0.17
   - openff-units
-  - ambertools =24
   # Optional features
   - openmm
   - smirnoff-plugins =2024

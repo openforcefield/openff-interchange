@@ -5,12 +5,15 @@ dependencies:
   # Core
   - python
   - versioningit
-  - numpy =2.2
+  - numpy
+<<<<<<< HEAD
   - pydantic =2,!=2.12
+=======
+  - pydantic =2
+>>>>>>> ecc9ac30 (Fix)
   # OpenFF stack
   - openff-toolkit-base =0.17
   - openff-units
-  - ambertools =24
   # Optional features
   - openmm
   - nglview
@@ -19,7 +22,6 @@ dependencies:
   - pyedr
   # Testing
   - mdtraj
-  - intermol
   - jax
   - pytest
   - pytest-cov

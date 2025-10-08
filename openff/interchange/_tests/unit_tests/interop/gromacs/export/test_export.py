@@ -3,7 +3,6 @@ from importlib import resources
 from math import exp
 
 import numpy
-import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
@@ -114,6 +113,7 @@ class TestGROMACSGROFile(_NeedsGROMACS):
         assert numpy.allclose(box, openmm_box)
 
     @skip_if_missing("intermol")
+    @pytest.mark.skip("don't run parmed tests")
     def test_load_gro_nonstandard_precision(self):
         file = self._INTERMOL_PATH / "lj3_bulk/lj3_bulk.gro"
 
@@ -320,8 +320,9 @@ class TestGROMACS(_NeedsGROMACS):
             },
         )
 
-    @skip_if_missing("parmed")
     def test_num_impropers(self, sage):
+        parmed = pytest.importorskip("parmed")
+
         out = Interchange.from_smirnoff(
             sage,
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
@@ -371,8 +372,9 @@ class TestGROMACS(_NeedsGROMACS):
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
-        import parmed
         from openff.units.openmm import from_openmm
+
+        parmed = pytest.importorskip("parmed")
 
         protein = get_protein("MainChain_HIE")
 
@@ -487,7 +489,7 @@ class TestGROMACS(_NeedsGROMACS):
 
     @pytest.mark.parametrize("name", ["MOL0", "MOL999", ""])
     def test_exisiting_mol0_names_overwritten(self, name, sage, ethanol, cyclohexane):
-        pytest.importorskip("parmed")
+        parmed = pytest.importorskip("parmed")
 
         ethanol.name = name
         cyclohexane.name = name
@@ -759,7 +761,7 @@ class TestMergeAtomTypes(_NeedsGROMACS):
         molecule_list,
         sage,
     ):
-        pytest.importorskip("parmed")
+        parmed = pytest.importorskip("parmed")
 
         topology = Topology.from_molecules(
             [Molecule.from_smiles(smi) for smi in molecule_list],
