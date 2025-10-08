@@ -114,15 +114,6 @@ def _combine(
 
     _check_nonbonded_compatibility(input1, input2)
 
-    # TODO: Test that charge cache is invalidated in each of these cases
-    if "Electrostatics" in input1.collections:
-        input1["Electrostatics"]._charges = dict()
-        input1["Electrostatics"]._charges_cached = False
-
-    if "Electrostatics" in input2.collections:
-        input2["Electrostatics"]._charges = dict()
-        input2["Electrostatics"]._charges_cached = False
-
     for collection in input2.collections.values():
         for potential_key in collection.potentials:
             if "_DUPLICATE" in potential_key.id:

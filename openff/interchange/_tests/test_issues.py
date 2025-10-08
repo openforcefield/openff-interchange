@@ -157,3 +157,12 @@ def test_issue_1209(sage, ethanol):
             combine_nonbonded_forces=False,
         ),
     )
+
+
+def test_issue_1337(water):
+    """Reproduce Issue #1337."""
+    ff14sb_tip3p = ForceField("ff14sb_off_impropers_0.0.3.offxml", "tip3p.offxml")
+
+    # just make sure this doesn't crash (original issue)
+    # more extensive tests in openff/interchange/_tests/unit_tests/interop/openmm/test_constraints.py
+    ff14sb_tip3p.create_interchange(water.to_topology())
