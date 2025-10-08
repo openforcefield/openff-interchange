@@ -134,7 +134,6 @@ def validate_key_map(v: Any, handler, info) -> dict:
                     | "ChargeIncrementModelHandler"
                 ):
                     key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
-
                 case _:
                     key_class = TopologyKey
 
