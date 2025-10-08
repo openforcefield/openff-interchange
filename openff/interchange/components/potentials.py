@@ -127,11 +127,13 @@ def validate_key_map(v: Any, handler, info) -> dict:
                     key_class = ImproperTorsionKey
                 case "LibraryCharges":
                     key_class = LibraryChargeTopologyKey  # type: ignore[assignment]
-                case "ToolkitAM1BCCHandler":
+                case (
+                    "ToolkitAM1BCCHandler"
+                    | "molecules_with_preset_charges"
+                    | "NAGLChargesHandler"
+                    | "ChargeIncrementModelHandler"
+                ):
                     key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
-                case "molecules_with_preset_charges":
-                    key_class = SingleAtomChargeTopologyKey  # type: ignore[assignment]
-
                 case _:
                     key_class = TopologyKey
 
