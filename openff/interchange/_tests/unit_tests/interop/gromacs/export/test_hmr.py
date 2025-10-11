@@ -1,6 +1,5 @@
 import random
 
-import parmed
 import pytest
 from openff.toolkit import unit
 
@@ -9,6 +8,7 @@ from openff.interchange.exceptions import UnsupportedExportError
 
 @pytest.mark.parametrize("reversed", [False, True])
 def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
+    parmed = pytest.importorskip("parmed")
     hydrogen_mass = random.uniform(1.0, 4.0)
 
     molecule = reversed_ethanol if reversed else ethanol
@@ -35,6 +35,7 @@ def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
 
 
 def test_hmr_not_applied_to_water(sage, water):
+    parmed = pytest.importorskip("parmed")
     # TODO: This should have different behavior for rigid and flexible water,
     #       but sage has tip3p (rigid) so it should always be skipped
     hydrogen_mass = 1.23

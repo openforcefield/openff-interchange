@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import numpy as np
-import parmed as pmd
 import pytest
 from openff.toolkit import Molecule, Topology, unit
 from openff.utilities.testing import skip_if_missing
@@ -51,6 +50,8 @@ class TestFoyer:
     @pytest.fixture
     def get_interchanges(self, oplsaa):
         def interchanges_from_path(molecule_path):
+            pmd = pytest.importorskip("parmed")
+
             molecule_or_molecules = Molecule.from_file(molecule_path)
             mol_name = Path(molecule_path).stem[0:4].upper()
 
