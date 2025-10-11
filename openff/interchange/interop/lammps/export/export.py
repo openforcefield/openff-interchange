@@ -70,21 +70,54 @@ def to_lammps(interchange: Interchange, file_path: Path | str, include_type_labe
             axis=0,
         ).magnitude
         if interchange.box is None:
-            L_x, L_y, L_z = 100, 100, 100
+            ax, by, cz = 100, 100, 100
+            xy, xz, yz = 0, 0, 0
         elif (interchange.box.m == numpy.diag(numpy.diagonal(interchange.box.m))).all():
-            L_x, L_y, L_z = numpy.diag(interchange.box.to(unit.angstrom).magnitude)
+            ax, by, cz = numpy.diag(interchange.box.to(unit.angstrom).magnitude)
+            xy, xz, yz = 0, 0, 0
         else:
-            raise NotImplementedError(
-                "Interchange does not yet support exporting non-rectangular boxes to LAMMPS",
-            )
+            a = interchange.box.to(unit.angstrom).magnitude[0]
+            b = interchange.box.to(unit.angstrom).magnitude[1]
+            c = interchange.box.to(unit.angstrom).magnitude[2]
+            a_len = numpy.linalg.norm(a)
+            b_len = numpy.linalg.norm(b)
+            c_len = numpy.linalg.norm(c)
+
+            alpha = numpy.arccos(numpy.dot(b, c) / (b_len * c_len))
+            beta = numpy.arccos(numpy.dot(c, a) / (c_len * a_len))
+            gamma = numpy.arccos(numpy.dot(a, b) / (a_len * b_len))
+
+            ax = a_len
+            bx = b_len * numpy.cos(gamma)
+            by = b_len * numpy.sin(gamma)
+            cx = c_len * numpy.cos(beta)
+            cy = c_len * (numpy.cos(alpha) - numpy.cos(beta) * numpy.cos(gamma)) / numpy.sin(gamma)
+            cz = numpy.sqrt(c_len**2 - cx**2 - cy**2)
+
+            xy, xz, yz = bx, cx, cy
+
+            a_new = numpy.array([ax, 0, 0])
+            b_new = numpy.array([bx, by, 0])
+            c_new = numpy.array([cx, cy, cz])
+
+            check = numpy.allclose(a, a_new)
+            check *= numpy.allclose(b, b_new)
+            check *= numpy.allclose(c, c_new)
+
+            if not check:
+                import warnings
+
+                warnings.warn(
+                    f"We are rotating the unit cell matrix. Before: a={a}, b={b}, c={c}, After: a={a_new}, b={b_new}, c={c_new}",
+                )
 
         lmp_file.write(
-            f"{x_min:.10g} {x_min + L_x:.10g} xlo xhi\n"
-            f"{y_min:.10g} {y_min + L_y:.10g} ylo yhi\n"
-            f"{z_min:.10g} {z_min + L_z:.10g} zlo zhi\n",
+            f"{x_min:.10g} {x_min + ax:.10g} xlo xhi\n"
+            f"{y_min:.10g} {y_min + by:.10g} ylo yhi\n"
+            f"{z_min:.10g} {z_min + cz:.10g} zlo zhi\n",
         )
 
-        lmp_file.write("0.0 0.0 0.0 xy xz yz\n")
+        lmp_file.write(f"{xy:.10g} {xz:.10g} {yz:.10g} xy xz yz\n")
 
         if include_type_labels:
             # type labels added in 15Sep2022, see PR #1208

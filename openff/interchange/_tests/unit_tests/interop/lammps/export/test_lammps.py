@@ -14,9 +14,90 @@ from openff.interchange.exceptions import EnergyError
 
 rng = numpy.random.default_rng(821)
 
-
 @needs_lmp
 class TestLammps:
+    @pytest.mark.parametrize("n_mols", [1, 2])
+    @pytest.mark.parametrize(
+        "mol",
+        [
+            "C",
+            "CC",  # Adds a proper torsion term(s)
+            "C=O",  # Simplest molecule with any improper torsion
+            "OC=O",  # Simplest molecule with a multi-term torsion
+            "CCOC",  # This hits t86, which has a non-1.0 idivf
+            "C1COC(=O)O1",  # This adds an improper, i2
+        ],
+    )
+    def test_to_lammps_single_mols_triclinic(
+        self,
+        mol: str,
+        sage_unconstrained: ForceField,
+        n_mols: int,
+    ) -> None:
+        """
+        Test that Interchange.to_openmm Interchange.to_lammps report sufficiently similar energies
+        in triclinic simulation boxes.
+        This test is only sensitive to nonbonded interactions. Due to inherent differences in how
+        long-ranged interactions are handled in openmm/lammps, there will be a baseline deviation
+        between the two codes that goes beyond this test. This test is designed to test whether the
+        triclinic box representations give no error greater than the ones from the orthogonal box test.
+        """
+        mol = MoleculeWithConformer.from_smiles(mol)
+        mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
+        top = Topology.from_molecules(n_mols * [mol])
+
+<<<<<<< HEAD
+        box_t = numpy.zeros((3,3), dtype=float) * unit.angstrom
+=======
+        box = numpy.zeros((3, 3), dtype=float) * unit.angstrom
+>>>>>>> 93384ed44aad23798252ae06fc348d2d75b4857b
+
+        box_t[0] = [51.34903463831951, 0, 0] * unit.angstrom
+        box_t[1] = [-0.03849979989403723, 50.9134404144338, 0] * unit.angstrom
+        box_t[2] = [-2.5907782992729538, 0.3720740833800747, 49.80705567557188] * unit.angstrom
+
+        box_o = 50. * numpy.eye(3) * unit.angstrom
+
+        top.box_vectors = box_o
+
+        if n_mols == 1:
+            positions = mol.conformers[0]
+        elif n_mols == 2:
+            positions = numpy.concatenate(
+                [mol.conformers[0], mol.conformers[0] + 1.5 * unit.nanometer],
+            )
+
+        interchange = Interchange.from_smirnoff(sage_unconstrained, top)
+        interchange.positions = positions
+        interchange.box = box_o
+
+        reference_o = get_openmm_energies(
+            interchange=interchange,
+            round_positions=3,
+        )
+
+        lmp_energies_o = get_lammps_energies(
+            interchange=interchange,
+            round_positions=3,
+        )
+
+        interchange.box = box_t
+        reference_t = get_openmm_energies(
+            interchange=interchange,
+            round_positions=3,
+        )
+
+        lmp_energies_t = get_lammps_energies(
+            interchange=interchange,
+            round_positions=3,
+        )
+
+        diff_o = reference_o.diff(lmp_energies_o)
+        diff_t = reference_t.diff(lmp_energies_t)
+
+        assert abs(diff_o["Nonbonded"] - diff_t["Nonbonded"]) < 0.1 * unit.kilojoule_per_mole
+
+
     @pytest.mark.parametrize("n_mols", [1, 2])
     @pytest.mark.parametrize(
         "mol",
@@ -71,7 +152,7 @@ class TestLammps:
         lmp_energies.compare(
             reference,
             tolerances={
-                "Nonbonded": 1 * unit.kilojoule_per_mole,
+                "Nonbonded": 0.4 * unit.kilojoule_per_mole,
                 "Torsion": 0.02 * unit.kilojoule_per_mole,
             },
         )
