@@ -8,11 +8,11 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/asottile/add-trailing-comma
-  rev: v3.2.0
+  rev: v4.0.0
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.13.3
+  rev: v0.14.0
   hooks:
     - id: ruff
       args: ["--fix"]
@@ -40,12 +40,12 @@ repos:
     - id: nbstripout
       files: ^examples
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.20.0
+  rev: v3.21.0
   hooks:
   - id: pyupgrade
     args:
       - --py310-plus
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.7.0
+  rev: v2.10.0
   hooks:
     - id: pyproject-fmt
