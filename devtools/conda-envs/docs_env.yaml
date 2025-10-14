@@ -9,7 +9,7 @@ dependencies:
   - versioningit
   - pip
   - numpy =1
-  - pydantic =2,!=2.12
+  - pydantic >=2,<2.12
   - openff-toolkit-base =0.17
   - openmm
   - mbuild
