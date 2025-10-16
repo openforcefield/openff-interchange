@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
@@ -759,7 +759,7 @@ class Interchange(_BaseModel):
             )
             positions = self.positions
 
-        _to_pdb(file_path, openmm_topology, positions.to(unit.angstrom))
+        _to_pdb(file_path, openmm_topology, positions.to("angstrom"))
 
     def to_psf(self, file_path: Path | str):
         """Export this Interchange to a CHARMM-style .psf file."""
@@ -917,7 +917,7 @@ class Interchange(_BaseModel):
         from openff.interchange.interop.gromacs._import._import import _read_coordinates
 
         # should already be in nm, might not be necessary
-        coordinates = _read_coordinates(pathlib.Path(gro_file)).to(unit.nanometer)
+        coordinates = _read_coordinates(pathlib.Path(gro_file)).to("nanometer")
 
         if coordinates.shape != (self.topology.n_atoms, 3):
             raise InvalidPositionsError(
