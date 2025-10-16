@@ -7,7 +7,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import numpy
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 
 from openff.interchange.exceptions import (
     MissingPositionsError,
@@ -274,16 +274,16 @@ def _get_separation_by_atom_indices(
                     (key.atom_indices[1], key.atom_indices[2]),
                 )
 
-                a = a.m_as(unit.nanometer)
-                b = b.m_as(unit.nanometer)
-                gamma = gamma.m_as(unit.radian)
+                a = a.m_as("nanometer")
+                b = b.m_as("nanometer")
+                gamma = gamma.m_as("radian")
 
                 # law of cosines
                 c2 = a**2 + b**2 - 2 * a * b * numpy.cos(gamma)
 
                 return Quantity(
                     c2**0.5,
-                    unit.nanometer,
+                    "nanometer",
                 )
 
     raise ValueError(f"Could not find distance between atoms {atom_indices}")

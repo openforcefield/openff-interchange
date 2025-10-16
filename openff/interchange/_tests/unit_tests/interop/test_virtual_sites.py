@@ -258,7 +258,7 @@ class TestVirtualSitePositions:
             ammonia_tetrahedral.to_topology(),
         )
 
-        positions = get_positions_with_virtual_sites(out).to(unit.angstrom)
+        positions = get_positions_with_virtual_sites(out).to("angstrom")
 
         distance = numpy.linalg.norm(positions[-1, :].m - positions[0, :].m)
 

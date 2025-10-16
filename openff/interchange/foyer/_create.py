@@ -1,7 +1,7 @@
 import numpy
 from numpy.typing import NDArray
 from openff.toolkit import Topology
-from openff.units import Quantity, unit
+from openff.units import Quantity
 
 from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
@@ -87,10 +87,7 @@ def _create_interchange(
         molecule_charges: NDArray[numpy.int_] = numpy.asarray(
             [charges[TopologyKey(atom_indices=(interchange.topology.atom_index(atom),))].m for atom in molecule.atoms],
         )
-        molecule.partial_charges = Quantity(
-            molecule_charges,
-            unit.elementary_charge,
-        )
+        molecule.partial_charges = Quantity(molecule_charges, "elementary_charge")
 
     interchange.collections["vdW"] = vdw_handler
     interchange.collections["Electrostatics"] = electrostatics

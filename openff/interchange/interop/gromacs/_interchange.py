@@ -1,5 +1,5 @@
 import networkx
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Quantity, Topology
 
 from openff.interchange import Interchange
 from openff.interchange._experimental import experimental
@@ -267,13 +267,10 @@ def to_interchange(
                 ):
                     potential = Potential(
                         parameters={
-                            "periodicity": Quantity(
-                                dihedral.multiplicity,
-                                unit.dimensionless,
-                            ),
+                            "periodicity": Quantity(dihedral.multiplicity, "dimensionless"),
                             "phase": dihedral.phi,
                             "k": dihedral.k,
-                            "idivf": 1 * unit.dimensionless,
+                            "idivf": Quantity(1, "dimensionless"),
                         },
                     )
 

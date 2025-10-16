@@ -1,7 +1,7 @@
 import warnings
 from typing import Literal, Self
 
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -565,9 +565,9 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                 for map_key in map_keys:
                     parameters = {
                         "k": parameter.k_bondorder[n][map_key],
-                        "periodicity": parameter.periodicity[n] * unit.dimensionless,
+                        "periodicity": Quantity(parameter.periodicity[n], "dimensionless"),
                         "phase": parameter.phase[n],
-                        "idivf": parameter.idivf[n] * unit.dimensionless,
+                        "idivf": Quantity(parameter.idivf[n], "dimensionless"),
                     }
                     pots.append(
                         Potential(
@@ -719,14 +719,14 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
                 # Assumed to be list here
                 idivf = parameter.idivf[n]
                 if idivf is not None:
-                    idivf = idivf * unit.dimensionless
+                    idivf = Quantity(idivf, "dimensionless")
 
             if idivf is None:
                 if _default_idivf == "auto":
-                    idivf = 3.0 * unit.dimensionless
+                    idivf = Quantity(3.0, "dimensionless")
                 else:
                     # Assumed to be a numerical value
-                    idivf = _default_idivf * unit.dimensionless
+                    idivf = Quantity(_default_idivf, "dimensionless")
 
             # parameter keys happen to be the same as keys in proper torsions
             self.potentials[potential_key] = Potential(
