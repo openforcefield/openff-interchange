@@ -2,7 +2,6 @@
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
 
-from openff.toolkit import unit as off_unit
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
@@ -35,7 +34,7 @@ def _process_constraints(
 
         params = constraint_handler.potentials[pot_key].parameters
         distance = params["distance"]
-        distance_omm = distance.m_as(off_unit.nanometer)
+        distance_omm = distance.m_as("nanometer")
 
         constrained_pairs.add(tuple(sorted(openmm_indices)))
         openmm_sys.addConstraint(
@@ -86,10 +85,8 @@ def _process_bond_forces(
                 continue
 
         params = bond_handler.potentials[pot_key].parameters
-        k = params["k"].m_as(
-            off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol,
-        )
-        length = params["length"].m_as(off_unit.nanometer)
+        k = params["k"].m_as("kilojoule / nanometer**2 / mole")
+        length = params["length"].m_as("nanometer")
 
         harmonic_bond_force.addBond(
             particle1=openmm_indices[0],
@@ -167,8 +164,8 @@ def _process_angle_forces(
 
         else:
             params = angle_handler.potentials[pot_key].parameters
-            k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
-            angle = params["angle"].m_as(off_unit.radian)
+            k = params["k"].m_as("kilojoule / radian / mole")
+            angle = params["angle"].m_as("radian")
 
             harmonic_angle_force.addAngle(
                 particle1=openmm_indices[0],
@@ -201,9 +198,9 @@ def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
 
         params = proper_torsion_handler.potentials[pot_key].parameters
 
-        k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
+        k = params["k"].m_as("kilojoule / mole")
         periodicity = int(params["periodicity"])
-        phase = params["phase"].m_as(off_unit.radian)
+        phase = params["phase"].m_as("radian")
         # Work around a pint gotcha:
         # >>> import pint
         # >>> u = pint.UnitRegistry()
@@ -219,7 +216,7 @@ def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
         # 1.0
         # >>> round(val, 0).m
         # 1.0
-        idivf = params["idivf"].m_as(off_unit.dimensionless)
+        idivf = params["idivf"].m_as("dimensionless")
         if idivf == 0:
             raise RuntimeError("Found an idivf of 0.")
         torsion_force.addTorsion(
@@ -248,12 +245,12 @@ def _process_rb_torsion_forces(interchange, openmm_sys, particle_map):
 
         params = rb_torsion_handler.potentials[pot_key].parameters
 
-        c0 = params["c0"].m_as(off_unit.kilojoule / off_unit.mol)
-        c1 = params["c1"].m_as(off_unit.kilojoule / off_unit.mol)
-        c2 = params["c2"].m_as(off_unit.kilojoule / off_unit.mol)
-        c3 = params["c3"].m_as(off_unit.kilojoule / off_unit.mol)
-        c4 = params["c4"].m_as(off_unit.kilojoule / off_unit.mol)
-        c5 = params["c5"].m_as(off_unit.kilojoule / off_unit.mol)
+        c0 = params["c0"].m_as("kilojoule / mole")
+        c1 = params["c1"].m_as("kilojoule / mole")
+        c2 = params["c2"].m_as("kilojoule / mole")
+        c3 = params["c3"].m_as("kilojoule / mole")
+        c4 = params["c4"].m_as("kilojoule / mole")
+        c5 = params["c5"].m_as("kilojoule / mole")
 
         rb_force.addTorsion(
             openmm_indices[0],
@@ -291,9 +288,9 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
 
         params = improper_torsion_handler.potentials[pot_key].parameters
 
-        k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
+        k = params["k"].m_as("kilojoule / mole")
         periodicity = int(params["periodicity"])
-        phase = params["phase"].m_as(off_unit.radian)
+        phase = params["phase"].m_as("radian")
         idivf = int(params["idivf"])
 
         torsion_force.addTorsion(

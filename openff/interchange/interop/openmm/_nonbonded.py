@@ -7,7 +7,7 @@ import warnings
 from collections import defaultdict
 from typing import NamedTuple
 
-from openff.toolkit import Molecule, Quantity, unit
+from openff.toolkit import Molecule, Quantity
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
@@ -387,7 +387,7 @@ def _create_single_nonbonded_force(
 
             if data.electrostatics_collection is not None:
                 try:
-                    partial_charge = partial_charges[top_key].m_as(unit.e)
+                    partial_charge = partial_charges[top_key].m_as("elementary_charge")
                 except KeyError:
                     # TODO: Work around this by updating the handler or .charges
                     #       to support looking up directly based on atom index,
@@ -396,7 +396,7 @@ def _create_single_nonbonded_force(
                         this_atom_index=atom_index,
                     )
 
-                    partial_charge = partial_charges[other_top_key].m_as(unit.e)
+                    partial_charge = partial_charges[other_top_key].m_as("elementary_charge")
 
             else:
                 partial_charge = 0.0
@@ -407,8 +407,8 @@ def _create_single_nonbonded_force(
                 sigma = vdw.potentials[pot_key].parameters["sigma"]
                 epsilon = vdw.potentials[pot_key].parameters["epsilon"]
 
-                sigma = sigma.m_as(unit.nanometer)
-                epsilon = epsilon.m_as(unit.kilojoule / unit.mol)
+                sigma = sigma.m_as("nanometer")
+                epsilon = epsilon.m_as("kilojoule / mole")
             else:
                 sigma = openmm.unit.Quantity(0.0, openmm.unit.nanometer)
                 epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
@@ -971,7 +971,7 @@ def _set_particle_parameters(
 
             top_key = TopologyKey(atom_indices=(atom_index,))
 
-            partial_charge = partial_charges[top_key].m_as(unit.e)
+            partial_charge = partial_charges[top_key].m_as("elementary_charge")
 
             if vdw is not None:
                 pot_key = vdw.key_map[top_key]
@@ -990,8 +990,8 @@ def _set_particle_parameters(
                     sigma = vdw.potentials[pot_key].parameters["sigma"]
                     epsilon = vdw.potentials[pot_key].parameters["epsilon"]
 
-                    sigma = sigma.m_as(unit.nanometer)
-                    epsilon = epsilon.m_as(unit.kilojoule / unit.mol)
+                    sigma = sigma.m_as("nanometer")
+                    epsilon = epsilon.m_as("kilojoule / mole")
             else:
                 sigma = openmm.unit.Quantity(0.0, openmm.unit.nanometer)
                 epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
@@ -1049,8 +1049,8 @@ def _set_particle_parameters(
                     sigma = vdw.potentials[pot_key].parameters["sigma"]
                     epsilon = vdw.potentials[pot_key].parameters["epsilon"]
 
-                    sigma = sigma.m_as(unit.nanometer)
-                    epsilon = epsilon.m_as(unit.kilojoule / unit.mol)
+                    sigma = sigma.m_as("nanometer")
+                    epsilon = epsilon.m_as("kilojoule / mole")
             else:
                 sigma = openmm.unit.Quantity(0.0, openmm.unit.nanometer)
                 epsilon = openmm.unit.Quantity(0.0, openmm.unit.kilojoules_per_mole)
@@ -1067,12 +1067,12 @@ def _set_particle_parameters(
                 else:
                     vdw_force.setParticleParameters(particle_index, [sigma, epsilon])
 
-            partial_charge = partial_charges[virtual_site_key].m_as(unit.e)
+            partial_charge = partial_charges[virtual_site_key].m_as("elementary_charge")
 
             if electrostatics_force is not None:
                 electrostatics_force.setParticleParameters(
                     particle_index,
-                    partial_charges[virtual_site_key].m_as(unit.e),
+                    partial_charges[virtual_site_key].m_as("elementary_charge"),
                     0.0,
                     0.0,
                 )
