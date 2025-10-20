@@ -636,11 +636,14 @@ def pack_box(
 
     Notes
     -----
+    Requires Packmol 20.15.0 or newer.
+
     Packmol places molecules at random positions in the box, satisfying
     geometric constraints but no thermodynamic considerations. The resulting
-    configurations need to be subject to energy minimization and equilibration
+    configurations need to be subjected to energy minimization and equilibration
     routines before being used in production simulations.
 
+    Periodic boundary conditions are accounted for during packing.
     """
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
@@ -830,7 +833,7 @@ def solvate_topology(
     """
     Add water and ions to neutralise and solvate a topology.
 
-    The [SLTCAP](10.1021/acs.jctc.7b01254)  method is used to determine the number of each ion to add.
+    The [SLTCAP](10.1021/acs.jctc.7b01254) method is used to determine the number of each ion to add.
 
     Parameters
     ----------
@@ -875,10 +878,14 @@ def solvate_topology(
 
     Notes
     -----
+    Requires Packmol 20.15.0 or newer.
+
     Packmol places solvent molecules at random positions in the box, satisfying
     geometric constraints but no thermodynamic considerations. The resulting
     configurations need to be subject to energy minimization and equilibration
     routines before being used in production simulations.
+
+    Periodic boundary conditions are accounted for during packing.
 
     Returned topologies may have ion concentrations higher than the value of the
     the `nacl_conc` argument.
@@ -1041,13 +1048,14 @@ def solvate_topology_nonwater(
 
     Notes
     -----
+    Requires Packmol 20.15.0 or newer.
+
     Packmol places solvent molecules at random positions in the box, satisfying
     geometric constraints but no thermodynamic considerations. The resulting
-    configurations need to be subject to energy minimization and equilibration
+    configurations need to be subjected to energy minimization and equilibration
     routines before being used in production simulations.
 
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Periodic boundary conditions are accounted for during packing.
     """
     _check_box_shape_shape(box_shape)
 

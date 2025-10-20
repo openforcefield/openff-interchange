@@ -13,6 +13,14 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Behavior changes
+
+* #1332 Introduces the following behavior changes to the private Packmol wrappers:
+  * Packmol verison 20.15.0 or newer is required.
+  * Periodic boundary conditions are accounted for when placing molecules.
+  * The `target_density` is used in box size calculations with modification; previously, box lengths were linearly scaled up by a factor of 1.1.
+  * Molecules are now packed into the box vectors as passed or calculated; previously, molecules were necessarily packed into a box slightly smaller because Packmol did not account for periodic boundary conditions.
+
 ### Bug fixes
 
 * #1325 Fixes some parameter bookkeepping in `Interchange.combine`, particularly when combining similar objects previously created too many `_DUPLICATE` tags.
