@@ -345,10 +345,14 @@ def _box_from_density(
     total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
     volume = total_mass / target_density
 
-    return _scale_box(box_shape, volume)
+    return _scale_box(
+        box=box_shape,
+        volume=volume,
+        box_scaleup_factor=1.0,
+    )
 
 
-def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float = 1.0) -> Quantity:
+def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float = 1.1) -> Quantity:
     """
     Scale the parallelepiped spanned by ``box`` to the given volume.
 
