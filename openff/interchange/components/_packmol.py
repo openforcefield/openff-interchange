@@ -486,6 +486,7 @@ def _build_input_file(
     input_lines = [
         f"tolerance {tolerance:f}",
         "filetype pdb",
+        f"  pbc 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
         f"output {output_file_path}",
         "",
     ]
@@ -511,7 +512,6 @@ def _build_input_file(
             [
                 f"structure {file_name}",
                 f"  number {count}",
-                f"  inside box 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
                 "end structure",
                 "",
             ],
