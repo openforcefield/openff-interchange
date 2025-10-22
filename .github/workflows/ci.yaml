@@ -33,6 +33,9 @@ jobs:
           - false
         rdkit:
           - true
+        ambertools:
+          - true
+          - false
         nagl:
           - true
           - false
@@ -41,6 +44,9 @@ jobs:
         exclude:
           - python-version: "3.13"
             openeye: true
+          - ambertools: false
+            nagl: false
+            openeye: false
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -76,6 +82,12 @@ jobs:
       if: ${{ matrix.rdkit == true }}
       run: |
         micromamba install rdkit -c conda-forge
+
+    - name: Remove AmberTools
+      if: ${{ matrix.ambertools == false }}
+      run: |
+        micromamba remove ambertools
+        micromamba install "packmol >=20.15.0"
 
     - name: Install OpenFF NAGL
       if: ${{ matrix.nagl == true }}
