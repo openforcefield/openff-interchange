@@ -45,7 +45,6 @@ jobs:
           - python-version: "3.13"
             openeye: true
           - ambertools: false
-            nagl: false
             openeye: false
 
     env:
