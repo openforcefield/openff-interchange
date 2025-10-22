@@ -11,7 +11,7 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.4.8 - 2025-10-09
 
 ### Behavior changes
 
@@ -23,7 +23,14 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Bug fixes
 
+* #1340 Fixes JSON deserialization issues when charges come from `NAGLCharges` or `ChargeIncrementModel`.
 * #1325 Fixes some parameter bookkeepping in `Interchange.combine`, particularly when combining similar objects previously created too many `_DUPLICATE` tags.
+* #1334 Improves error reporting when Amber calculates non-numeric energies.
+* #1337 Fixes a bug in which errors were sometimes raised when valence parameters were missing but not needed.
+
+### Miscellaneous improvements
+
+* #1327 and #1328 Make small improvements to internal logic in `Interchange.combine`.
 
 ## 0.4.7 - 2025-09-11
 

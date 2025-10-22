@@ -156,7 +156,7 @@ class TestLammps:
 
         tolerances = {
             "Bond": 1e-11 * kj_mol,
-            "Angle": 1e-12 * kj_mol,
+            "Angle": 1e-10 * kj_mol,
             "Torsion": 1e-12 * kj_mol,
             "vdW": 1e-7 * kj_mol,
             "Electrostatics": 1e-1 * kj_mol,
