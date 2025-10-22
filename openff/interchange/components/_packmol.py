@@ -14,6 +14,7 @@ import numpy
 from numpy.typing import ArrayLike, NDArray
 from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology
 from openff.utilities.utilities import requires_package, temporary_cd
+from packaging.version import Version
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
@@ -478,7 +479,32 @@ def _build_input_file(
         The path to the output file.
 
     """
-    box_size = box_size.m_as("angstrom")
+    try:
+        # TODO: Can we pass this through without actually having this temporary file touch disk?
+        with open("dummy.input", "w") as file_handle:
+            file_handle.write(
+                "tolerance 2.0\nfiletype pdb\noutput dummy.pdb\n",
+            )
+
+        output = subprocess.check_output(
+            _find_packmol(),  # if this is None, will it get gobbled up by CalledProcessError below?
+            stdin=open("dummy.input"),
+            stderr=subprocess.STDOUT,
+        )
+
+        found_version = Version(output.decode("utf-8").split("Version ")[1].split(" ")[0])
+
+        PACKMOL_USE_PBC = found_version >= Version("20.15.0")
+
+    except subprocess.CalledProcessError as expected_error:
+        found_version = Version(expected_error.stdout.decode("utf-8").split("Version ")[1].split(" ")[0])
+
+        PACKMOL_USE_PBC = found_version >= Version("20.15.0")
+
+    except Exception as error:
+        raise PACKMOLRuntimeError("Unexpected error while running Packmol.") from error
+
+    box_size = box_size.m_as("angstrom") if PACKMOL_USE_PBC else (box_size - tolerance).m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
 
     # Add the global header options.
@@ -486,10 +512,12 @@ def _build_input_file(
     input_lines = [
         f"tolerance {tolerance:f}",
         "filetype pdb",
-        f"  pbc 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
         f"output {output_file_path}",
         "",
     ]
+
+    if PACKMOL_USE_PBC:
+        input_lines.append(f"pbc 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}")
 
     # Add the section of the molecule to solvate if provided.
     if structure_to_solvate is not None:
@@ -512,6 +540,7 @@ def _build_input_file(
             [
                 f"structure {file_name}",
                 f"  number {count}",
+                "" if PACKMOL_USE_PBC else f"  inside box 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
                 "end structure",
                 "",
             ],
@@ -636,12 +665,14 @@ def pack_box(
 
     Notes
     -----
-    Requires Packmol 20.15.0 or newer.
-
     Packmol places molecules at random positions in the box, satisfying
     geometric constraints but no thermodynamic considerations. The resulting
     configurations need to be subjected to energy minimization and equilibration
     routines before being used in production simulations.
+
+    Periodic boundary conditions are accounted for during packing if using Packmol version 20.15.0 or newer.
+
+    If Packmol version 20.15.0 or less is used, periodic boundary conditions may not be handled correctly.
 
     Periodic boundary conditions are accounted for during packing.
     """
@@ -878,14 +909,14 @@ def solvate_topology(
 
     Notes
     -----
-    Requires Packmol 20.15.0 or newer.
-
     Packmol places solvent molecules at random positions in the box, satisfying
     geometric constraints but no thermodynamic considerations. The resulting
-    configurations need to be subject to energy minimization and equilibration
+    configurations need to be subjected to energy minimization and equilibration
     routines before being used in production simulations.
 
-    Periodic boundary conditions are accounted for during packing.
+    Periodic boundary conditions are accounted for during packing if using Packmol version 20.15.0 or newer.
+
+    If Packmol version 20.15.0 or less is used, periodic boundary conditions may not be handled correctly.
 
     Returned topologies may have ion concentrations higher than the value of the
     the `nacl_conc` argument.
@@ -1048,12 +1079,14 @@ def solvate_topology_nonwater(
 
     Notes
     -----
-    Requires Packmol 20.15.0 or newer.
-
     Packmol places solvent molecules at random positions in the box, satisfying
     geometric constraints but no thermodynamic considerations. The resulting
     configurations need to be subjected to energy minimization and equilibration
     routines before being used in production simulations.
+
+    Periodic boundary conditions are accounted for during packing if using Packmol version 20.15.0 or newer.
+
+    If Packmol version 20.15.0 or less is used, periodic boundary conditions may not be handled correctly.
 
     Periodic boundary conditions are accounted for during packing.
     """
