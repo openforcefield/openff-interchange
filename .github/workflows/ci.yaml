@@ -30,8 +30,9 @@ jobs:
           - "3.13"
         openeye:
           - true
-        rdkit:
           - false
+        rdkit:
+          - true
         nagl:
           - true
           - false
@@ -74,7 +75,7 @@ jobs:
     - name: Install RDKit
       if: ${{ matrix.rdkit == true }}
       run: |
-        micromamba install rdkit ambertools -c conda-forge
+        micromamba install rdkit -c conda-forge
 
     - name: Install OpenFF NAGL
       if: ${{ matrix.nagl == true }}
