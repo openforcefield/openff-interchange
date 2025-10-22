@@ -479,30 +479,30 @@ def _build_input_file(
         The path to the output file.
 
     """
-    try:
-        # TODO: Can we pass this through without actually having this temporary file touch disk?
-        with open("dummy.input", "w") as file_handle:
-            file_handle.write(
-                "tolerance 2.0\nfiletype pdb\noutput dummy.pdb\n",
+    with temporary_cd(tempfile.mkdtemp()):
+        try:
+            # TODO: Can we pass this through without actually having this temporary file touch disk?
+            with open("dummy.input", "w") as file_handle:
+                file_handle.write(
+                    "tolerance 2.0\nfiletype pdb\noutput dummy.pdb",
+                )
+
+            subprocess.check_output(
+                _find_packmol(),  # if this is None, will it get gobbled up by CalledProcessError below?
+                stdin=open("dummy.input"),
+                stderr=subprocess.STDOUT,
             )
 
-        output = subprocess.check_output(
-            _find_packmol(),  # if this is None, will it get gobbled up by CalledProcessError below?
-            stdin=open("dummy.input"),
-            stderr=subprocess.STDOUT,
-        )
+        except subprocess.CalledProcessError as expected_error:
+            # STDOUT from Packmol is a lot of text, but in this middle is something like
+            # ... Version 21.1.1 ...
+            # and they tend to follow something semver-like
+            found_version = Version(expected_error.stdout.decode("utf-8").split("Version ")[1].split(" ")[0])
 
-        found_version = Version(output.decode("utf-8").split("Version ")[1].split(" ")[0])
+            PACKMOL_USE_PBC = found_version >= Version("20.15.0")
 
-        PACKMOL_USE_PBC = found_version >= Version("20.15.0")
-
-    except subprocess.CalledProcessError as expected_error:
-        found_version = Version(expected_error.stdout.decode("utf-8").split("Version ")[1].split(" ")[0])
-
-        PACKMOL_USE_PBC = found_version >= Version("20.15.0")
-
-    except Exception as error:
-        raise PACKMOLRuntimeError("Unexpected error while running Packmol.") from error
+        except Exception as error:
+            raise PACKMOLRuntimeError("Unexpected error while running Packmol.") from error
 
     box_size = box_size.m_as("angstrom") if PACKMOL_USE_PBC else (box_size - tolerance).m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
