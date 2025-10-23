@@ -18,9 +18,9 @@ dependencies:
   # de-forcefields  # add back after smirnoff-plugins update
   - openff-nagl
   - openff-nagl-models
-  - mbuild =1
-  - foyer =1
-  - gmso ~=0.12
+  # mbuild =1
+  # foyer =1
+  # gmso ~=0.12
   - nglview
   # Drivers
   - gromacs
@@ -47,3 +47,4 @@ dependencies:
   - pre-commit
   - snakeviz
   - tuna
+  - polars
