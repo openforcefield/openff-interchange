@@ -487,11 +487,13 @@ def _build_input_file(
                     "tolerance 2.0\nfiletype pdb\noutput dummy.pdb",
                 )
 
-            subprocess.check_output(
+            result = subprocess.check_output(
                 _find_packmol(),  # if this is None, will it get gobbled up by CalledProcessError below?
                 stdin=open("dummy.input"),
                 stderr=subprocess.STDOUT,
             )
+            
+            found_version = Version(result.decode("utf-8").split("Version ")[1].split(" ")[0])
 
         except subprocess.CalledProcessError as expected_error:
             # STDOUT from Packmol is a lot of text, but in this middle is something like
@@ -499,10 +501,10 @@ def _build_input_file(
             # and they tend to follow something semver-like
             found_version = Version(expected_error.stdout.decode("utf-8").split("Version ")[1].split(" ")[0])
 
-            PACKMOL_USE_PBC = found_version >= Version("20.15.0")
-
         except Exception as error:
-            raise PACKMOLRuntimeError("Unexpected error while running Packmol.") from error
+            raise PACKMOLRuntimeError(f"Unexpected error ({type(error)}) while running Packmol.") from error
+
+    PACKMOL_USE_PBC = found_version >= Version("20.15.0")
 
     box_size = box_size.m_as("angstrom") if PACKMOL_USE_PBC else (box_size - tolerance).m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
