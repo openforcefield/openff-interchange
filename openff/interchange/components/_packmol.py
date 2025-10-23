@@ -492,7 +492,7 @@ def _build_input_file(
                 stdin=open("dummy.input"),
                 stderr=subprocess.STDOUT,
             )
-            
+
             found_version = Version(result.decode("utf-8").split("Version ")[1].split(" ")[0])
 
         except subprocess.CalledProcessError as expected_error:
