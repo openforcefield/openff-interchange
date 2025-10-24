@@ -326,7 +326,6 @@ def _convert_periodic_torsion_force(
 ) -> ProperTorsionCollection:
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
-    from openff.toolkit import unit
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
     from openff.interchange.common._valence import ProperTorsionCollection
@@ -352,10 +351,10 @@ def _convert_periodic_torsion_force(
         )
         pot = Potential(
             parameters={
-                "periodicity": int(per) * unit.dimensionless,
+                "periodicity": Quantity(int(per), "dimensionless"),
                 "phase": from_openmm_quantity(phase),
                 "k": from_openmm_quantity(k),
-                "idivf": 1 * unit.dimensionless,
+                "idivf": Quantity(1, "dimensionless"),
             },
         )
 

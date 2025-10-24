@@ -386,6 +386,9 @@ class Collection(_BaseModel):
 
         return self.potentials[self.key_map[key]]
 
+    def __hash__(self) -> int:
+        return id(self)
+
 
 def validate_collections(
     v: Any,
