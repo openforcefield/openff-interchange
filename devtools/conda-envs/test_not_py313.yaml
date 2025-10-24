@@ -19,7 +19,7 @@ dependencies:
   # https://github.com/conda-forge/mbuild-feedstock/issues/46
   # https://github.com/conda-forge/mbuild-feedstock/pull/49
   # mbuild =1
-  # foyer =1
+  - foyer =1
   - nglview
   # Drivers
   - gromacs
