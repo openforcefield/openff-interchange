@@ -27,3 +27,5 @@ Ligand in water benchmark summary:
     GROMACS export time (s): 1.705 ± 0.144
 
 ```
+
+`ctr148a-2KO1-model-1.pdb` is [from `proteinbenchmark`](https://github.com/openforcefield/proteinbenchmark/blob/eb89f8407b09b54b8cc32f688f8efe806942d95c/proteinbenchmark/data/pdbs/ctr148a-2KO1-model-1.pdb)
