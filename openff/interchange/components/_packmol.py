@@ -447,38 +447,8 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
     return pdb_file_names
 
 
-def _build_input_file(
-    molecule_file_names: list[str],
-    molecule_counts: list[int],
-    structure_to_solvate: str | None,
-    box_size: Quantity,
-    tolerance: Quantity,
-) -> tuple[str, str]:
-    """
-    Construct the packmol input file.
-
-    Parameters
-    ----------
-    molecule_file_names
-        The paths to the molecule pdb files. No file will be produced for molecules where corresponding count is zero.
-    molecule_counts
-        The number of each molecule to add. No file will be produced for molecules where corresponding count is zero.
-    structure_to_solvate
-        The path to the structure to solvate.
-    box_size
-        The lengths of each side of the box we want to fill. This is the box
-        size of the rectangular brick representation of the simulation box
-    tolerance
-        The packmol convergence tolerance.
-
-    Returns
-    -------
-    str
-        The path to the input file.
-    str
-        The path to the output file.
-
-    """
+def _get_packmol_version() -> Version:
+    """Return the version of packmol installed."""
     with temporary_cd(tempfile.mkdtemp()):
         try:
             # TODO: Can we pass this through without actually having this temporary file touch disk?
@@ -504,7 +474,48 @@ def _build_input_file(
         except Exception as error:
             raise PACKMOLRuntimeError(f"Unexpected error ({type(error)}) while running Packmol.") from error
 
-    PACKMOL_USE_PBC = found_version >= Version("20.15.0")
+    return found_version
+
+
+def _build_input_file(
+    molecule_file_names: list[str],
+    molecule_counts: list[int],
+    structure_to_solvate: str | None,
+    box_size: Quantity,
+    tolerance: Quantity,
+    rectangular: bool = False,
+) -> tuple[str, str]:
+    """
+    Construct the packmol input file.
+
+    Parameters
+    ----------
+    molecule_file_names
+        The paths to the molecule pdb files. No file will be produced for molecules where corresponding count is zero.
+    molecule_counts
+        The number of each molecule to add. No file will be produced for molecules where corresponding count is zero.
+    structure_to_solvate
+        The path to the structure to solvate.
+    box_size
+        The lengths of each side of the box we want to fill. This is the box
+        size of the rectangular brick representation of the simulation box
+    tolerance
+        The packmol convergence tolerance.
+    rectangular
+        Whether the box is rectangular (True) or triclinic (False).
+
+    Returns
+    -------
+    str
+        The path to the input file.
+    str
+        The path to the output file.
+
+    """
+    if rectangular:
+        PACKMOL_USE_PBC = _get_packmol_version() >= Version("20.15.0")
+    else:
+        PACKMOL_USE_PBC = False
 
     box_size = box_size.m_as("angstrom") if PACKMOL_USE_PBC else (box_size - tolerance).m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
@@ -698,6 +709,8 @@ def pack_box(
         target_density,
     )
 
+    is_rectangular = numpy.all(box_shape == numpy.diag(numpy.diagonal(box_shape)))
+
     # Estimate the box_vectors from mass density if one is not provided.
     if target_density is not None:
         box_vectors = _box_from_density(
@@ -718,8 +731,7 @@ def pack_box(
             + "05_other_features.html#periodic-boundary-conditions",
         )
 
-    # Compute the dimensions of the equivalent brick - this is what packmol will
-    # fill
+    # Compute the dimensions of the equivalent brick - this is what packmol will fill
     brick_size = _compute_brick_from_box_vectors(box_vectors)
 
     # Center the solute
@@ -756,6 +768,7 @@ def pack_box(
             solute_pdb_filename,
             brick_size,
             tolerance,
+            rectangular=is_rectangular,
         )
 
         with open(input_file_path) as file_handle:
