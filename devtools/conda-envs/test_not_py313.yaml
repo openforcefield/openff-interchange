@@ -13,7 +13,7 @@ dependencies:
   - ambertools =24
   # Optional features
   - openmm
-  - smirnoff-plugins =2024
+  # smirnoff-plugins =2024
   # de-forcefields  # add back after smirnoff-plugins update
   # https://github.com/mosdef-hub/foyer/pull/574
   # https://github.com/conda-forge/mbuild-feedstock/issues/46
@@ -23,7 +23,7 @@ dependencies:
   - nglview
   # Drivers
   - gromacs
-  - lammps
+  # lammps
   - pyedr
   # Testing
   - mdtraj
