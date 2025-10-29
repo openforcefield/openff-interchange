@@ -387,7 +387,13 @@ class Collection(_BaseModel):
         return self.potentials[self.key_map[key]]
 
     def __hash__(self) -> int:
-        return id(self)
+        return hash(id(self))
+
+    def __eq__(self, other) -> bool:
+        if type(self) is not type(other):
+            return NotImplemented
+
+        return self is other
 
 
 def validate_collections(
