@@ -2,7 +2,7 @@ from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Topology
+from openff.toolkit import Quantity, Topology
 
 from openff.interchange.components.potentials import Collection, Potential
 from openff.interchange.foyer._guard import has_foyer
@@ -23,15 +23,15 @@ POTENTIAL_KEY_SEPARATOR = "-"
 def _copy_params(
     params: dict[str, float],
     *drop_keys: str,
-    param_units: dict | None = None,
+    param_units: dict[str, str] | None = None,
 ) -> dict:
     """Copy parameters from a dictionary."""
     params_copy = copy(params)
     for drop_key in drop_keys:
         params_copy.pop(drop_key, None)
     if param_units:
-        for unit_item, units in param_units.items():
-            params_copy[unit_item] = params_copy[unit_item] * units
+        for unit_item, unit_str in param_units.items():
+            params_copy[unit_item] = Quantity(params_copy[unit_item], unit_str)
     return params_copy
 
 
