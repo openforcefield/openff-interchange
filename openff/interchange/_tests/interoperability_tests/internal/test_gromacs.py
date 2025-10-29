@@ -1,7 +1,6 @@
 from importlib import resources
 
 import numpy
-import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
@@ -25,13 +24,17 @@ if has_package("openmm"):
     import openmm.unit
 
 
+@skip_if_missing("intermol")
 @skip_if_missing("mdtraj")
 @skip_if_missing("openmm")
 @needs_gmx
 class TestGROMACSGROFile:
-    _INTERMOL_PATH = resources.files(
-        "intermol.tests.gromacs.unit_tests",
-    )
+    try:
+        _INTERMOL_PATH = resources.files(
+            "intermol.tests.gromacs.unit_tests",
+        )
+    except ImportError:
+        _INTERMOL_PATH = None
 
     @skip_if_missing("intermol")
     def test_load_gro(self):
@@ -54,6 +57,7 @@ class TestGROMACSGROFile:
         assert numpy.allclose(box, openmm_box)
 
     @skip_if_missing("intermol")
+    @pytest.mark.skip("don't run parmed tests")
     def test_load_gro_nonstandard_precision(self):
         file = self._INTERMOL_PATH / "lj3_bulk/lj3_bulk.gro"
 
@@ -126,8 +130,9 @@ class TestGROMACS:
             },
         )
 
-    @skip_if_missing("parmed")
+    @pytest.mark.skip("don't run parmed tests")
     def test_num_impropers(self, sage):
+        parmed = pytest.importorskip("parmed")
         out = Interchange.from_smirnoff(
             sage,
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
@@ -174,11 +179,13 @@ class TestGROMACS:
             interchange.to_top("out.top")
 
     @pytest.mark.slow
+    @pytest.mark.skip("don't run parmed tests")
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
-        import parmed
         from openff.units.openmm import from_openmm
+
+        parmed = pytest.importorskip("parmed")
 
         protein = get_protein("MainChain_HIE")
 
@@ -272,6 +279,8 @@ class TestGROMACSVirtualSites:
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
+        parmed = pytest.importorskip("parmed")
+
         molecule = MoleculeWithConformer.from_smiles("CCl", name="Chloromethane")
 
         out = Interchange.from_smirnoff(

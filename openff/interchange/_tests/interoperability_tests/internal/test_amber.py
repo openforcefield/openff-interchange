@@ -1,5 +1,4 @@
 import numpy as np
-import parmed
 import pytest
 from openff.toolkit import ForceField, Molecule, unit
 from openff.utilities import (
@@ -22,6 +21,8 @@ if has_package("openmm"):
 class TestAmber:
     @pytest.mark.skip(reason="Need replacement route to reference positions")
     def test_inpcrd(self, sage):
+        parmed = pytest.importorskip("parmed")
+
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
@@ -129,6 +130,7 @@ class TestAmberResidues:
         ethanol,
         patch_residue_name,
     ):
+        parmed = pytest.importorskip("parmed")
         if patch_residue_name:
             for atom in ethanol.atoms:
                 atom.metadata["residue_name"] = "YUP"

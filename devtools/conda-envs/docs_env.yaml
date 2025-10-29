@@ -8,11 +8,11 @@ dependencies:
   - setuptools !=76.0.0
   - versioningit
   - pip
-  - numpy =1
+  - numpy =2
   - pydantic >=2,<2.12
   - openff-toolkit-base =0.17
   - openmm
-  - mbuild
+  - mbuild-base =1
   - foyer =1
   - nglview
   - pyedr
