@@ -13,15 +13,15 @@ dependencies:
   - ambertools =24
   # Optional features
   - openmm
-  - smirnoff-plugins =2024
-  - de-forcefields
+  # smirnoff-plugins =2024
+  # de-forcefields
   # https://github.com/mosdef-hub/foyer/pull/574
   - mbuild-base =1
   - foyer =1
   - nglview
   # Drivers
   - gromacs
-  - lammps
+  # lammps
   - pyedr
   # Testing
   - mdtraj

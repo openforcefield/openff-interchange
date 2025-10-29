@@ -14,8 +14,8 @@ dependencies:
   - ambertools =24
   # Optional features
   - openmm
-  - smirnoff-plugins =2024
-  - de-forcefields
+  # smirnoff-plugins =2024
+  # de-forcefields
   - openff-nagl
   - openff-nagl-models
   - mbuild-base =1
