@@ -14,11 +14,9 @@ dependencies:
   # Optional features
   - openmm
   - smirnoff-plugins =2024
-  # de-forcefields  # add back after smirnoff-plugins update
+  - de-forcefields
   # https://github.com/mosdef-hub/foyer/pull/574
-  # https://github.com/conda-forge/mbuild-feedstock/issues/46
-  # https://github.com/conda-forge/mbuild-feedstock/pull/49
-  # mbuild =1
+  - mbuild-base =1
   - foyer =1
   - nglview
   # Drivers

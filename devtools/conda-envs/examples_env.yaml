@@ -16,13 +16,13 @@ dependencies:
   # Optional features
   - openff-nagl
   - openff-nagl-models
-  - mbuild
+  - mbuild-base
   - foyer
   - nglview
   # Drivers
   - openmm =8.2
   - gromacs
-  # lammps
+  - lammps
   - pyedr
   # Testing
   - mdtraj
