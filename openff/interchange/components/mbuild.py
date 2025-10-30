@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Topology
 from openff.utilities.utilities import has_package, requires_package
 
 if has_package("mbuild") or TYPE_CHECKING:
@@ -42,7 +42,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     for b in off_mol.bonds:
         comp.add_bond((comp[b.atom1_index], comp[b.atom2_index]))
 
-    comp.xyz = off_mol.conformers[0].m_as(unit.nanometer)
+    comp.xyz = off_mol.conformers[0].m_as("nanometer")
 
     return comp
 

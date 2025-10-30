@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from typing import Literal, Self
 
 import numpy
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -640,7 +640,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                 elif len(atom_indices) - len(charge_increments) == 1:
                     # If we've been provided with one less charge increment value than tagged atoms, assume the last
                     # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
-                    charge_increment_sum = Quantity(0.0, unit.elementary_charge)
+                    charge_increment_sum = Quantity(0.0, "elementary_charge")
 
                     for ci in charge_increments:
                         charge_increment_sum += ci
