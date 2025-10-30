@@ -20,6 +20,15 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 
+entry-points."openff.interchange.plugins.collections".BuckinghamCollection = "nonbonded_plugins.nonbonded:SMIRNOFFBuckinghamCollection"
+entry-points."openff.interchange.plugins.collections".BuckinghamVirtualSiteCollection = "nonbonded_plugins.virtual_sites:SMIRNOFFBuckinghamVirtualSiteCollection"
+entry-points."openff.interchange.plugins.collections".C4IonCollection = "nonbonded_plugins.nonbonded:SMIRNOFFC4IonCollection"
+entry-points."openff.interchange.plugins.collections".DoubleExponentialCollection = "nonbonded_plugins.nonbonded:SMIRNOFFDoubleExponentialCollection"
+entry-points."openff.toolkit.plugins.handlers".BuckinghamHandler = "nonbonded_plugins.nonbonded:BuckinghamHandler"
+entry-points."openff.toolkit.plugins.handlers".BuckinghamVirtualSiteHandler = "nonbonded_plugins.virtual_sites:BuckinghamVirtualSiteHandler"
+entry-points."openff.toolkit.plugins.handlers".C4IonHandler = "nonbonded_plugins.nonbonded:C4IonHandler"
+entry-points."openff.toolkit.plugins.handlers".DoubleExponentialHandler = "nonbonded_plugins.nonbonded:DoubleExponentialHandler"
+
 [tool.ruff]
 line-length = 119
 
