@@ -1,5 +1,11 @@
 """Plugins handling virtual sites."""
 
+from openff.interchange.components.potentials import Potential
+from openff.interchange.components.toolkit import _validated_list_to_array
+from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.models import PotentialKey
+from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollection
+from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
     VirtualSiteHandler,
@@ -8,12 +14,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.units import unit
 
 from nonbonded_plugins.nonbonded import SMIRNOFFBuckinghamCollection
-from openff.interchange.components.potentials import Potential
-from openff.interchange.components.toolkit import _validated_list_to_array
-from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.models import PotentialKey
-from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollection
-from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 
 
 class BuckinghamVirtualSiteHandler(VirtualSiteHandler):

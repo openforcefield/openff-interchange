@@ -4,6 +4,10 @@ import math
 from collections.abc import Iterable
 from typing import Literal
 
+from openff.interchange._annotations import _DimensionlessQuantity, _DistanceQuantity
+from openff.interchange.components.potentials import Potential
+from openff.interchange.exceptions import InvalidParameterHandlerError
+from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
 from openff.toolkit import Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
@@ -12,11 +16,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
     _allow_only,
 )
-
-from openff.interchange._annotations import _DimensionlessQuantity, _DistanceQuantity
-from openff.interchange.components.potentials import Potential
-from openff.interchange.exceptions import InvalidParameterHandlerError
-from openff.interchange.smirnoff._nonbonded import _SMIRNOFFNonbondedCollection
 
 _HandlerIterable = Iterable[type[ParameterHandler]]
 _CollectionAlias = type[_SMIRNOFFNonbondedCollection]
@@ -469,7 +468,6 @@ class SMIRNOFFC4IonCollection(_SMIRNOFFNonbondedCollection):
     ):
         """Add a `openmm.CustomNonbondedForce` to handle the C/r^4 term. See 10.1021/jp505875v."""
         import openmm
-
         from openff.interchange.models import TopologyKey
 
         non_bonded_forces = [

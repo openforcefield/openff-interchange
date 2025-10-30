@@ -39,12 +39,6 @@ repos:
   hooks:
     - id: nbstripout
       files: ^examples
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.21.0
-  hooks:
-  - id: pyupgrade
-    args:
-      - --py310-plus
 - repo: https://github.com/tox-dev/pyproject-fmt
   rev: v2.11.0
   hooks:
