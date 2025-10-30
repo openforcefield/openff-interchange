@@ -11,7 +11,6 @@ from openff.utilities.utilities import requires_package, temporary_cd
 
 from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig
-from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import (
     GMXGromppError,
@@ -185,7 +184,7 @@ def _run_gmx_energy(
 
 def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of GROMACS energies."""
-    gmx_vdw = 0.0 * kj_mol
+    gmx_vdw = Quantity(0.0, "kilojoule / mole")
     for key in ["LJ (SR)", "LJ recip.", "LJ-14", "Disper. corr.", "Buck.ham (SR)"]:
         if key in gmx_energies:
             gmx_vdw += gmx_energies[key]
@@ -194,7 +193,7 @@ def _get_gmx_energy_vdw(gmx_energies: dict) -> Quantity:
 
 
 def _get_gmx_energy_coul(gmx_energies: dict) -> Quantity:
-    gmx_coul = 0.0 * kj_mol
+    gmx_coul = Quantity(0.0, "kilojoule / mole")
     for key in ["Coulomb (SR)", "Coul. recip.", "Coulomb-14"]:
         if key in gmx_energies:
             gmx_coul += gmx_energies[key]
@@ -204,7 +203,7 @@ def _get_gmx_energy_coul(gmx_energies: dict) -> Quantity:
 
 def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
     """Canonicalize torsion energies from a set of GROMACS energies."""
-    gmx_torsion = 0.0 * kj_mol
+    gmx_torsion = Quantity(0.0, "kilojoule / mole")
 
     for key in ["Torsion", "Proper Dih.", "Per. Imp. Dih."]:
         if key in gmx_energies:
@@ -217,15 +216,6 @@ def _get_gmx_energy_torsion(gmx_energies: dict) -> Quantity:
 def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
     """Parse an `.edr` file written by `gmx energy`."""
     from pyedr import read_edr
-
-    #   for key in energies:
-    #       energies[key] *= kj_mol
-
-    #   # TODO: Better way of filling in missing fields
-    #   # GROMACS may not populate all keys
-    #   for required_key in ["Bond", "Angle", "Proper Dih."]:
-    #       if required_key not in energies:
-    #           energies[required_key] = 0.0 * kj_mol
 
     keys_to_drop = [
         "Time",
@@ -249,7 +239,7 @@ def _parse_gmx_energy(edr_path: str) -> dict[str, Quantity]:
         if name not in keys_to_drop:
             parsed_energies[name] = all_energies[0][idx]
 
-    return {key: val * kj_mol for key, val in parsed_energies.items()}
+    return {key: Quantity(val, "kilojoule / mole") for key, val in parsed_energies.items()}
 
 
 def _process(
@@ -262,10 +252,10 @@ def _process(
 
     return EnergyReport(
         energies={
-            "Bond": energies.get("Bond", 0.0 * kj_mol),
-            "Angle": energies.get("Angle", 0.0 * kj_mol),
+            "Bond": energies.get("Bond", Quantity(0.0, "kilojoule / mole")),
+            "Angle": energies.get("Angle", Quantity(0.0, "kilojoule / mole")),
             "Torsion": _get_gmx_energy_torsion(energies),
-            "RBTorsion": energies.get("Ryckaert-Bell.", 0.0 * kj_mol),
+            "RBTorsion": energies.get("Ryckaert-Bell.", Quantity(0.0, "kilojoule / mole")),
             "vdW": _get_gmx_energy_vdw(energies),
             "Electrostatics": _get_gmx_energy_coul(energies),
         },
@@ -277,15 +267,16 @@ def _canonicalize_detailed_energies(
 ) -> dict[str, Quantity]:
     """Condense the full `gmx energy` report into the keys of a "detailed" report."""
     return {
-        "Bond": energies.get("Bond", 0.0 * kj_mol),
-        "Angle": energies.get("Angle", 0.0 * kj_mol),
+        "Bond": energies.get("Bond", Quantity(0.0, "kilojoule / mole")),
+        "Angle": energies.get("Angle", Quantity(0.0, "kilojoule / mole")),
         "Torsion": _get_gmx_energy_torsion(energies),
-        "vdW": energies.get("LJ (SR)", 0.0 * kj_mol) + energies.get("LJ recip.", 0.0 * kj_mol),
-        "vdW 1-4": energies.get("LJ-14", 0.0 * kj_mol),
-        "Electrostatics": energies.get("Coulomb (SR)", 0.0 * kj_mol)
+        "vdW": energies.get("LJ (SR)", Quantity(0.0, "kilojoule / mole"))
+        + energies.get("LJ recip.", Quantity(0.0, "kilojoule / mole")),
+        "vdW 1-4": energies.get("LJ-14", Quantity(0.0, "kilojoule / mole")),
+        "Electrostatics": energies.get("Coulomb (SR)", Quantity(0.0, "kilojoule / mole"))
         + energies.get(
             "Coul. recip.",
-            0.0 * kj_mol,
+            Quantity(0.0, "kilojoule / mole"),
         ),
-        "Electrostatics 1-4": energies.get("Coulomb-14", 0.0 * kj_mol),
+        "Electrostatics 1-4": energies.get("Coulomb-14", Quantity(0.0, "kilojoule / mole")),
     }

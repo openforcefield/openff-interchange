@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from pydantic import Field
 
 from openff.interchange._annotations import _DistanceQuantity
@@ -48,7 +48,7 @@ class MDConfig(_BaseModel):
         description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: _DistanceQuantity = Field(
-        Quantity(9.0, unit.angstrom),
+        Quantity(9.0, "angstrom"),
         description="The distance at which pairwise interactions are truncated",
     )
     mixing_rule: str = Field(
@@ -61,7 +61,7 @@ class MDConfig(_BaseModel):
         description="Whether or not to use a switching function for the vdw interactions",
     )
     switching_distance: _DistanceQuantity = Field(
-        Quantity(0.0, unit.angstrom),
+        Quantity(0.0, "angstrom"),
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
@@ -69,7 +69,7 @@ class MDConfig(_BaseModel):
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: _DistanceQuantity = Field(
-        Quantity(9.0, unit.angstrom),
+        Quantity(9.0, "angstrom"),
         description=(
             "The distance at which electrostatic interactions are truncated or transition from short- to long-range."
         ),
@@ -115,7 +115,7 @@ class MDConfig(_BaseModel):
         """Attempt to apply these settings to an Interchange object."""
         if self.periodic:
             if interchange.box is None:
-                interchange.box = [10, 10, 10] * unit.nanometer
+                interchange.box = Quantity([10, 10, 10], "nanometer")
         else:
             interchange.box = None
 
@@ -133,7 +133,7 @@ class MDConfig(_BaseModel):
             if self.switching_function:
                 vdw_collection.switch_width = self.vdw_cutoff - self.switching_distance
             else:
-                vdw_collection.switch_width = 0.0 * unit.angstrom
+                vdw_collection.switch_width = Quantity(0.0, "angstrom")
 
         if "Electrostatics" in interchange.collections:
             electrostatics = interchange["Electrostatics"]
@@ -164,7 +164,7 @@ class MDConfig(_BaseModel):
 
             mdp.write(f"constraints              = {self.constraints}\n")
 
-            coul_cutoff = round(self.coul_cutoff.m_as(unit.nanometer), 4)
+            coul_cutoff = round(self.coul_cutoff.m_as("nanometer"), 4)
 
             if self.coul_method == "cutoff":
                 mdp.write("coulombtype              = Cut-off\n")
@@ -202,12 +202,12 @@ class MDConfig(_BaseModel):
                     f"vdW method {self.vdw_method} not supported",
                 )
 
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
+            vdw_cutoff = round(self.vdw_cutoff.m_as("nanometer"), 4)
             mdp.write(f"rvdw                     = {vdw_cutoff}\n")
 
             if self.switching_function and self.vdw_method == "cutoff":
                 mdp.write("vdw-modifier             = Potential-switch\n")
-                distance = round(self.switching_distance.m_as(unit.nanometer), 4)
+                distance = round(self.switching_distance.m_as("nanometer"), 4)
                 mdp.write(f"rvdw-switch              = {distance}\n")
             else:
                 mdp.write("vdw-modifier             = None\n")
@@ -352,8 +352,8 @@ class MDConfig(_BaseModel):
                 "\n",
             )
 
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
-            coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)
+            vdw_cutoff = round(self.vdw_cutoff.m_as("angstrom"), 4)
+            coul_cutoff = round(self.coul_cutoff.m_as("angstrom"), 4)
 
             if self.coul_method == _PME:
                 lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
@@ -455,7 +455,7 @@ class MDConfig(_BaseModel):
                 )
 
             if self.vdw_method == "cutoff":
-                vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
+                vdw_cutoff = round(self.vdw_cutoff.m_as("angstrom"), 4)
                 sander.write(f"cut={vdw_cutoff},\n")
             else:
                 raise UnsupportedExportError(
@@ -525,10 +525,10 @@ def get_smirnoff_defaults(periodic: bool = False) -> MDConfig:
         periodic=periodic,
         constraints="h-bonds",
         vdw_method="cutoff",
-        vdw_cutoff=0.9 * unit.nanometer,
+        vdw_cutoff=Quantity(0.9, "nanometer"),
         mixing_rule="lorentz-berthelot",
         switching_function=True,
-        switching_distance=0.8 * unit.nanometer,
+        switching_distance=Quantity(0.8, "nanometer"),
         coul_method="PME" if periodic else "Coulomb",
     )
 
@@ -564,5 +564,5 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
         switching_function=False,
         switching_distance=Quantity(0.0, "angstrom"),
         coul_method="PME" if periodic else "cutoff",
-        coul_cutoff=(0.9 * unit.nanometer if periodic else 2.0 * unit.nanometer),
+        coul_cutoff=Quantity(0.9, "nanometer") if periodic else Quantity(2.0, "nanometer"),
     )

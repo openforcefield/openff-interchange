@@ -13,8 +13,6 @@ def _process_gbsa(
     system: "openmm.System",
 ):
     import openmm.app
-    import openmm.unit
-    from openff.toolkit import unit
 
     try:
         collection: SMIRNOFFGBSACollection = interchange.collections["GBSA"]  # type: ignore[assignment]
@@ -79,7 +77,7 @@ def _process_gbsa(
 
         parameters = [
             charge,
-            _parameters["radius"].m_as(unit.nanometer),
+            _parameters["radius"].m_as("nanometer"),
             _parameters["scale"],
         ]
 

@@ -69,10 +69,7 @@ def get_summary_data(
     _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
 ) -> "pandas.DataFrame":
     """Return a pandas DataFrame with summaries of energies from all available engines."""
-    from openff.toolkit import unit
     from pandas import DataFrame
-
-    kj_mol = unit.kilojoule / unit.mol
 
     energies = get_all_energies(
         interchange,
@@ -82,6 +79,6 @@ def get_summary_data(
 
     for k, v in energies.items():
         for kk in v.energies:
-            energies[k].energies[kk] = energies[k].energies[kk].m_as(kj_mol)  # type: ignore[union-attr]
+            energies[k].energies[kk] = energies[k].energies[kk].m_as("kilojoule / mole")  # type: ignore[union-attr]
 
     return DataFrame({k: v.energies for k, v in energies.items()}).T

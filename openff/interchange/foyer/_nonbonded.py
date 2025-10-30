@@ -1,6 +1,6 @@
 from typing import Literal
 
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Quantity, Topology
 from pydantic import Field, PrivateAttr
 
 from openff.interchange._annotations import _DistanceQuantity
@@ -51,7 +51,7 @@ class FoyerVDWHandler(vdWCollection):
             atom_params = _copy_params(
                 atom_params,
                 "charge",
-                param_units={"epsilon": unit.kJ / unit.mol, "sigma": unit.nm},
+                param_units={"epsilon": "kJ / mol", "sigma": "nanometer"},
             )
 
             self.potentials[self.key_map[top_key]] = Potential(parameters=atom_params)
@@ -61,7 +61,7 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
     """Handler storing electrostatics potentials as produced by a Foyer force field."""
 
     force_field_key: str = "atoms"
-    cutoff: _DistanceQuantity = 9.0 * unit.angstrom
+    cutoff: _DistanceQuantity = Quantity(9.0, "angstrom")
 
     _charges: dict[TopologyKey, Quantity] = PrivateAttr(dict())
 
@@ -74,7 +74,7 @@ class FoyerElectrostaticsHandler(ElectrostaticsCollection):
         for top_key, pot_key in atom_slots.items():
             foyer_params = force_field.get_parameters(self.force_field_key, pot_key.id)
 
-            charge = Quantity(foyer_params["charge"], unit.elementary_charge)
+            charge = Quantity(foyer_params["charge"], "elementary_charge")
 
             self._charges[top_key] = charge
 
