@@ -44,7 +44,6 @@ lint.per-file-ignores."openff/interchange/smirnoff/_*.py" = [ "RUF015" ]
 lint.per-file-ignores."openff/interchange/smirnoff/_gbsa.py" = [ "F821" ]
 lint.per-file-ignores."openff/interchange/smirnoff/_nonbonded.py" = [ "F821" ]
 lint.per-file-ignores."openff/interchange/smirnoff/_virtual_sites.py" = [ "F821" ]
-lint.per-file-ignores."plugins/*" = [ "INP001" ]
 lint.isort.known-first-party = [ "openff.interchange" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]

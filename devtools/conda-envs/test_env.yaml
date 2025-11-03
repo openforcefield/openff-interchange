@@ -10,7 +10,6 @@ dependencies:
   # OpenFF stack
   - openff-toolkit-base =0.17
   - openff-units
-  - ambertools =24
   # Optional features
   - openmm
   - nglview
@@ -19,7 +18,6 @@ dependencies:
   - pyedr
   # Testing
   - mdtraj
-  - intermol
   - jax
   - pytest
   - pytest-cov
