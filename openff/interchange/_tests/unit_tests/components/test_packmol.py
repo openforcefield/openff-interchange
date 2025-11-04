@@ -7,8 +7,7 @@ import re
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule
-from openff.units import Quantity, unit
+from openff.toolkit import Molecule, Quantity
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
@@ -46,10 +45,10 @@ class TestPackmolWrapper:
     @pytest.mark.parametrize(
         "volume",
         [
-            1.0 * unit.angstrom**3,
-            1.0 * unit.nanometer**3,
-            0.0 * unit.angstrom**3,
-            234 * unit.angstrom**3,
+            Quantity(1.0, "angstrom**3"),
+            Quantity(1.0, "nanometer**3"),
+            Quantity(0.0, "angstrom**3"),
+            Quantity(234, "angstrom**3"),
         ],
     )
     def test_scale_box(self, box, volume):
@@ -62,17 +61,17 @@ class TestPackmolWrapper:
         # linear dimensions are scaled by 1.1, so volumes are scaled by 1.1 ** 3
         assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume * 1.1**3)
 
-        assert scaled_box.u == unit.angstrom
+        assert str(scaled_box.u) == "angstrom"
 
     @pytest.mark.parametrize(
         "box",
         [
-            UNIT_CUBE * unit.angstrom,
-            RHOMBIC_DODECAHEDRON * unit.angstrom,
-            RHOMBIC_DODECAHEDRON_XYHEX * unit.angstrom,
-            UNIT_CUBE * unit.nanometer,
-            50 * UNIT_CUBE * unit.angstrom,
-            165.0 * RHOMBIC_DODECAHEDRON * unit.angstrom,
+            Quantity(UNIT_CUBE, "angstrom"),
+            Quantity(RHOMBIC_DODECAHEDRON, "angstrom"),
+            Quantity(RHOMBIC_DODECAHEDRON_XYHEX, "angstrom"),
+            Quantity(UNIT_CUBE, "nanometer"),
+            Quantity(50 * UNIT_CUBE, "angstrom"),
+            Quantity(165.0 * RHOMBIC_DODECAHEDRON, "angstrom"),
         ],
     )
     def test_compute_brick_from_box_vectors(self, box):
@@ -105,7 +104,7 @@ class TestPackmolWrapper:
                     [1.0, 0.0, 0.0],
                 ],
             ),
-            unit.nanometer,
+            "nanometer",
         )
         with pytest.raises(AssertionError):
             _compute_brick_from_box_vectors(box)
@@ -114,7 +113,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [10],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -123,7 +122,7 @@ class TestPackmolWrapper:
         assert topology.n_bonds == 20
 
         numpy.testing.assert_allclose(
-            topology.box_vectors.m_as(unit.nanometer).diagonal(),
+            topology.box_vectors.m_as("nanometer").diagonal(),
             [2.0, 2.0, 2.0],
         )
 
@@ -132,7 +131,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [10, 20],
-                box_vectors=20 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
             )
 
     def test_packmol_bad_box_vectors(self, molecules):
@@ -140,22 +139,22 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [2],
-                box_vectors=20 * numpy.identity(4) * unit.angstrom,
+                box_vectors=Quantity(20 * numpy.identity(4), "angstrom"),
             )
 
     def test_packmol_bad_box_shape(self, molecules):
         with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
             solvate_topology(
                 molecules[0].to_topology(),
-                box_shape=20 * numpy.identity(4) * unit.angstrom,
+                box_shape=Quantity(20 * numpy.identity(4), "angstrom"),
             )
 
         with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
             solvate_topology_nonwater(
                 molecules[0].to_topology(),
                 solvent=Molecule.from_smiles("CCCCCCO"),
-                box_shape=20 * numpy.identity(4) * unit.angstrom,
-                target_density=1.0 * unit.grams / unit.milliliter,
+                box_shape=Quantity(20 * numpy.identity(4), "angstrom"),
+                target_density=Quantity(1.0, "grams / milliliter"),
             )
 
     def test_packmol_underspecified(self, molecules):
@@ -174,8 +173,8 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 number_of_copies=[1],
-                target_density=1.0 * unit.grams / unit.milliliter,
-                box_vectors=20 * numpy.identity(3) * unit.angstrom,
+                target_density=Quantity(1.0, "grams / milliliter"),
+                box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
             )
 
     def test_packmol_bad_solute(self, molecules):
@@ -183,7 +182,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [2],
-                box_vectors=20 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
                 solute="my_solute.pdb",
             )
 
@@ -192,14 +191,14 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [10],
-                box_vectors=0.1 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(0.1 * numpy.identity(3), "angstrom"),
             )
 
     def test_packmol_water(self, molecules):
         topology = pack_box(
             molecules,
             [10],
-            target_density=1.0 * unit.grams / unit.milliliter,
+            target_density=Quantity(1.0, "grams / milliliter"),
         )
 
         assert topology is not None
@@ -218,7 +217,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [1, 1, 1],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -227,14 +226,14 @@ class TestPackmolWrapper:
         assert topology.n_bonds == 0
 
         # Na+
-        assert topology.atom(0).formal_charge == +1 * unit.elementary_charge
+        assert topology.atom(0).formal_charge == Quantity(+1, "elementary_charge")
         assert topology.atom(0).atomic_number == 11
 
         # Cl-
-        assert topology.atom(1).formal_charge == -1 * unit.elementary_charge
+        assert topology.atom(1).formal_charge == Quantity(-1, "elementary_charge")
         assert topology.atom(1).atomic_number == 17
         # K+
-        assert topology.atom(2).formal_charge == +1 * unit.elementary_charge
+        assert topology.atom(2).formal_charge == Quantity(+1, "elementary_charge")
         assert topology.atom(2).atomic_number == 19
 
     def test_packmol_paracetamol(self):
@@ -244,7 +243,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [1],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -285,7 +284,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             counts,
-            box_vectors=1000 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(1000 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -296,7 +295,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [1, 2],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -305,7 +304,7 @@ class TestPackmolWrapper:
         assert topology.n_atoms == 3
 
         numpy.testing.assert_allclose(
-            topology.box_vectors.m_as(unit.nanometer).diagonal(),
+            topology.box_vectors.m_as("nanometer").diagonal(),
             [2.0, 2.0, 2.0],
         )
 
@@ -320,7 +319,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [10],
-                box_vectors=50 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(50 * numpy.identity(3), "angstrom"),
                 solute=benzene.to_topology(),
             )
 
@@ -329,7 +328,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [10],
-            box_vectors=50 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(50 * numpy.identity(3), "angstrom"),
             solute=benzene.to_topology(),
         )
 
@@ -403,8 +402,8 @@ class TestPackmolWrapper:
                 molecules=[Molecule.from_smiles("CCO")],
                 number_of_copies=[11112],
                 box_shape=UNIT_CUBE,
-                tolerance=1.0 * unit.angstrom,
-                target_density=0.1 * unit.grams / unit.milliliters,
+                tolerance=Quantity(1.0, "angstrom"),
+                target_density=Quantity(0.1, "grams/milliliters"),
             )
 
     @pytest.mark.slow
@@ -415,8 +414,8 @@ class TestPackmolWrapper:
             molecules=[Molecule.from_smiles("CCO")],
             number_of_copies=[11112],
             box_shape=UNIT_CUBE,
-            tolerance=1.0 * unit.angstrom,
-            target_density=0.1 * unit.grams / unit.milliliters,
+            tolerance=Quantity(1.0, "angstrom"),
+            target_density=Quantity(0.1, "grams/milliliters"),
         )
 
     @pytest.mark.slow
@@ -426,8 +425,8 @@ class TestPackmolWrapper:
             molecules=[Molecule.from_smiles("CCO")],
             number_of_copies=[11112],
             box_shape=UNIT_CUBE,
-            tolerance=1.0 * unit.angstrom,
-            target_density=0.1 * unit.grams / unit.milliliters,
+            tolerance=Quantity(1.0, "angstrom"),
+            target_density=Quantity(0.1, "grams/milliliters"),
         )
 
     @pytest.mark.parametrize("use_local_path", [False, True])
@@ -440,7 +439,7 @@ class TestPackmolWrapper:
                 molecules=[Molecule.from_smiles("CCO")],
                 number_of_copies=[100],
                 box_shape=UNIT_CUBE,
-                target_density=1000 * unit.grams / unit.milliliters,
+                target_density=Quantity(1000, "grams / milliliters"),
                 working_directory="." if use_local_path else None,
             )
 
@@ -460,8 +459,8 @@ class TestPackmolWrapper:
 
         topology = solvate_topology(
             solute.to_topology(),
-            nacl_conc=ion_conc * unit.molar,
-            padding=2 * unit.nm,
+            nacl_conc=Quantity(ion_conc, "molar"),
+            padding=Quantity(2, "nanometer"),
         )
 
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
@@ -470,8 +469,8 @@ class TestPackmolWrapper:
     def test_solvate_topology_neutral_solute_no_ions(self, ethanol_with_conformer):
         topology = solvate_topology(
             ethanol_with_conformer.to_topology(),
-            nacl_conc=0.0 * unit.molar,
-            padding=2 * unit.nm,
+            nacl_conc=Quantity(0.0, "molar"),
+            padding=Quantity(2, "nanometer"),
         )
 
         # there should be no ions in the topology
@@ -488,8 +487,8 @@ class TestPackmolWrapper:
 
         topology = solvate_topology(
             solute.to_topology(),
-            nacl_conc=1e-3 * unit.molar,
-            padding=2 * unit.nm,
+            nacl_conc=Quantity(1e-3, "molar"),
+            padding=Quantity(2, "nanometer"),
         )
 
         assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
@@ -518,7 +517,7 @@ class TestPackmolWrapper:
             case "solvate_topology":
                 args = (
                     solute_topology,
-                    1e-3 * unit.molar,
+                    Quantity(1e-3, "molar"),
                 )
             case "solvate_topology_nonwater":
                 args = (
@@ -563,6 +562,6 @@ class TestPackmolWrapper:
         packed_topology2 = solvation_function(*args, padding=None)
 
         numpy.testing.assert_allclose(
-            packed_topology2.box_vectors.m_as(unit.nanometer).diagonal(),
+            packed_topology2.box_vectors.m_as("nanometer").diagonal(),
             [2.123, 2.123, 2.123],
         )

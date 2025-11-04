@@ -1,7 +1,6 @@
 import numpy
 from numpy.typing import NDArray
-from openff.toolkit import Topology
-from openff.units import Quantity
+from openff.toolkit import Quantity, Topology
 
 from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions

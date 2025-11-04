@@ -1,7 +1,7 @@
 """Pytest configuration."""
 
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondType,
     ChargeIncrementModelHandler,
@@ -89,11 +89,11 @@ def sage_with_sigma_hole(sage):
         parameter=VirtualSiteType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
+            distance=Quantity(1.4, "angstrom"),
             type="BondCharge",
             match="all_permutations",
-            charge_increment1=0.1 * unit.elementary_charge,
-            charge_increment2=0.2 * unit.elementary_charge,
+            charge_increment1=Quantity(0.1, "elementary_charge"),
+            charge_increment2=Quantity(0.2, "elementary_charge"),
         ),
     )
 
@@ -326,7 +326,7 @@ def caffeine():
 @pytest.fixture
 def basic_top() -> Topology:
     topology = MoleculeWithConformer.from_smiles("C").to_topology()
-    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], "nanometer")
     return topology
 
 
@@ -353,7 +353,7 @@ def water_tip4p() -> Molecule:
                 [-0.7569503, -0.5858823, 0.0],
                 [0.7569503, -0.5858823, 0.0],
             ],
-            unit.angstrom,
+            "angstrom",
         ),
     ]
 
@@ -382,7 +382,7 @@ def ammonia_tetrahedral() -> Molecule:
                 [0.4427786006, -0.2556383443, 0],
                 [-0.4427786006, 0.2556383443, 0],
             ],
-            unit.angstrom,
+            "angstrom",
         ),
     ]
 
@@ -413,7 +413,7 @@ def ethanol() -> Molecule:
 
     ethanol.partial_charges = Quantity(
         [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4],
-        unit.elementary_charge,
+        "elementary_charge",
     )
 
     return ethanol
@@ -443,7 +443,7 @@ def reversed_ethanol() -> Molecule:
 
     ethanol.partial_charges = Quantity(
         [0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4],
-        unit.elementary_charge,
+        "elementary_charge",
     )
 
     return ethanol
@@ -628,7 +628,7 @@ def methane_with_conformer(methane):
     methane.add_conformer(
         Quantity(
             _rng.random((methane.n_atoms, 3)),
-            unit.angstrom,
+            "angstrom",
         ),
     )
     return methane
@@ -639,7 +639,7 @@ def ethanol_with_conformer(ethanol):
     ethanol.add_conformer(
         Quantity(
             _rng.random((ethanol.n_atoms, 3)),
-            unit.angstrom,
+            "angstrom",
         ),
     )
     return ethanol

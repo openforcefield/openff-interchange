@@ -32,18 +32,7 @@ namespace-packages = [ "openff/interchange/" ]
 lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
 lint.ignore = [ "D105", "D107", "D200", "D203", "D212", "E721" ]
 lint.per-file-ignores."openff/interchange/**/__init__.py" = [ "F401" ]
-lint.per-file-ignores."openff/interchange/*_pydantic.py" = [ "F401" ]
-lint.per-file-ignores."openff/interchange/_tests/*" = [ "RUF015" ]
-lint.per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
-lint.per-file-ignores."openff/interchange/_tests/unit_tests/test_types.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/components/*.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/components/interchange.py" = [ "F821" ]
 lint.per-file-ignores."openff/interchange/foyer/_guard.py" = [ "F401" ]
-lint.per-file-ignores."openff/interchange/foyer/_nonbonded.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_*.py" = [ "RUF015" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_gbsa.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_nonbonded.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_virtual_sites.py" = [ "F821" ]
 lint.isort.known-first-party = [ "openff.interchange" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
@@ -108,17 +97,3 @@ module = [
 ignore_missing_imports = true
 
 [tool.versioningit]
-
-[tool.interrogate]
-ignore-init-method = true
-ignore-init-module = true
-ignore-magic = true
-ignore-semiprivate = false
-ignore-private = true
-ignore-property-decorators = false
-ignore-module = false
-ignore-nested-functions = false
-ignore-nested-classes = true
-ignore-setters = true
-ignore-regex = [ "^Test.*", "test_.*", "^_.*" ]
-fail-under = 90

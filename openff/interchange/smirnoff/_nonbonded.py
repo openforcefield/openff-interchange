@@ -495,7 +495,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         f"{handler.version}.",
                     )
 
-        toolkit_handler_with_metadata = [p for p in parameter_handlers if type(p) is ElectrostaticsHandler][0]
+        toolkit_handler_with_metadata = next(p for p in parameter_handlers if type(p) is ElectrostaticsHandler)
 
         handler = cls(
             type=toolkit_handler_with_metadata.TAGNAME,

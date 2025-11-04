@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
 
-import numpy as np
+import numpy
 from openff.toolkit import Topology
 
 from openff.interchange import Interchange
@@ -721,7 +721,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         if IFBOX == 1:
-            if (interchange.box.m != np.diag(np.diagonal(interchange.box.m))).any():  # type: ignore[union-attr]
+            if (interchange.box.m != numpy.diag(numpy.diagonal(interchange.box.m))).any():  # type: ignore[union-attr]
                 raise NotImplementedError(
                     "Interchange does not yet support exporting non-rectangular boxes to Amber",
                 )
@@ -783,7 +783,7 @@ def to_inpcrd(interchange: "Interchange", file_path: Path | str):
 
         if interchange.box is not None:
             box = interchange.box.to("angstrom").magnitude
-            if (box == np.diag(np.diagonal(box))).all():
+            if (box == numpy.diag(numpy.diagonal(box))).all():
                 for i in range(3):
                     inpcrd.write(f"{box[i, i]:12.7f}")
                 for _ in range(3):

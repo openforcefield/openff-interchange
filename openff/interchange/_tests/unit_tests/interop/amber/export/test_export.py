@@ -1,7 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.units import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import (
     get_data_file_path,
     has_executable,
@@ -101,7 +100,7 @@ class TestAmber:
         out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.positions = unit.nanometer * numpy.round(out.positions.m_as(unit.nanometer), 5)
+        out.positions = Quantity(numpy.round(out.positions.m_as("nanometer"), 5), "nanometer")
 
         out.to_inpcrd("internal.inpcrd")
         # This method no longer exists

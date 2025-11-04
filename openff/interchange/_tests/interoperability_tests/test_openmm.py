@@ -2,7 +2,7 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
@@ -169,7 +169,7 @@ class TestOpenMM:
             "[H:5][C:2]([H:6])([C:3]([H:7])([H:8])[Br:4])[Cl:1]",
         )
         topology = Topology.from_molecules(molecule)
-        topology.box_vectors = [30, 30, 30] * unit.angstrom
+        topology.box_vectors = Quantity([30, 30, 30], "angstrom")
 
         interchange = Interchange.from_smirnoff(
             force_field=forcefield,
@@ -205,17 +205,17 @@ class TestOpenMM:
 
         assert cl_parameters[0] == forcefield["vdW"].get_parameter(
             {"smirks": "[#17:1]"},
-        )[0].sigma.m_as(unit.nanometer)
+        )[0].sigma.m_as("nanometer")
         assert cl_parameters[1] == forcefield["vdW"].get_parameter(
             {"smirks": "[#17:1]"},
-        )[0].epsilon.m_as(unit.kilojoule_per_mole)
+        )[0].epsilon.m_as("kilojoule_per_mole")
 
         assert br_parameters[0] == forcefield["vdW"].get_parameter(
             {"smirks": "[#35:1]"},
-        )[0].sigma.m_as(unit.nanometer)
+        )[0].sigma.m_as("nanometer")
         assert br_parameters[1] == forcefield["vdW"].get_parameter(
             {"smirks": "[#35:1]"},
-        )[0].epsilon.m_as(unit.kilojoule_per_mole)
+        )[0].epsilon.m_as("kilojoule_per_mole")
 
         for index in range(vdw_14_force.getNumBonds()):
             particle1, particle2, parameters = vdw_14_force.getBondParameters(index)
@@ -283,7 +283,7 @@ class TestOpenMM:
 
     def test_openmm_no_angle_force_if_constrained(self, water, sage):
         topology = water.to_topology()
-        topology.box_vectors = [4, 4, 4] * unit.nanometer
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         # Sage includes angle parameters for water and also TIP3P constraints
         interchange = Interchange.from_smirnoff(sage, topology)
@@ -352,9 +352,9 @@ class TestOpenMM:
     def test_nonstandard_cutoffs_match(self, sage):
         """Test that multiple nonbonded forces use the same cutoff."""
         topology = Molecule.from_smiles("C").to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
-        cutoff = Quantity(1.555, unit.nanometer)
+        cutoff = Quantity(1.555, "nanometer")
 
         sage["vdW"].cutoff = cutoff
 
@@ -370,7 +370,7 @@ class TestOpenMM:
             if type(force) in (openmm.NonbondedForce, openmm.CustomNonbondedForce):
                 assert force.getCutoffDistance().value_in_unit(
                     openmm.unit.nanometer,
-                ) == pytest.approx(cutoff.m_as(unit.nanometer))
+                ) == pytest.approx(cutoff.m_as("nanometer"))
 
 
 @skip_if_missing("openmm")
@@ -392,7 +392,7 @@ class TestOpenMMSwitchingFunction:
         assert found_force, "NonbondedForce not found in system"
 
     def test_switching_function_not_applied(self, sage, basic_top):
-        sage["vdW"].switch_width = 0.0 * unit.angstrom
+        sage["vdW"].switch_width = Quantity(0.0, "angstrom")
 
         out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
@@ -408,7 +408,7 @@ class TestOpenMMSwitchingFunction:
         assert found_force, "NonbondedForce not found in system"
 
     def test_switching_function_nonstandard(self, sage, basic_top):
-        sage["vdW"].switch_width = 0.12345 * unit.angstrom
+        sage["vdW"].switch_width = Quantity(0.12345, "angstrom")
 
         out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
@@ -464,7 +464,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         out = Interchange.from_smirnoff(
             de_force_field,
@@ -567,11 +567,11 @@ class TestOpenMMVirtualSites:
         sigma_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
+            distance=Quantity(1.4, "angstrom"),
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * unit.elementary_charge,
-            charge_increment2=0.2 * unit.elementary_charge,
+            charge_increment1=Quantity(0.1, "elementary_charge"),
+            charge_increment2=Quantity(0.2, "elementary_charge"),
         )
 
         virtual_site_handler.add_parameter(parameter=sigma_type)
@@ -586,14 +586,14 @@ class TestOpenMMVirtualSites:
         carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
             name="EP",
             smirks="[O:1]=[C:2]-[C:3]",
-            distance=0.3 * unit.angstrom,
+            distance=Quantity(0.3, "angstrom"),
             type="MonovalentLonePair",
             match="once",
-            outOfPlaneAngle=0.0 * unit.degree,
-            inPlaneAngle=120.0 * unit.degree,
-            charge_increment1=0.05 * unit.elementary_charge,
-            charge_increment2=0.1 * unit.elementary_charge,
-            charge_increment3=0.15 * unit.elementary_charge,
+            outOfPlaneAngle=Quantity(0.0, "degree"),
+            inPlaneAngle=Quantity(120.0, "degree"),
+            charge_increment1=Quantity(0.05, "elementary_charge"),
+            charge_increment2=Quantity(0.1, "elementary_charge"),
+            charge_increment3=Quantity(0.15, "elementary_charge"),
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)
@@ -639,7 +639,7 @@ class TestToOpenMMTopology:
         and as the wrapped method of the same name on the `Interchange` class.
         """
         topology = water.to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         out = Interchange.from_smirnoff(tip4p, topology)
 
@@ -984,7 +984,7 @@ class TestToOpenMMPositions:
 
         numpy.testing.assert_allclose(
             positions.value_in_unit(openmm.unit.angstrom)[:3],
-            water.conformers[0].m_as(unit.angstrom),
+            water.conformers[0].m_as("angstrom"),
         )
 
     @pytest.mark.parametrize("include_virtual_sites", [True, False])
@@ -1007,7 +1007,7 @@ class TestToOpenMMPositions:
                     [5.0, 0.71, 0.76],
                 ],
             ),
-            unit.angstrom,
+            "angstrom",
         )
 
         positions = to_openmm_positions(
@@ -1147,7 +1147,7 @@ class TestGBSA:
         interchange = Interchange.from_smirnoff(
             force_field=gbsa_force_field,
             topology=MoleculeWithConformer.from_smiles("CCO").to_topology(),
-            box=[4, 4, 4] * unit.nanometer,
+            box=Quantity([4, 4, 4], "nanometer"),
         )
 
         assert get_openmm_energies(interchange).total_energy is not None
@@ -1157,7 +1157,7 @@ class TestGBSA:
             Interchange.from_smirnoff(
                 force_field=gbsa_force_field,
                 topology=MoleculeWithConformer.from_smiles("CCO").to_topology(),
-                box=[4, 4, 4] * unit.nanometer,
+                box=Quantity([4, 4, 4], "nanometer"),
             ).to_openmm(combine_nonbonded_forces=False)
 
     def test_no_cutoff(self, gbsa_force_field):

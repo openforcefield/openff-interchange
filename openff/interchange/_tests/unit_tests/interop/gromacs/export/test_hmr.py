@@ -1,7 +1,6 @@
 import random
 
 import pytest
-from openff.toolkit import unit
 
 from openff.interchange.exceptions import UnsupportedExportError
 
@@ -23,7 +22,7 @@ def test_hmr_basic(sage, reversed, ethanol, reversed_ethanol):
 
     structure = parmed.load_file("asdf.top")
 
-    expected_mass = sum([atom.mass for atom in topology.atoms]).m_as(unit.dalton)
+    expected_mass = sum([atom.mass for atom in topology.atoms]).m_as("dalton")
 
     found_mass = sum([atom.mass for atom in structure.atoms])
 
@@ -47,7 +46,7 @@ def test_hmr_not_applied_to_water(sage, water):
 
     structure = parmed.load_file("fff.top")
 
-    expected_mass = sum([atom.mass for atom in water.atoms]).m_as(unit.dalton)
+    expected_mass = sum([atom.mass for atom in water.atoms]).m_as("dalton")
 
     found_mass = sum([atom.mass for atom in structure.atoms])
 

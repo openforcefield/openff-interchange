@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -35,8 +35,8 @@ class TestSMIRNOFFValenceCollections:
         bond_handler.fractional_bondorder_method = "AM1-Wiberg"
         bond_parameter = BondHandler.BondType(
             smirks="[*:1]~[*:2]",
-            k=1.5 * unit.kilocalorie_per_mole / unit.angstrom**2,
-            length=1.5 * unit.angstrom,
+            k=Quantity(1.5, "kilocalorie_per_mole / angstrom**2"),
+            length=Quantity(1.5, "angstrom"),
             id="b1000",
         )
         bond_handler.add_parameter(bond_parameter.to_dict())
@@ -59,8 +59,8 @@ class TestSMIRNOFFValenceCollections:
         angle_handler = AngleHandler(version=0.3)
         angle_parameter = AngleHandler.AngleType(
             smirks="[*:1]~[*:2]~[*:3]",
-            k=2.5 * unit.kilocalorie_per_mole / unit.radian**2,
-            angle=100 * unit.degree,
+            k=Quantity(2.5, "kilocalorie_per_mole / radian**2"),
+            angle=Quantity(100, "degree"),
             id="b1000",
         )
         angle_handler.add_parameter(angle_parameter.to_dict())
@@ -87,8 +87,8 @@ class TestSMIRNOFFValenceCollections:
             parameter=ImproperTorsionHandler.ImproperTorsionType(
                 smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]",
                 periodicity1=2,
-                phase1=180.0 * unit.degree,
-                k1=1.1 * unit.kilocalorie_per_mole,
+                phase1=Quantity(180.0, "degree"),
+                k1=Quantity(1.1, "kilocalorie_per_mole"),
             ),
         )
 
@@ -111,9 +111,9 @@ class TestSMIRNOFFValenceCollections:
             {
                 "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
                 "periodicity1": 2,
-                "phase1": 180.0 * unit.degree,
-                "k1": 1.1 * unit.kilocalorie_per_mole,
-                "idivf1": 1.234 * unit.dimensionless,
+                "phase1": Quantity(180.0, "degree"),
+                "k1": Quantity(1.1, "kilocalorie_per_mole"),
+                "idivf1": Quantity(1.234, "dimensionless"),
                 "id": "i1",
             },
         )
@@ -129,8 +129,8 @@ class TestSMIRNOFFValenceCollections:
             {
                 "smirks": "[*:1]~[#6:2](~[#8:3])~[*:4]",
                 "periodicity1": 2,
-                "phase1": 180.0 * unit.degree,
-                "k1": 1.1 * unit.kilocalorie_per_mole,
+                "phase1": Quantity(180.0, "degree"),
+                "k1": Quantity(1.1, "kilocalorie_per_mole"),
                 "id": "i1",
             },
         )
@@ -140,7 +140,7 @@ class TestSMIRNOFFValenceCollections:
             topology=acetaldehyde.to_topology(),
         )
 
-        assert [*collection.potentials.values()][0].parameters["idivf"] == 5.555 * unit.dimensionless
+        assert Quantity(5.555, "dimensionless") == next(iter(collection.potentials.values())).parameters["idivf"]
 
 
 class TestBondCollection:
@@ -179,7 +179,7 @@ class TestConstraintCollection:
 
     def test_constraints_with_distance(self, tip3p, water):
         topology = water.to_topology()
-        topology.box_vectors = [4, 4, 4] * unit.nanometer
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         constraints = SMIRNOFFConstraintCollection.create(
             parameter_handler=tip3p["Constraints"],
@@ -341,12 +341,12 @@ class TestParameterInterpolation:
 
         assert numpy.allclose(
             out["Bonds"].potentials[bond1_pot_key].parameters["k"],
-            300.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+            Quantity(300.0, "kilocalories / mol / angstrom ** 2"),
         )
 
         assert numpy.allclose(
             out["Bonds"].potentials[bond2_pot_key].parameters["k"],
-            180.0 * unit.Unit("kilocalories / mol / angstrom ** 2"),
+            Quantity(180.0, "kilocalories / mol / angstrom ** 2"),
         )
 
     @skip_if_missing("openmm")
@@ -418,11 +418,11 @@ class TestParameterInterpolation:
         topology = Topology.from_molecules(mol)
 
         out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = Quantity(4 * numpy.eye(3), unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), "nanometer")
         omm_system = out.to_openmm(combine_nonbonded_forces=True)
 
         # Verify that the assigned bond parameters were correctly interpolated
-        off_bond_force = [force for force in omm_system.getForces() if isinstance(force, openmm.HarmonicBondForce)][0]
+        off_bond_force = next(force for force in omm_system.getForces() if isinstance(force, openmm.HarmonicBondForce))
 
         for idx in range(off_bond_force.getNumBonds()):
             params = off_bond_force.getBondParameters(idx)
@@ -447,9 +447,9 @@ class TestParameterInterpolation:
                 )
 
         # Verify that the assigned torsion parameters were correctly interpolated
-        off_torsion_force = [
+        off_torsion_force = next(
             force for force in omm_system.getForces() if isinstance(force, openmm.PeriodicTorsionForce)
-        ][0]
+        )
 
         for idx in range(off_torsion_force.getNumTorsions()):
             params = off_torsion_force.getTorsionParameters(idx)
@@ -480,8 +480,8 @@ def test_get_uses_interpolation():
         handler.add_parameter(
             {
                 "smirks": "[#1:1]-[*:2]",
-                "k": 400 * kcal_mol_a2,
-                "length": 1 * unit.angstrom,
+                "k": Quantity(400, "kilocalories / mol / angstrom ** 2"),
+                "length": Quantity(1, "angstrom"),
             },
         )
 
@@ -492,19 +492,19 @@ def test_get_uses_interpolation():
         handler.add_parameter(
             {
                 "smirks": "[#6:1]-[#6:2]",
-                "k_bondorder1": 400 * kcal_mol_a2,
-                "length_bondorder1": 1 * unit.angstrom,
-                "k_bondorder2": 500 * kcal_mol_a2,
-                "length_bondorder2": 1.2 * unit.angstrom,
+                "k_bondorder1": Quantity(400, "kilocalories / mol / angstrom ** 2"),
+                "length_bondorder1": Quantity(1, "angstrom"),
+                "k_bondorder2": Quantity(500, "kilocalories / mol / angstrom ** 2"),
+                "length_bondorder2": Quantity(1.2, "angstrom"),
             },
         )
 
     handler_partial_interpolation.add_parameter(
         {
             "smirks": "[#6:1]-[#7:2]",
-            "k": 400 * kcal_mol_a2,
-            "length_bondorder1": 1 * unit.angstrom,
-            "length_bondorder2": 0.5 * unit.angstrom,
+            "k": Quantity(400, "kilocalories / mol / angstrom ** 2"),
+            "length_bondorder1": Quantity(1, "angstrom"),
+            "length_bondorder2": Quantity(0.5, "angstrom"),
         },
     )
 

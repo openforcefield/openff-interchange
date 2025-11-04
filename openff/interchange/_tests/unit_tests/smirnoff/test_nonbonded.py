@@ -2,7 +2,7 @@ import re
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, RDKitToolkitWrapper, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, RDKitToolkitWrapper, Topology
 from openff.toolkit.typing.engines.smirnoff import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -42,7 +42,7 @@ class TestNonbonded:
             methane.to_topology(),
         )
         numpy.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler._get_charges().values()],
+            [charge.m_as("e") for charge in electrostatics_handler._get_charges().values()],
             reference_charges,
         )
 
@@ -51,8 +51,8 @@ class TestNonbonded:
         library_charge_handler.add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
-                "charge1": -0.1 * unit.elementary_charge,
-                "charge2": 0.025 * unit.elementary_charge,
+                "charge1": Quantity(-0.1, "elementary_charge"),
+                "charge2": Quantity(0.025, "elementary_charge"),
             },
         )
 
@@ -67,7 +67,7 @@ class TestNonbonded:
         )
 
         numpy.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler._get_charges().values()],
+            [charge.m_as("e") for charge in electrostatics_handler._get_charges().values()],
             [-0.1, 0.025, 0.025, 0.025, 0.025],
         )
 
@@ -82,8 +82,8 @@ class TestNonbonded:
         charge_increment_handler.add_parameter(
             {
                 "smirks": "[#17:1]-[#1:2]",
-                "charge_increment1": 0.1 * unit.elementary_charge,
-                "charge_increment2": -0.1 * unit.elementary_charge,
+                "charge_increment1": Quantity(0.1, "elementary_charge"),
+                "charge_increment2": Quantity(-0.1, "elementary_charge"),
             },
         )
 
@@ -100,7 +100,7 @@ class TestNonbonded:
         # AM1-Mulliken charges are [-0.168,  0.168], increments are [0.1, -0.1],
         # sum is [-0.068,  0.068]
         numpy.testing.assert_allclose(
-            [charge.m_as(unit.e) for charge in electrostatics_handler._get_charges().values()],
+            [charge.m_as("e") for charge in electrostatics_handler._get_charges().values()],
             reference_charges,
         )
 
@@ -152,7 +152,7 @@ class TestNonbonded:
 
         expected_charges = hexane_diol.partial_charges
         assert expected_charges is not None
-        assert expected_charges.units == unit.elementary_charge
+        assert str(expected_charges.units) == "elementary_charge"
         assert not all(charge == 0 for charge in expected_charges.magnitude)
         expected_charges_unitless = [v.m for v in expected_charges]
         numpy.testing.assert_allclose(expected_charges_unitless, assigned_charges_unitless)
@@ -378,8 +378,8 @@ class TestNAGLChargesPrecedence:
         sage_nagl["LibraryCharges"].add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
-                "charge1": -0.2 * unit.elementary_charge,
-                "charge2": 0.05 * unit.elementary_charge,
+                "charge1": Quantity(-0.2, "elementary_charge"),
+                "charge2": Quantity(0.05, "elementary_charge"),
             },
         )
 
@@ -430,8 +430,8 @@ class TestNAGLChargesIntegration:
         methane_charge_sum = sum(assigned_charges[: methane.n_atoms])
         ethane_charge_sum = sum(assigned_charges[methane.n_atoms :])
 
-        assert abs(methane_charge_sum) < 1e-10 * unit.elementary_charge
-        assert abs(ethane_charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs(methane_charge_sum) < Quantity(1e-10, "elementary_charge")
+        assert abs(ethane_charge_sum) < Quantity(1e-10, "elementary_charge")
 
     def test_nagl_charges_with_virtual_sites(self, sage_with_bond_charge):
         """Test NAGLCharges compatibility with virtual sites."""
@@ -459,10 +459,10 @@ class TestNAGLChargesIntegration:
 
         # Net charge should be approximately zero
         all_particle_charge_sum = sum(assigned_charges.values())
-        assert abs(all_particle_charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs(all_particle_charge_sum) < Quantity(1e-10, "elementary_charge")
         # Charge without the vsite should be nonzero
         atom_charge_sum = sum([charge for tk, charge in assigned_charges.items() if tk.atom_indices is not None])
-        assert abs(atom_charge_sum - (0.123 * unit.elementary_charge)) < 1e-10 * unit.elementary_charge
+        assert abs(atom_charge_sum - Quantity(0.123, "elementary_charge")) < Quantity(1e-10, "elementary_charge")
 
     def test_nagl_charges_force_field_creation_complete(self, hexane_diol):
         """Test complete interchange creation with NAGLCharges."""
@@ -834,15 +834,15 @@ class TestSMIRNOFFChargeIncrements:
         handler.add_parameter(
             {
                 "smirks": "[H:1][C:2]",
-                "charge_increment1": -0.111 * unit.elementary_charge,
-                "charge_increment2": 0.111 * unit.elementary_charge,
+                "charge_increment1": Quantity(-0.111, "elementary_charge"),
+                "charge_increment2": Quantity(0.111, "elementary_charge"),
             },
         )
         handler.add_parameter(
             {
                 "smirks": "[C:1]#[N:2]",
-                "charge_increment1": 0.5 * unit.elementary_charge,
-                "charge_increment2": -0.5 * unit.elementary_charge,
+                "charge_increment1": Quantity(0.5, "elementary_charge"),
+                "charge_increment2": Quantity(-0.5, "elementary_charge"),
             },
         )
 
@@ -876,8 +876,8 @@ class TestSMIRNOFFChargeIncrements:
         charge_handler.add_parameter(
             {
                 "smirks": "[C:1][H:2]",
-                "charge_increment1": 0.111 * unit.elementary_charge,
-                "charge_increment2": -0.111 * unit.elementary_charge,
+                "charge_increment1": Quantity(0.111, "elementary_charge"),
+                "charge_increment2": Quantity(-0.111, "elementary_charge"),
             },
         )
         sage.register_parameter_handler(charge_handler)

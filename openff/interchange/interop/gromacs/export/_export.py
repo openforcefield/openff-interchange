@@ -3,6 +3,7 @@ import warnings
 from typing import IO
 
 import numpy
+from openff.toolkit import Quantity
 
 from openff.interchange.exceptions import MissingPositionsError, UnsupportedExportError
 from openff.interchange.interop.gromacs.models.models import (
@@ -96,8 +97,6 @@ class GROMACSWriter(_BaseModel):
             """
             Check if the atom type is already in list.
             """
-            from openff.units import Quantity
-
             mass_tolerance = Quantity("1e-5 amu")
             sigma_tolerance = Quantity("1e-5 nanometer")
             epsilon_tolerance = Quantity("1e-5 kilojoule_per_mole")

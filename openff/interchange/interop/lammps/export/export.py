@@ -5,7 +5,7 @@ from typing import IO
 
 import numpy
 import packaging.version
-from openff.toolkit.topology.molecule import Atom
+from openff.toolkit.topology import Atom
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError

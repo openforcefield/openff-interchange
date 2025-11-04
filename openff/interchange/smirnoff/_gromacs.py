@@ -4,8 +4,8 @@ from collections import defaultdict
 from typing import TypeAlias
 
 from openff.toolkit import Molecule, Quantity
+from openff.toolkit.topology import Atom
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Atom
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange._annotations import PositiveFloat

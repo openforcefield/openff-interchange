@@ -1,6 +1,6 @@
-import numpy as np
+import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, unit
+from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities import (
     get_data_file_path,
     has_executable,
@@ -28,9 +28,9 @@ class TestAmber:
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
-        out.box = [4, 4, 4]
+        out.box = Quantity([4, 4, 4], "nanometer")
         out.positions = mol.conformers[0]
-        out.positions = unit.nanometer * np.round(out.positions.m_as(unit.nanometer), 5)
+        out.positions = Quantity(numpy.round(out.positions.m_as("nanometer"), 5), "nanometer")
 
         out.to_inpcrd("internal.inpcrd")
         # This method no longer exists
@@ -39,7 +39,7 @@ class TestAmber:
         coords1 = parmed.load_file("internal.inpcrd").coordinates
         coords2 = parmed.load_file("parmed.inpcrd").coordinates
 
-        np.testing.assert_equal(coords1, coords2)
+        numpy.testing.assert_equal(coords1, coords2)
 
     @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")

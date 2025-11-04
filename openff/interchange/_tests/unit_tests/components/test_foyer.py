@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import numpy as np
+import numpy
 import pytest
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -43,7 +43,7 @@ class TestFoyer:
         top = molecule.to_topology()
 
         interchange = Interchange.from_foyer(topology=top, force_field=oplsaa)
-        interchange.positions = molecule.conformers[0].m_as(unit.nanometer)
+        interchange.positions = molecule.conformers[0].m_as("nanometer")
         interchange.box = [4, 4, 4]
         return interchange
 
@@ -66,18 +66,18 @@ class TestFoyer:
             openff_interchange = Interchange.from_foyer(oplsaa, topology)
 
             if isinstance(molecule_or_molecules, list):
-                openff_interchange.positions = np.vstack(
-                    tuple(molecule.conformers[0].m_as(unit.nanometer) for molecule in molecule_or_molecules),
+                openff_interchange.positions = numpy.vstack(
+                    tuple(molecule.conformers[0].m_as("nanometer") for molecule in molecule_or_molecules),
                 )
             else:
                 openff_interchange.positions = molecule_or_molecules.conformers[0].m_as(
-                    unit.nanometer,
+                    "nanometer",
                 )
 
             openff_interchange.box = [4, 4, 4]
 
             parmed_struct = pmd.openmm.load_topology(topology.to_openmm())
-            parmed_struct.positions = openff_interchange.positions.m_as(unit.angstrom)
+            parmed_struct.positions = openff_interchange.positions.m_as("angstrom")
             parmed_struct.box = [40, 40, 40, 90, 90, 90]
 
             return openff_interchange, parmed_struct
@@ -105,8 +105,8 @@ class TestFoyer:
         gmx_energies.compare(
             omm_energies,
             {
-                "vdW": 12.0 * unit.kilojoule / unit.mole,
-                "Electrostatics": 12.0 * unit.kilojoule / unit.mole,
+                "vdW": Quantity(12.0, "kilojoule / mole"),
+                "Electrostatics": Quantity(12.0, "kilojoule / mole"),
             },
         )
 
@@ -143,11 +143,11 @@ class TestFoyer:
         openff_energy.compare(
             through_foyer,
             {
-                "Bond": 1e-3 * unit.kilojoule / unit.mole,
-                "Angle": 1e-3 * unit.kilojoule / unit.mole,
-                "Torsion": 1e-3 * unit.kilojoule / unit.mole,
-                "vdW": 5 * unit.kilojoule / unit.mole,
-                "Electrostatics": 1 * unit.kilojoule / unit.mole,
+                "Bond": Quantity(1e-3, "kilojoule / mole"),
+                "Angle": Quantity(1e-3, "kilojoule / mole"),
+                "Torsion": Quantity(1e-3, "kilojoule / mole"),
+                "vdW": Quantity(5, "kilojoule / mole"),
+                "Electrostatics": Quantity(1, "kilojoule / mole"),
             },
         )
 
@@ -163,7 +163,7 @@ class TestRBTorsions(TestFoyer):
         out = Interchange.from_smirnoff(sage, top)
         out.box = [4, 4, 4]
         out.positions = mol.conformers[0]
-        out.positions = np.round(out.positions, 2)
+        out.positions = numpy.round(out.positions, 2)
 
         rb_torsions = _RBTorsionHandler()
         smirks = "[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]"
@@ -213,7 +213,7 @@ class TestRBTorsions(TestFoyer):
         import mbuild
 
         comp = mbuild.load("CC", smiles=True)
-        comp.xyz = ethanol_with_rb_torsions.positions.m_as(unit.nanometer)
+        comp.xyz = ethanol_with_rb_torsions.positions.m_as("nanometer")
 
         from_foyer = oplsaa.apply(comp)
         from_foyer.box = [40, 40, 40, 90, 90, 90]

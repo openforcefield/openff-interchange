@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.utilities.testing import skip_if_missing
 
@@ -175,7 +175,7 @@ def test_lookup_virtual_site_parameter(
         name="EP1",
         match="once",
     )
-    assert ep1.distance.m_as(unit.nanometer) == -0.5
+    assert ep1.distance.m_as("nanometer") == -0.5
 
     ep2 = _lookup_virtual_site_parameter(
         sage_with_two_virtual_sites_same_smirks["VirtualSites"],
@@ -183,7 +183,7 @@ def test_lookup_virtual_site_parameter(
         name="EP2",
         match="once",
     )
-    assert ep2.distance.m_as(unit.nanometer) == 1.5
+    assert ep2.distance.m_as("nanometer") == 1.5
 
     with pytest.raises(
         ValueError,
