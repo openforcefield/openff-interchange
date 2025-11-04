@@ -1,0 +1,45 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+
+requires = [
+  "setuptools",
+]
+
+[project]
+name = "nonbonded-plugins"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [ { name = "Open Force Field Initiative", email = "info@openforcefield.org" } ]
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dynamic = [ "version" ]
+
+entry-points."openff.interchange.plugins.collections".BuckinghamCollection = "nonbonded_plugins.nonbonded:SMIRNOFFBuckinghamCollection"
+entry-points."openff.interchange.plugins.collections".BuckinghamVirtualSiteCollection = "nonbonded_plugins.virtual_sites:SMIRNOFFBuckinghamVirtualSiteCollection"
+entry-points."openff.interchange.plugins.collections".C4IonCollection = "nonbonded_plugins.nonbonded:SMIRNOFFC4IonCollection"
+entry-points."openff.interchange.plugins.collections".DoubleExponentialCollection = "nonbonded_plugins.nonbonded:SMIRNOFFDoubleExponentialCollection"
+entry-points."openff.toolkit.plugins.handlers".BuckinghamHandler = "nonbonded_plugins.nonbonded:BuckinghamHandler"
+entry-points."openff.toolkit.plugins.handlers".BuckinghamVirtualSiteHandler = "nonbonded_plugins.virtual_sites:BuckinghamVirtualSiteHandler"
+entry-points."openff.toolkit.plugins.handlers".C4IonHandler = "nonbonded_plugins.nonbonded:C4IonHandler"
+entry-points."openff.toolkit.plugins.handlers".DoubleExponentialHandler = "nonbonded_plugins.nonbonded:DoubleExponentialHandler"
+
+[tool.ruff]
+line-length = 119
+
+lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+lint.ignore = [ "D105", "D107", "D200", "D203", "D212", "E721" ]
+lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units", "openff.interchange" ]
+
+[tool.mypy]
+plugins = "numpy.typing.mypy_plugin,pydantic.mypy"
+python_version = "3.11"
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_incomplete_stub = true
+show_error_codes = true
