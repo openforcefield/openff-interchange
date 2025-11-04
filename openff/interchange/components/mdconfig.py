@@ -11,6 +11,7 @@ from pydantic import Field
 from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
+    NonperiodicNoCutoffNotSupported,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -458,7 +459,7 @@ class MDConfig(_BaseModel):
                 vdw_cutoff = round(self.vdw_cutoff.m_as("angstrom"), 4)
                 sander.write(f"cut={vdw_cutoff},\n")
             else:
-                raise UnsupportedExportError(
+                raise NonperiodicNoCutoffNotSupported(
                     f"vdW method {self.vdw_method} not supported",
                 )
 

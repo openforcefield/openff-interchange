@@ -104,6 +104,18 @@ class UnsupportedExportError(InterchangeException):
     """
 
 
+class NonperiodicNoCutoffNotSupported(UnsupportedExportError):
+    """
+    Exception for when an engine does not support "no-cutoff" non-bonded methods in non-periodic system.
+    """
+
+    def __init__(self, message):
+        super().__init__(
+            message
+            + "\nFor more see: https://docs.openforcefield.org/projects/interchange/en/stable/using/edges.html#no-cutoff-support",
+        )
+
+
 class UnsupportedCombinationError(InterchangeException):
     """General exception for something going wrong in Interchange object combination."""
 
