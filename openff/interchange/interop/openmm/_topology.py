@@ -35,8 +35,8 @@ def to_openmm_topology(
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
     from openff.toolkit import Topology
+    from openff.toolkit.topology import Bond
     from openff.toolkit.topology._mm_molecule import _SimpleBond
-    from openff.toolkit.topology.molecule import Bond
 
     from openff.interchange.interop._virtual_sites import _get_molecule_virtual_site_map
 

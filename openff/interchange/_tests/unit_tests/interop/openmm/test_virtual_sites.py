@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import has_package, skip_if_missing
 
@@ -33,7 +33,7 @@ class TestBondChargeVirtualSite:
             parameter_attrs={"smirks": "[#6:2]-[#17X1:1]"},
         )[0].distance = Quantity(
             distance_,
-            unit.angstrom,
+            "angstrom",
         )
 
         system = sage_with_bond_charge.create_openmm_system(
@@ -68,8 +68,8 @@ class TestBondChargeVirtualSite:
                     0,
                     0,
                 ],
-                unit.angstrom,
-            ).m_as(unit.angstrom),
+                "angstrom",
+            ).m_as("angstrom"),
             numpy.asarray(
                 virtual_site.getLocalPosition().value_in_unit(openmm.unit.angstrom),
             ),
@@ -138,7 +138,7 @@ class TestFourSiteWater:
             parameter_attrs={"smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]"},
         )[0].distance = Quantity(
             distance_,
-            unit.angstrom,
+            "angstrom",
         )
 
         system = tip4p.create_openmm_system(water.to_topology())
@@ -435,7 +435,7 @@ class TestOpenMMVirtualSiteExclusions:
         assert system.isVirtualSite(8)
         assert system.isVirtualSite(9)
 
-        non_bonded_force = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
+        non_bonded_force = next(f for f in system.getForces() if isinstance(f, openmm.NonbondedForce))
 
         for exception_index in range(non_bonded_force.getNumExceptions()):
             p1, p2, q, sigma, epsilon = non_bonded_force.getExceptionParameters(

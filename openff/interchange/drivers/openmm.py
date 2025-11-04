@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy
 from openff.toolkit import Quantity
-from openff.units.openmm import ensure_quantity
+from openff.units import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange import Interchange

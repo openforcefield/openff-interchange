@@ -2,8 +2,8 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.toolkit import Quantity, unit
-from openff.units.openmm import ensure_quantity
+from openff.toolkit import Quantity
+from openff.units import ensure_quantity
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -97,7 +97,7 @@ class TestOpenMM:
         topology = MoleculeWithConformer.from_smiles("CC").to_topology()
         topology.box_vectors = Quantity(
             10.0 * numpy.eye(3),
-            unit.angstrom,
+            "angstrom",
         )
 
         interchange = Interchange.from_smirnoff(sage, topology)
@@ -107,8 +107,8 @@ class TestOpenMM:
         parsed_box_vectors = PDBFile("temp.pdb").topology.getPeriodicBoxVectors()
 
         numpy.testing.assert_allclose(
-            topology.box_vectors.m_as(unit.angstrom),
-            ensure_quantity(parsed_box_vectors, "openff").m_as(unit.angstrom),
+            topology.box_vectors.m_as("angstrom"),
+            ensure_quantity(parsed_box_vectors, "openff").m_as("angstrom"),
         )
 
 
@@ -129,5 +129,5 @@ class TestOpenMMMissingHandlers:
 
         assert abs(energy2 - energy1) < Quantity(
             1e-6,
-            unit.kilojoule_per_mole,
+            "kilojoule_per_mole",
         )

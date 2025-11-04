@@ -3,13 +3,14 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     LibraryChargeHandler,
     VirtualSiteHandler,
     vdWHandler,
 )
+from openff.units import Unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 
@@ -40,7 +41,7 @@ class TestSMIRNOFFVirtualSiteCharges:
             },
         )[0].charge_increment1 = Quantity(
             chlorine_charge,
-            unit.elementary_charge,
+            "elementary_charge",
         )
 
         out = sage_with_bond_charge.create_interchange(
@@ -87,22 +88,22 @@ class TestSMIRNOFFVirtualSites:
         force_field.get_parameter_handler("Bonds").add_parameter(
             {
                 "smirks": "[*:1]~[*:2]",
-                "k": 0.0 * unit.kilojoule_per_mole / unit.angstrom**2,
-                "length": 0.0 * unit.angstrom,
+                "k": Quantity(0.0, "kilojoule_per_mole / angstrom**2"),
+                "length": Quantity(0.0, "angstrom"),
             },
         )
         force_field.get_parameter_handler("Angles").add_parameter(
             {
                 "smirks": "[*:1]~[*:2]~[*:3]",
-                "k": 0.0 * unit.kilojoule_per_mole / unit.degree**2,
-                "angle": 60.0 * unit.degree,
+                "k": Quantity(0.0, "kilojoule_per_mole / degree**2"),
+                "angle": Quantity(60.0, "degree"),
             },
         )
         force_field.get_parameter_handler("ProperTorsions").add_parameter(
             {
                 "smirks": "[*:1]~[*:2]~[*:3]~[*:4]",
-                "k": [0.0] * unit.kilojoule_per_mole,
-                "phase": [0.0] * unit.degree,
+                "k": Quantity([0.0], "kilojoule_per_mole"),
+                "phase": Quantity([0.0], "degree"),
                 "periodicity": [2],
                 "idivf": [1.0],
             },
@@ -110,12 +111,12 @@ class TestSMIRNOFFVirtualSites:
         force_field.get_parameter_handler("vdW").add_parameter(
             {
                 "smirks": "[*:1]",
-                "epsilon": 0.0 * unit.kilojoule_per_mole,
-                "sigma": 1.0 * unit.angstrom,
+                "epsilon": Quantity(0.0, "kilojoule_per_mole"),
+                "sigma": Quantity(1.0, "angstrom"),
             },
         )
         force_field.get_parameter_handler("LibraryCharges").add_parameter(
-            {"smirks": "[*:1]", "charge": [0.0] * unit.elementary_charge},
+            {"smirks": "[*:1]", "charge": Quantity([0.0], "elementary_charge")},
         )
         force_field.get_parameter_handler("Electrostatics")
 
@@ -127,9 +128,9 @@ class TestSMIRNOFFVirtualSites:
     def generate_v_site_coordinates(
         cls,
         molecule: Molecule,
-        input_conformer: unit.Quantity,
+        input_conformer: Quantity,
         parameter: VirtualSiteHandler.VirtualSiteType,
-    ) -> unit.Quantity:
+    ) -> Quantity:
         # Compute the coordinates of the virtual site. Unfortunately OpenMM does not
         # seem to offer a more compact way to do this currently.
         handler = VirtualSiteHandler(version="0.3")
@@ -144,11 +145,11 @@ class TestSMIRNOFFVirtualSites:
         input_conformer = Quantity(
             numpy.vstack(
                 [
-                    input_conformer.m_as(unit.angstrom),
+                    input_conformer.m_as("angstrom"),
                     numpy.zeros((n_v_sites, 3)),
                 ],
             ),
-            unit.angstrom,
+            "angstrom",
         )
 
         context = openmm.Context(
@@ -187,7 +188,7 @@ class TestSMIRNOFFVirtualSites:
                 "[Cl:1][C:2]([H:3])([H:4])[H:5]",
                 VirtualSiteMocking.sp3_conformer(),
                 (0, 1),
-                Quantity(numpy.array([[0.0, 3.0, 0.0]]), unit.angstrom),
+                Quantity(numpy.array([[0.0, 3.0, 0.0]]), "angstrom"),
             ),
             (
                 VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]"),
@@ -196,7 +197,7 @@ class TestSMIRNOFFVirtualSites:
                 (2, 3),
                 Quantity(
                     numpy.array([[-3.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
-                    unit.angstrom,
+                    "angstrom",
                 ),
             ),
             (
@@ -210,7 +211,7 @@ class TestSMIRNOFFVirtualSites:
                         numpy.array(
                             [[1.0, numpy.sqrt(2), 1.0], [1.0, -numpy.sqrt(2), -1.0]],
                         ),
-                        unit.angstrom,
+                        "angstrom",
                     )
                 ),
             ),
@@ -218,18 +219,18 @@ class TestSMIRNOFFVirtualSites:
                 VirtualSiteMocking.divalent_parameter(
                     "[H:2][O:1][H:3]",
                     match="once",
-                    angle=0.0 * unit.degree,
+                    angle=Quantity(0.0, "degree"),
                 ),
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
                 (0, 1, 2),
-                numpy.array([[2.0, 0.0, 0.0]]) * unit.angstrom,
+                Quantity(numpy.array([[2.0, 0.0, 0.0]]), "angstrom"),
             ),
             (
                 VirtualSiteMocking.divalent_parameter(
                     "[H:2][O:1][H:3]",
                     match="all_permutations",
-                    angle=45.0 * unit.degree,
+                    angle=Quantity(45.0, "degree"),
                 ),
                 "[H:2][O:1][H:3]",
                 VirtualSiteMocking.sp2_conformer()[1:, :],
@@ -241,7 +242,7 @@ class TestSMIRNOFFVirtualSites:
                             [numpy.sqrt(2), -numpy.sqrt(2), 0.0],
                         ],
                     ),
-                    unit.angstrom,
+                    "angstrom",
                 ),
             ),
             (
@@ -249,7 +250,7 @@ class TestSMIRNOFFVirtualSites:
                 "[N:1]([H:2])([H:3])[H:4]",
                 VirtualSiteMocking.sp3_conformer()[1:, :],
                 (0, 1, 2, 3),
-                numpy.array([[0.0, 2.0, 0.0]]) * unit.angstrom,
+                Quantity(numpy.array([[0.0, 2.0, 0.0]]), "angstrom"),
             ),
         ],
     )
@@ -257,9 +258,9 @@ class TestSMIRNOFFVirtualSites:
         self,
         parameter: VirtualSiteHandler.VirtualSiteType,
         smiles: str,
-        input_conformer: unit.Quantity,
+        input_conformer: Quantity,
         atoms_to_shuffle: tuple[int, ...],
-        expected_coordinates: unit.Quantity,
+        expected_coordinates: Quantity,
     ):
         """An integration test that virtual sites are placed correctly relative to the
         parent atoms"""
@@ -293,13 +294,13 @@ class TestSMIRNOFFVirtualSites:
             found = sort_coordinates(
                 output_coordinates.value_in_unit(openmm.unit.angstrom),
             )
-            expected = sort_coordinates(expected_coordinates.m_as(unit.angstrom))
+            expected = sort_coordinates(expected_coordinates.m_as("angstrom"))
 
             assert numpy.allclose(found, expected), expected - found
 
-    _E = unit.elementary_charge
-    _A = unit.angstrom
-    _KJ = unit.kilojoule_per_mole
+    _E = Unit("elementary_charge")
+    _A = Unit("angstrom")
+    _KJ = Unit("kilojoule_per_mole")
 
     @pytest.mark.skip(
         "Interchange does not allow this combination of non-bonded settings.",
@@ -474,15 +475,15 @@ class TestSMIRNOFFVirtualSites:
         force_field.get_parameter_handler("LibraryCharges").add_parameter(
             {
                 "smirks": "[*:1]",
-                "charge": [0.0] * unit.elementary_charge,
+                "charge": Quantity([0.0], "elementary_charge"),
             },
         )
         force_field.register_parameter_handler(vdWHandler(version=0.3))
         force_field.get_parameter_handler("vdW").add_parameter(
             {
                 "smirks": "[*:1]",
-                "epsilon": 0.0 * unit.kilojoule_per_mole,
-                "sigma": 1.0 * unit.nanometer,
+                "epsilon": Quantity(0.0, "kilojoule_per_mole"),
+                "sigma": Quantity(1.0, "nanometer"),
             },
         )
         force_field.register_parameter_handler(handler)
@@ -512,23 +513,21 @@ class TestSMIRNOFFVirtualSites:
             assert (numpy.isclose(system.getParticleMass(i)._value, 0.0)) == system.isVirtualSite(i)
 
             assert numpy.isclose(
-                expected_charge.m_as(unit.elementary_charge),
+                expected_charge.m_as("elementary_charge"),
                 charge.value_in_unit(openmm.unit.elementary_charge),
             )
             assert numpy.isclose(
-                expected_sigma.m_as(unit.angstrom),
+                expected_sigma.m_as("angstrom"),
                 sigma.value_in_unit(openmm.unit.angstrom),
             )
             assert numpy.isclose(
-                expected_epsilon.m_as(unit.kilojoule_per_mole),
+                expected_epsilon.m_as("kilojoule_per_mole"),
                 epsilon.value_in_unit(openmm.unit.kilojoule_per_mole),
             )
 
             total_charge += charge
 
-        expected_total_charge = sum(
-            molecule.total_charge.m_as(unit.elementary_charge) for molecule in topology.molecules
-        )
+        expected_total_charge = sum(molecule.total_charge.m_as("elementary_charge") for molecule in topology.molecules)
 
         assert numpy.isclose(
             expected_total_charge,

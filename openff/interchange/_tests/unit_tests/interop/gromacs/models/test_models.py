@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
@@ -30,28 +30,28 @@ def molecule2():
     molecule.generate_conformers(n_conformers=1)
     molecule.name = "MOL__2"
 
-    molecule.conformers[0] += numpy.array([5, 0, 0]) * unit.angstrom
+    molecule.conformers[0] += Quantity(numpy.array([5, 0, 0]), "angstrom")
 
     return molecule
 
 
 @pytest.fixture
 def system1(molecule1, sage):
-    box = 5 * numpy.eye(3) * unit.nanometer
+    box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
 
 
 @pytest.fixture
 def system2(molecule2, sage):
-    box = 5 * numpy.eye(3) * unit.nanometer
+    box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
 
 @pytest.fixture
 def combined_system(molecule1, molecule2, sage):
-    box = 5 * numpy.eye(3) * unit.nanometer
+    box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(
         Interchange.from_smirnoff(
@@ -72,8 +72,8 @@ class TestModels:
                 name="foo",
                 bonding_type="",
                 atomic_number=100,
-                mass=Quantity(0.0, unit.dalton),
-                charge=Quantity(0.0, unit.elementary_charge),
+                mass=Quantity(0.0, "dalton"),
+                charge=Quantity(0.0, "elementary_charge"),
                 particle_type="A",
             )
 
@@ -86,8 +86,8 @@ class TestModels:
                 name="foo",
                 bonding_type="",
                 atomic_number=100,
-                mass=Quantity(20.0, unit.dalton),
-                charge=Quantity(0.0, unit.elementary_charge),
+                mass=Quantity(20.0, "dalton"),
+                charge=Quantity(0.0, "elementary_charge"),
                 particle_type="V",
             )
 
@@ -129,7 +129,7 @@ class TestAddRemoveMoleculeType:
         sage,
         parsley,
     ):
-        box = 5 * numpy.eye(3) * unit.nanometer
+        box = Quantity(5 * numpy.eye(3), "nanometer")
 
         parsley_system = deepcopy(system1)
         sage_system = deepcopy(system1)

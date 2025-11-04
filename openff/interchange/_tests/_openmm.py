@@ -14,7 +14,7 @@ if TYPE_CHECKING or has_package("openmm"):
 @requires_package("openmm")
 def get_14_scaling_factors(omm_sys: "openmm.System") -> tuple[list, list]:
     """Find the 1-4 scaling factors as they are applied to an OpenMM System."""
-    nonbond_force = [f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce][0]
+    nonbond_force = next(f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce)
 
     vdw_14 = list()
     coul_14 = list()

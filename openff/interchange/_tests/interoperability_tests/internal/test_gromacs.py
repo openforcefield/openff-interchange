@@ -2,9 +2,9 @@ from importlib import resources
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
-from openff.units.openmm import ensure_quantity
+from openff.units import ensure_quantity
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -61,7 +61,7 @@ class TestGROMACSGROFile:
     def test_load_gro_nonstandard_precision(self):
         file = self._INTERMOL_PATH / "lj3_bulk/lj3_bulk.gro"
 
-        coords = _read_coordinates(file).m_as(unit.nanometer)
+        coords = _read_coordinates(file).m_as("nanometer")
 
         # OpenMM seems to assume a precision of 3. Use InterMol instead here.
         from intermol.gromacs.grofile_parser import GromacsGroParser
@@ -125,8 +125,8 @@ class TestGROMACS:
         get_gromacs_energies(out).compare(
             get_gromacs_energies(converted),
             tolerances={
-                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
-                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+                "Bond": Quantity(0.002 * molecule.n_bonds, "kilojoule / mol"),
+                "Electrostatics": Quantity(0.05, "kilojoule / mol"),
             },
         )
 
@@ -138,7 +138,7 @@ class TestGROMACS:
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
         )
 
-        out.box = Quantity(4 * numpy.eye(3), units=unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), "nanometer")
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
@@ -223,16 +223,16 @@ class TestGROMACS:
 
         for index, molecule in enumerate(molecules):
             molecule.generate_conformers(n_conformers=1)
-            molecule.conformers[0] += Quantity(3 * [5 * index], unit.angstrom)
+            molecule.conformers[0] += Quantity(3 * [5 * index], "angstrom")
 
         topology = Topology.from_molecules(molecules)
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         out = Interchange.from_smirnoff(sage_unconstrained, topology)
 
         get_gromacs_energies(out).compare(
             get_openmm_energies(out, combine_nonbonded_forces=True),
-            {"Nonbonded": 0.5 * unit.kilojoule_per_mole},
+            {"Nonbonded": Quantity(0.5, "kilojoule_per_mole")},
         )
 
 
@@ -245,11 +245,11 @@ class TestGROMACSVirtualSites:
         return VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
+            distance=Quantity(1.4, "angstrom"),
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * unit.elementary_charge,
-            charge_increment2=0.2 * unit.elementary_charge,
+            charge_increment1=Quantity(0.1, "elementary_charge"),
+            charge_increment2=Quantity(0.2, "elementary_charge"),
         )
 
     @pytest.fixture
@@ -260,14 +260,14 @@ class TestGROMACSVirtualSites:
         carbonyl_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
-            distance=0.3 * unit.angstrom,
+            distance=Quantity(0.3, "angstrom"),
             type="MonovalentLonePair",
             match="all_permutations",
-            outOfPlaneAngle=0.0 * unit.degree,
-            inPlaneAngle=120.0 * unit.degree,
-            charge_increment1=0.05 * unit.elementary_charge,
-            charge_increment2=0.1 * unit.elementary_charge,
-            charge_increment3=0.15 * unit.elementary_charge,
+            outOfPlaneAngle=Quantity(0.0, "degree"),
+            inPlaneAngle=Quantity(120.0, "degree"),
+            charge_increment1=Quantity(0.05, "elementary_charge"),
+            charge_increment2=Quantity(0.1, "elementary_charge"),
+            charge_increment3=Quantity(0.15, "elementary_charge"),
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)

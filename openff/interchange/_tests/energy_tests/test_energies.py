@@ -1,6 +1,6 @@
-import numpy as np
+import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -18,7 +18,6 @@ from openff.interchange.foyer._guard import has_foyer
 
 if has_package("openmm"):
     import openmm
-    import openmm.app
     import openmm.unit
 
 if HAS_GROMACS:
@@ -47,7 +46,7 @@ class TestEnergies:
     @pytest.mark.parametrize("constrained", [True, False])
     @pytest.mark.parametrize("mol_smi", ["C"])  # ["C", "CC"]
     def test_energies_single_mol(self, constrained, sage, sage_unconstrained, mol_smi):
-        import mbuild as mb
+        import mbuild
 
         molecule = MoleculeWithConformer.from_smiles(mol_smi, name="FOO")
 
@@ -58,14 +57,14 @@ class TestEnergies:
         interchange.collections["Electrostatics"].periodic_potential = "cutoff"
 
         molecule.to_file("out.xyz", file_format="xyz")
-        compound = mb.load("out.xyz")
-        packed_box = mb.fill_box(
+        compound = mbuild.load("out.xyz")
+        packed_box = mbuild.fill_box(
             compound=compound,
             n_compounds=1,
-            box=mb.Box(lengths=[10, 10, 10]),
+            box=mbuild.Box(lengths=[10, 10, 10]),
         )
 
-        positions = packed_box.xyz * unit.nanometer
+        positions = Quantity(packed_box.xyz, "nanometer")
         interchange.positions = positions
 
         omm_energies = get_openmm_energies(interchange, round_positions=8)
@@ -166,14 +165,14 @@ class TestEnergies:
             ],
         )
         out = Interchange.from_smirnoff(ion_ff, ions)
-        out.box = [4, 4, 4] * unit.nanometer
+        out.box = Quantity([4, 4, 4], "nanometer")
 
         gmx = []
         lmp = []
 
-        for d in np.linspace(0.75, 0.95, 5):
-            positions = np.zeros((2, 3)) * unit.nanometer
-            positions[1, 0] = d * unit.nanometer
+        for d in numpy.linspace(0.75, 0.95, 5):
+            positions = Quantity(numpy.zeros((2, 3)), "nanometer")
+            positions[1, 0] = Quantity(d, "nanometer")
             out.positions = positions
 
             out["Electrostatics"].periodic_potential = "cutoff"
@@ -181,10 +180,10 @@ class TestEnergies:
                 get_gromacs_energies(out, mdp="auto").energies["Electrostatics"].m,
             )
             lmp.append(
-                get_lammps_energies(out).energies["Electrostatics"].m_as(unit.kilojoule / unit.mol),
+                get_lammps_energies(out).energies["Electrostatics"].m_as("kilojoule / mol"),
             )
 
-        assert np.sum(np.sqrt(np.square(np.asarray(lmp) - np.asarray(gmx)))) < 1e-3
+        assert numpy.sum(numpy.sqrt(numpy.square(numpy.asarray(lmp) - numpy.asarray(gmx)))) < 1e-3
 
     @pytest.mark.parametrize(
         "smi",
@@ -217,7 +216,7 @@ class TestEnergies:
         )
 
         out = Interchange.from_smirnoff(forcefield, [molecule])
-        out.box = [4, 4, 4] * unit.nanometer
+        out.box = Quantity([4, 4, 4], "nanometer")
         out.positions = molecule.conformers[0]
 
         for key in ["Bond", "Torsion"]:
@@ -252,4 +251,4 @@ class TestEnergies:
         openmm_energy = get_openmm_energies(interchange)["RBTorsion"]
         gromacs_energy = get_gromacs_energies(interchange)["RBTorsion"]
 
-        assert abs(openmm_energy - gromacs_energy).m_as(unit.kilojoule_per_mole) < 1e-4
+        assert abs(openmm_energy - gromacs_energy).m_as("kilojoule_per_mole") < 1e-4

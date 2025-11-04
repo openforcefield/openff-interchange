@@ -5,7 +5,7 @@ from collections import defaultdict
 import numpy
 import openmm
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -28,7 +28,7 @@ class TestFromOpenMM:
         interchange = Interchange.from_smirnoff(
             sage_unconstrained,
             [ethanol],
-            box=Quantity([4, 4, 4], unit.nanometer),
+            box=Quantity([4, 4, 4], "nanometer"),
         )
 
         system = interchange.to_openmm(combine_nonbonded_forces=True)
@@ -99,14 +99,14 @@ class TestFromOpenMM:
     ):
         """Ensure that, if box vectors specified in the topology and system differ, those in the topology are used."""
         topology = Molecule.from_smiles("C").to_topology()
-        topology.box_vectors = Quantity([4, 5, 6], unit.nanometer)
+        topology.box_vectors = Quantity([4, 5, 6], "nanometer")
 
         box = Interchange.from_openmm(
             system=simple_system,
             topology=topology.to_openmm(),
         ).box
 
-        assert numpy.diag(box.m_as(unit.nanometer)) == pytest.approx([4, 5, 6])
+        assert numpy.diag(box.m_as("nanometer")) == pytest.approx([4, 5, 6])
 
     def test_openmm_roundtrip_metadata(self, sage):
         # Make an example OpenMM Topology with metadata.
@@ -202,10 +202,8 @@ class TestFromOpenMM:
             topology=topology.to_openmm(),
         )
 
-        assert interchange["Electrostatics"].cutoff.m_as(
-            unit.nanometer,
-        ) == pytest.approx(1.2345)
-        assert interchange["vdW"].cutoff.m_as(unit.nanometer) == pytest.approx(1.2345)
+        assert pytest.approx(1.2345) == interchange["Electrostatics"].cutoff.m_as("nanometer")
+        assert pytest.approx(1.2345) == interchange["vdW"].cutoff.m_as("nanometer")
 
     @needs_gmx
     def test_fill_in_rigid_water_parameters(self, water_dimer):
@@ -339,8 +337,8 @@ class TestConvertNonbondedForce:
 
         vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
-        assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
-        assert vdw.switch_width.m_as(unit.nanometer) == pytest.approx(switch_width)
+        assert vdw.cutoff.m_as("nanometer") == pytest.approx(cutoff)
+        assert vdw.switch_width.m_as("nanometer") == pytest.approx(switch_width)
 
     def test_parse_switching_distance_unused(self):
         force = openmm.NonbondedForce()
@@ -352,8 +350,8 @@ class TestConvertNonbondedForce:
 
         vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
-        assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
-        assert vdw.switch_width.m_as(unit.nanometer) == 0.0
+        assert vdw.cutoff.m_as("nanometer") == pytest.approx(cutoff)
+        assert vdw.switch_width.m_as("nanometer") == 0.0
 
 
 @skip_if_missing("openmm")

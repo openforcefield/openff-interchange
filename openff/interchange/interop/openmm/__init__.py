@@ -159,7 +159,7 @@ def _to_pdb(
     topology: "openmm.app.Topology",
     positions,
 ):
-    from openff.units.openmm import ensure_quantity
+    from openff.units import ensure_quantity
 
     # Deal with the possibility of `StringIO`
     manager: nullcontext[TextIO] | TextIO  # MyPy needs some help here

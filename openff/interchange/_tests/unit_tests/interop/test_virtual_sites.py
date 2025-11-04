@@ -4,7 +4,7 @@ from random import random
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Quantity, unit
+from openff.toolkit import ForceField, Quantity
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import MissingVirtualSitesError
@@ -40,21 +40,21 @@ def test_nonzero_positions(tip4p_interchange):
 def test_collate_virtual_site_positions(tip4p, water_dimer):
     out = tip4p.create_interchange(water_dimer)
 
-    out.box = Quantity([10, 10, 10], unit.nanometer)
+    out.box = Quantity([10, 10, 10], "nanometer")
 
     # move the second water far away, since we're later checking that
     # each water's virtual site is close to its oxygen
-    out.positions[3:] += Quantity([3, 3, 3], unit.nanometer)
+    out.positions[3:] += Quantity([3, 3, 3], "nanometer")
 
     positions = get_positions_with_virtual_sites(
         out,
         collate=False,
-    ).m_as(unit.nanometer)
+    ).m_as("nanometer")
 
     collated_positions = get_positions_with_virtual_sites(
         out,
         collate=True,
-    ).m_as(unit.nanometer)
+    ).m_as("nanometer")
 
     # first three atoms and last virtual site should not be affected
     assert positions[:3, :] == pytest.approx(collated_positions[:3, :])
@@ -102,7 +102,7 @@ class TestVirtualSitePositions:
             parameter_attrs={"smirks": "[#6:2]-[#17X1:1]"},
         )[0].distance = Quantity(
             distance_,
-            unit.nanometer,
+            "nanometer",
         )
 
         out = sage_with_bond_charge.create_interchange(
@@ -144,22 +144,26 @@ class TestVirtualSitePositions:
             parameter_attrs={"smirks": "[#8:1]=[#6X3+0:2]-[#6:3]"},
         )[0].distance = Quantity(
             distance_,
-            unit.nanometer,
+            "nanometer",
         )
 
         sage_with_planar_monovalent_carbonyl["VirtualSites"].get_parameter(
             parameter_attrs={"smirks": "[#8:1]=[#6X3+0:2]-[#6:3]"},
         )[0].inPlaneAngle = Quantity(
             theta,
-            unit.degree,
+            "degree",
         )
 
         out = sage_with_planar_monovalent_carbonyl.create_interchange(
             carbonyl_planar.to_topology(),
         )
 
-        assert [*out["VirtualSites"].potentials.values()][0].parameters["inPlaneAngle"].m_as(unit.degree) == theta
-        assert [*out["VirtualSites"].potentials.values()][0].parameters["distance"].m_as(unit.nanometer) == distance_
+        assert theta == next(iter(out["VirtualSites"].potentials.values())).parameters["inPlaneAngle"].m_as(
+            "degree",
+        )
+        assert distance_ == next(iter(out["VirtualSites"].potentials.values())).parameters["distance"].m_as(
+            "nanometer",
+        )
 
         positions = get_positions_with_virtual_sites(out)
 
@@ -215,7 +219,7 @@ class TestVirtualSitePositions:
             parameter_attrs={"smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]"},
         )[0].distance = Quantity(
             distance_,
-            unit.nanometer,
+            "nanometer",
         )
 
         out = tip4p.create_interchange(water_tip4p.to_topology())
@@ -227,8 +231,8 @@ class TestVirtualSitePositions:
         p3 = out.positions[2]
 
         assert numpy.allclose(
-            positions[-1].m_as(unit.angstrom),
-            (w1 * p1 + w2 * p2 + w3 * p3).m_as(unit.angstrom),
+            positions[-1].m_as("angstrom"),
+            (w1 * p1 + w2 * p2 + w3 * p3).m_as("angstrom"),
         )
 
     @pytest.mark.parametrize(
@@ -251,7 +255,7 @@ class TestVirtualSitePositions:
             parameter_attrs={"smirks": "[#1:2][#7:1]([#1:3])[#1:4]"},
         )[0].distance = Quantity(
             distance_,
-            unit.angstrom,
+            "angstrom",
         )
 
         out = sage_with_trivalent_nitrogen.create_interchange(
@@ -266,5 +270,5 @@ class TestVirtualSitePositions:
 
         # The nitrogen is placed at [0, 0, 0.8855572013] and the hydrogens are on
         # the xy plane, so the virtual site is at [0, 0, 0.88 ... + distance_]
-        assert positions[-1].m_as(unit.angstrom)[0] == pytest.approx(0.0)
-        # assert positions[-1].m_as(unit.angstrom)[1] == pytest.approx(0.0)
+        assert positions[-1].m_as("angstrom")[0] == pytest.approx(0.0)
+        # assert positions[-1].m_as("angstrom")[1] == pytest.approx(0.0)

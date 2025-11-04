@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Union
 
 from openff.toolkit import Quantity, Topology
-from openff.units.openmm import ensure_quantity
+from openff.units import ensure_quantity
 from openff.units.openmm import from_openmm as from_openmm_
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import ValidationError
