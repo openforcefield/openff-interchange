@@ -104,7 +104,7 @@ class UnsupportedExportError(InterchangeException):
     """
 
 
-class NonperiodicNoCutoffNotSupported(UnsupportedExportError):
+class NonperiodicNoCutoffNotSupportedError(UnsupportedExportError):
     """
     Exception for when an engine does not support "no-cutoff" non-bonded methods in non-periodic system.
     """

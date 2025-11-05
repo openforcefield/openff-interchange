@@ -5,7 +5,7 @@ from typing import IO
 import numpy
 from openff.toolkit import Quantity
 
-from openff.interchange.exceptions import MissingPositionsError, NonperiodicNoCutoffNotSupported
+from openff.interchange.exceptions import MissingPositionsError, NonperiodicNoCutoffNotSupportedError
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSSystem,
     GROMACSVirtualSite2,
@@ -487,7 +487,7 @@ class GROMACSWriter(_BaseModel):
                     count += 1
 
         if self.system.box is None:
-            raise NonperiodicNoCutoffNotSupported(
+            raise NonperiodicNoCutoffNotSupportedError(
                 "GROMACS versions 2020 and newer do not support systems without periodicity/box vectors.",
             )
         else:
