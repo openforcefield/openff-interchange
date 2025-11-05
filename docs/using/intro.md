@@ -96,7 +96,6 @@ field modification.
 Converting in the reverse direction is a long term goal of the project.
 
 (interchange_units)=
-
 ## Units in Interchange
 
 As a best practice, Interchange always associates explicit units with numerical

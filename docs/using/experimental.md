@@ -28,7 +28,7 @@ $ INTERCHANGE_EXPERIMENTAL=1 jupyter-lab my_notebook.ipynb
 
 or, with cloud services like Google Colab, use the [`%env`](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-env) magic command:
 
-```
+```shell
 %env INTERCHANGE_EXPERIMENTAL=1
 ```
 
