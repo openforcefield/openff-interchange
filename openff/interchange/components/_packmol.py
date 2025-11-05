@@ -683,11 +683,10 @@ def pack_box(
     configurations need to be subjected to energy minimization and equilibration
     routines before being used in production simulations.
 
-    Periodic boundary conditions are accounted for during packing if using Packmol version 20.15.0 or newer.
+    Orthorhombic periodic boundary conditions are accounted for during packing if using Packmol version 20.15.0 or newer.
 
-    If Packmol version 20.15.0 or less is used, periodic boundary conditions may not be handled correctly.
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older than 20.15.0, are accounted for by packing the ["brick" representation](https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc) after shrinking each dimension by the `tolerance`. This introduces a small void at the edges of the box to avoid clashes. This void will quickly be filled in during equilibration.
 
-    Periodic boundary conditions are accounted for during packing.
     """
     # Make sure packmol can be found.
     packmol_path = _find_packmol()
