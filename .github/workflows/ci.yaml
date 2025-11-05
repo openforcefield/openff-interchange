@@ -88,12 +88,6 @@ jobs:
         micromamba remove ambertools parmed
         micromamba install "packmol >=20.15.0" "lammps>=2024" "numpy>=2.3"
 
-    - name: Remove AmberTools
-      if: ${{ matrix.ambertools == false }}
-      run: |
-        micromamba remove ambertools
-        micromamba install "packmol >=20.15.0"
-
     - name: Install OpenFF NAGL
       if: ${{ matrix.nagl == true }}
       run: |
