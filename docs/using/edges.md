@@ -1,7 +1,7 @@
 # Sharp edges
 
 (no-cutoff-support)=
-## Some MM engines do not support "no-cutoff" non-bonded methods
+## Some MM engines do not support "no-cutoff" non-bonded methods <!-- markdownlint-disable-line -->
 
 SMIRNOFF force fields support a non-bonded treatment in which, for non-periodic systems, the vdW interactions are not truncated. OpenFF force fields commonly use this option (`nonperiodic_method="no-cutoff"`).
 
