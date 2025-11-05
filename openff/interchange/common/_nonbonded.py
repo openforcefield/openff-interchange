@@ -2,7 +2,7 @@ import abc
 from collections.abc import Iterable
 from typing import Any, Literal
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from pydantic import Field, PrivateAttr, computed_field
 
 from openff.interchange._annotations import _DistanceQuantity, _ElementaryChargeQuantity
@@ -18,7 +18,7 @@ class _NonbondedCollection(Collection, abc.ABC):
     type: str = "nonbonded"
 
     cutoff: _DistanceQuantity = Field(
-        Quantity(10.0, unit.angstrom),
+        Quantity(10.0, "angstrom"),
         description="The distance at which pairwise interactions are truncated",
     )
 
@@ -65,7 +65,7 @@ class vdWCollection(_NonbondedCollection):
     )
 
     switch_width: _DistanceQuantity = Field(
-        Quantity(1.0, unit.angstrom),
+        Quantity(1.0, "angstrom"),
         description="The width over which the switching function is applied",
     )
 

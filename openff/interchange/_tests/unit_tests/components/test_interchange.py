@@ -2,7 +2,7 @@ import subprocess
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
@@ -17,6 +17,7 @@ from openff.interchange._tests import (
     get_test_file_path,
     needs_gmx,
     needs_lmp,
+    needs_sander,
 )
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
@@ -40,7 +41,7 @@ class TestInterchange:
         out.box = [4, 4, 4]
 
         assert not out.positions
-        numpy.testing.assert_equal(out["box"].m, (4 * numpy.eye(3) * unit.nanometer).m)
+        numpy.testing.assert_equal(out["box"].m, 4 * numpy.eye(3))
         numpy.testing.assert_equal(out["box"].m, out["box_vectors"].m)
 
         assert out["Bonds"] == out.collections["Bonds"]
@@ -81,7 +82,7 @@ class TestInterchange:
         tip3p.deregister_parameter_handler("Electrostatics")
 
         topology = water.to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], units=unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         with pytest.raises(MissingParameterHandlerError, match="modify partial"):
             Interchange.from_smirnoff(tip3p, topology)
@@ -92,11 +93,11 @@ class TestInterchange:
 
         Interchange.from_smirnoff(tip3p, topology)
 
-        tip3p["Electrostatics"].cutoff = 7.89 * unit.angstrom
+        tip3p["Electrostatics"].cutoff = Quantity(7.89, "angstrom")
 
         out = Interchange.from_smirnoff(tip3p, topology)
 
-        assert out["Electrostatics"].cutoff == 7.89 * unit.angstrom
+        assert out["Electrostatics"].cutoff == Quantity(7.89, "angstrom")
 
     def test_box_setter(self):
         tmp = Interchange(topology=Molecule.from_smiles("O").to_topology())
@@ -107,14 +108,14 @@ class TestInterchange:
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
-        molecule.conformers[0] += 1 * unit.angstrom
+        molecule.conformers[0] += Quantity(1, "angstrom")
         topology = molecule.to_topology()
         original = next(topology.molecules).conformers[0]
 
         Interchange.from_smirnoff(force_field=sage, topology=topology)
         new = next(topology.molecules).conformers[0]
 
-        assert numpy.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
+        assert numpy.sum((original - new).m_as("angstrom")) == pytest.approx(0)
 
     @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
@@ -196,7 +197,7 @@ class TestInterchange:
 
         if generate_conformers:
             molecule.generate_conformers(n_conformers=1)
-            expected_positions = molecule.conformers[0].m_as(unit.nanometer)
+            expected_positions = molecule.conformers[0].m_as("nanometer")
         else:
             expected_positions = numpy.zeros((molecule.n_atoms, 3))
 
@@ -215,7 +216,7 @@ class TestInterchange:
         import openmm.unit
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         simulation = sage.create_interchange(topology).to_openmm_simulation(
             integrator=default_integrator,
@@ -357,7 +358,7 @@ class TestBadExports:
         )
         zero_positions.positions = Quantity(
             numpy.zeros((zero_positions.topology.n_atoms, 3)),
-            unit.nanometer,
+            "nanometer",
         )
 
         zero_positions.box = [4, 4, 4]
@@ -379,7 +380,7 @@ class TestInterchangeSerialization:
         for molecule in topology.molecules:
             molecule.generate_conformers(n_conformers=1)
 
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         original = Interchange.from_smirnoff(
             force_field=sage,
@@ -401,7 +402,7 @@ class TestWrappedCalls:
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        top.box_vectors = Quantity(numpy.eye(3) * 4, unit.nanometer)
+        top.box_vectors = Quantity(numpy.eye(3) * 4, "nanometer")
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -423,6 +424,7 @@ class TestWrappedCalls:
             box_vectors=box,
         )
 
+    @needs_sander
     def test_to_amber(self, simple_interchange):
         simple_interchange.to_amber(prefix="blargh")
 
@@ -496,10 +498,10 @@ class TestWrappedCalls:
     def test_set_positions_from_gro_wrong_coordinates(self, sage):
         with temporary_cd():
             eth = sage.create_interchange(MoleculeWithConformer.from_smiles("CCO").to_topology())
-            eth.box = Quantity([4, 4, 4], unit.nanometer)
+            eth.box = Quantity([4, 4, 4], "nanometer")
             eth.to_gromacs(prefix="ethanol")
             benzene = sage.create_interchange(MoleculeWithConformer.from_smiles("c1ccccc1").to_topology())
-            benzene.box = Quantity([4, 4, 4], unit.nanometer)
+            benzene.box = Quantity([4, 4, 4], "nanometer")
             benzene.to_gromacs(prefix="benzene")
 
             with pytest.raises(InvalidPositionsError, match=r"12.*9"):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Quantity, Topology, unit
+from openff.toolkit import ForceField, Quantity, Topology
 from openff.utilities import temporary_cd
 
 from openff.interchange import Interchange
@@ -45,13 +45,15 @@ class TestLammps:
         mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
         top = Topology.from_molecules(n_mols * [mol])
 
-        top.box_vectors = 5.0 * numpy.eye(3) * unit.nanometer
+        top.box_vectors = Quantity(5.0 * numpy.eye(3), "nanometer")
 
         if n_mols == 1:
             positions = mol.conformers[0]
         elif n_mols == 2:
-            positions = numpy.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 1.5 * unit.nanometer],
+            positions = Quantity(
+                numpy.concatenate(
+                    [mol.conformers[0], mol.conformers[0] + Quantity(1.5, "nanometer")],
+                ),
             )
 
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)
@@ -71,8 +73,8 @@ class TestLammps:
         lmp_energies.compare(
             reference,
             tolerances={
-                "Nonbonded": 1 * unit.kilojoule_per_mole,
-                "Torsion": 0.02 * unit.kilojoule_per_mole,
+                "Nonbonded": Quantity(1, "kilojoule_per_mole"),
+                "Torsion": Quantity(0.02, "kilojoule_per_mole"),
             },
         )
 
@@ -109,15 +111,18 @@ class TestLammps:
         mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
         top = Topology.from_molecules(n_mols * [mol])
 
-        top.box_vectors = 5.0 * numpy.eye(3) * unit.nanometer
+        top.box_vectors = Quantity(5.0 * numpy.eye(3), "nanometer")
 
         if n_mols == 1:
             positions = mol.conformers[0]
         elif n_mols == 2:
-            positions = numpy.concatenate(
-                [mol.conformers[0], mol.conformers[0] + 1.5 * unit.nanometer],
+            positions = Quantity(
+                numpy.concatenate(
+                    [mol.conformers[0], mol.conformers[0] + Quantity(1.5, "nanometer")],
+                ),
             )
-        perturbed_positions = positions + rng.random(positions.shape) * 0.1 * unit.angstrom
+
+        perturbed_positions = positions + Quantity(rng.random(positions.shape) * 0.1, "angstrom")
 
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)
         interchange.positions = positions
@@ -248,7 +253,7 @@ class TestLammps:
         mol.conformers[0] -= numpy.min(mol.conformers[0], axis=0)
         top = Topology.from_molecules([mol])
 
-        top.box_vectors = 5.0 * numpy.eye(3) * unit.nanometer
+        top.box_vectors = Quantity(5.0 * numpy.eye(3), "nanometer")
         positions = mol.conformers[0]
 
         interchange = Interchange.from_smirnoff(sage_unconstrained, top)

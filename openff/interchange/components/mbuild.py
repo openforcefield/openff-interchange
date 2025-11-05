@@ -2,15 +2,15 @@
 
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Topology
 from openff.utilities.utilities import has_package, requires_package
 
 if has_package("mbuild") or TYPE_CHECKING:
-    import mbuild as mb
+    import mbuild
 
 
 @requires_package("mbuild")
-def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
+def offmol_to_compound(off_mol: "Molecule") -> "mbuild.Compound":
     """
     Convert an OpenFF Molecule into an mBuild Compound.
 
@@ -32,23 +32,23 @@ def offmol_to_compound(off_mol: "Molecule") -> "mb.Compound":
     if off_mol.n_conformers == 0:
         off_mol.generate_conformers(n_conformers=1)
 
-    comp = mb.Compound()
+    comp = mbuild.Compound()
     comp.name = off_mol.name
 
     for a in off_mol.atoms:
-        atom_comp = mb.Particle(name=a.symbol)
+        atom_comp = mbuild.Particle(name=a.symbol)
         comp.add(atom_comp, label=a.name)
 
     for b in off_mol.bonds:
         comp.add_bond((comp[b.atom1_index], comp[b.atom2_index]))
 
-    comp.xyz = off_mol.conformers[0].m_as(unit.nanometer)
+    comp.xyz = off_mol.conformers[0].m_as("nanometer")
 
     return comp
 
 
 @requires_package("mbuild")
-def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
+def offtop_to_compound(off_top: "Topology") -> "mbuild.Compound":
     """
     Convert an OpenFF Topology into an mBuild Compound.
 
@@ -68,6 +68,6 @@ def offtop_to_compound(off_top: "Topology") -> "mb.Compound":
         (<class 'mbuild.compound.Compound'>, 4, 28, 24)
 
     """
-    return mb.Compound(
+    return mbuild.Compound(
         subcompounds=[offmol_to_compound(molecule) for molecule in off_top.molecules],
     )

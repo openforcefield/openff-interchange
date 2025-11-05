@@ -11,6 +11,18 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Behavior changes
+
+* #1352 `Collection` and its subclasses (likely anything with "Collection" in its name) now define equality by identity.
+
+### Performance improvements
+
+* #1352 Improves speed of unit conversions in many submodules and OpenMM export in particular.
+
+### Bug fixes
+
 ## 0.4.8 - 2025-10-09
 
 ### Behavior changes

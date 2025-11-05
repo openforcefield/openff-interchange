@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}, RDKit ${{ matrix.rdkit }}, NAGL ${{ matrix.nagl }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}, RDKit ${{ matrix.rdkit }}, AmberTools ${{ matrix.ambertools }}, NAGL ${{ matrix.nagl }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -80,7 +80,13 @@ jobs:
     - name: Install RDKit
       if: ${{ matrix.rdkit == true }}
       run: |
-        micromamba install rdkit -c conda-forge
+        micromamba install rdkit "ambertools =24" intermol -c conda-forge
+
+    - name: Remove AmberTools
+      if: ${{ matrix.ambertools == false }}
+      run: |
+        micromamba remove ambertools parmed
+        micromamba install "packmol >=20.15.0" "lammps>=2024" "numpy>=2.3"
 
     - name: Remove AmberTools
       if: ${{ matrix.ambertools == false }}
@@ -94,7 +100,7 @@ jobs:
         micromamba install openff-nagl -c conda-forge
 
     - name: Install Python <3.13 dependencies
-      if: ${{ matrix.python-version != '3.13' }}
+      if: ${{ matrix.python-version != '3.13' && matrix.ambertools == true }}
       run: micromamba install --file devtools/conda-envs/test_not_py313.yaml python=${{ matrix.python-version }}
 
     - name: Install package

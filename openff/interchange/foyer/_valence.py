@@ -1,6 +1,6 @@
 from typing import Literal
 
-from openff.toolkit import Topology, unit
+from openff.toolkit import Topology
 from pydantic import Field
 
 from openff.interchange.common._valence import (
@@ -30,7 +30,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
         """Get the parameters of this handler, tagged with units."""
         return _copy_params(
             params,
-            param_units={"k": unit.kJ / unit.mol / unit.nm**2, "length": unit.nm},
+            param_units={"k": "kJ / mol / nm**2", "length": "nm"},
         )
 
     def store_matches(
@@ -66,8 +66,8 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler, AngleCollection):
         return _copy_params(
             {"k": params["k"], "angle": params["theta"]},
             param_units={
-                "k": unit.kJ / unit.mol / unit.radian**2,
-                "angle": unit.dimensionless,
+                "k": "kJ / mol / radian**2",
+                "angle": "dimensionless",  # should this really be dimensionless ... ?
             },
         )
 
@@ -110,7 +110,7 @@ class FoyerRBProperHandler(
     def get_params_with_units(self, params):
         """Get the parameters of this handler, tagged with units."""
         rb_params = params
-        param_units = {k: unit.kJ / unit.mol for k in rb_params}
+        param_units = {k: "kJ / mol" for k in rb_params}
         return _copy_params(rb_params, param_units=param_units)
 
     def store_matches(
@@ -151,9 +151,9 @@ class FoyerPeriodicProperHandler(FoyerConnectedAtomsHandler, ProperTorsionCollec
         return _copy_params(
             params,
             param_units={
-                "k": unit.kJ / unit.mol / unit.nm**2,
-                "phase": unit.dimensionless,
-                "periodicity": unit.dimensionless,
+                "k": "kJ / mol / nm**2",
+                "phase": "dimensionless",
+                "periodicity": "dimensionless",
             },
         )
 

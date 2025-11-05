@@ -1,7 +1,7 @@
 """Test SMIRNOFF-GROMACS conversion."""
 
 import pytest
-from openff.toolkit import Molecule, unit
+from openff.toolkit import Molecule
 
 from openff.interchange import Interchange
 from openff.interchange.interop.gromacs.models.models import GROMACSMolecule
@@ -81,10 +81,10 @@ class TestSettles:
         settle = molecule.settles[0]
 
         assert settle.first_atom == 1
-        assert settle.hydrogen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
+        assert settle.hydrogen_hydrogen_distance.m_as("angstrom") == pytest.approx(
             1.5139006545247014,
         )
-        assert settle.oxygen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
+        assert settle.oxygen_hydrogen_distance.m_as("angstrom") == pytest.approx(
             0.9572,
         )
 
@@ -163,7 +163,7 @@ class TestSettles:
 
             # b88 in both 2.0 and 2.1
             assert molecule.settles[0].oxygen_hydrogen_distance.m_as(
-                unit.angstrom,
+                "angstrom",
             ) == pytest.approx(
                 0.97167633126,
             )

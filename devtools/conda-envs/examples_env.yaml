@@ -7,7 +7,7 @@ dependencies:
   # Core
   - python
   - versioningit
-  - numpy
+  - numpy =2.2
   - pydantic >=2,<2.12
   # OpenFF stack
   - openff-toolkit-base =0.17
@@ -16,7 +16,7 @@ dependencies:
   # Optional features
   - openff-nagl
   - openff-nagl-models
-  - mbuild
+  - mbuild-base
   - foyer
   - nglview
   # Drivers

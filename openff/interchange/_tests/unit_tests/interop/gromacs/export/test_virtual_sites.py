@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
@@ -42,7 +42,7 @@ class TestBondChargeVirtualSite:
             },
         )[0].distance = Quantity(
             distance_,
-            unit.angstrom,
+            "angstrom",
         )
 
         sage_with_bond_charge.create_interchange(

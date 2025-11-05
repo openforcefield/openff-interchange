@@ -12,17 +12,11 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.1
+  rev: v0.14.3
   hooks:
-    - id: ruff
+    - id: ruff-check
       args: ["--fix"]
     - id: ruff-format
-- repo: https://github.com/econchick/interrogate
-  rev: 1.7.0
-  hooks:
-    - id: interrogate
-      args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
-      pass_filenames: false
 - repo: https://github.com/adamchainz/blacken-docs
   rev: 1.20.0
   hooks:
@@ -39,12 +33,6 @@ repos:
   hooks:
     - id: nbstripout
       files: ^examples
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.21.0
-  hooks:
-  - id: pyupgrade
-    args:
-      - --py310-plus
 - repo: https://github.com/tox-dev/pyproject-fmt
   rev: v2.11.0
   hooks:

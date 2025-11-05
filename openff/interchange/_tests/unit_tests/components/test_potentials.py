@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Molecule, Quantity, unit
+from openff.toolkit import Molecule, Quantity
 from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
 
 from openff.interchange.components.potentials import (
@@ -32,8 +32,8 @@ class TestWrappedPotential:
 
         interp_pot = WrappedPotential(data={pot1: 0.2, pot2: 0.8})
         assert interp_pot.parameters == {
-            "k": 180 * unit.Unit("kilocalorie / angstrom ** 2 / mole"),
-            "length": 1.32 * unit.angstrom,
+            "k": Quantity(180, "kilocalorie / angstrom ** 2 / mole"),
+            "length": Quantity(1.32, "angstrom"),
         }
 
         # Ensure a single Potential object can be wrapped with similar behavior
@@ -78,8 +78,8 @@ class TestPotentialSerialization:
     def dummy_potential(self):
         return Potential(
             parameters={
-                "a": Quantity(1.0, unit.kilocalorie / unit.mole),
-                "b": Quantity(2.0, unit.angstrom),
+                "a": Quantity(1.0, "kilocalorie / mole"),
+                "b": Quantity(2.0, "angstrom"),
             },
         )
 

@@ -5,7 +5,7 @@ from typing import IO
 
 import numpy
 import packaging.version
-from openff.toolkit.topology.molecule import Atom, unit
+from openff.toolkit.topology import Atom
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
@@ -66,13 +66,13 @@ def to_lammps(interchange: Interchange, file_path: Path | str, include_type_labe
         # write types section
 
         x_min, y_min, z_min = numpy.min(
-            interchange.positions.to(unit.angstrom),  # type: ignore[union-attr]
+            interchange.positions.to("angstrom"),  # type: ignore[union-attr]
             axis=0,
         ).magnitude
         if interchange.box is None:
             L_x, L_y, L_z = 100, 100, 100
         elif (interchange.box.m == numpy.diag(numpy.diagonal(interchange.box.m))).all():
-            L_x, L_y, L_z = numpy.diag(interchange.box.to(unit.angstrom).magnitude)
+            L_x, L_y, L_z = numpy.diag(interchange.box.to("angstrom").magnitude)
         else:
             raise NotImplementedError(
                 "Interchange does not yet support exporting non-rectangular boxes to LAMMPS",
@@ -215,8 +215,8 @@ def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: di
     for atom_type_idx, smirks in atom_type_map.items():
         params = vdw_handler.potentials[smirks].parameters
 
-        sigma = params["sigma"].to(unit.angstrom).magnitude
-        epsilon = params["epsilon"].to(unit.Unit("kilocalorie / mole")).magnitude
+        sigma = params["sigma"].to("angstrom").magnitude
+        epsilon = params["epsilon"].to("kilocalorie / mole").magnitude
 
         lmp_file.write(f"{atom_type_idx + 1:d}\t{epsilon:.8g}\t{sigma:.8g}\n")
 
@@ -233,9 +233,9 @@ def _write_bond_coeffs(lmp_file: IO, interchange: Interchange):
     for bond_type_idx, smirks in bond_type_map.items():
         params = bond_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole / angstrom ** 2")).magnitude
+        k = params["k"].to("kilocalorie / mole / angstrom ** 2").magnitude
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
-        length = params["length"].to(unit.angstrom).magnitude
+        length = params["length"].to("angstrom").magnitude
 
         lmp_file.write(f"{bond_type_idx + 1:d}\t{k:.16g}\t{length:.16g}\n")
 
@@ -252,9 +252,9 @@ def _write_angle_coeffs(lmp_file: IO, interchange: Interchange):
     for angle_type_idx, smirks in angle_type_map.items():
         params = angle_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole / radian ** 2")).magnitude
+        k = params["k"].to("kilocalorie / mole / radian ** 2").magnitude
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
-        theta = params["angle"].to(unit.degree).magnitude
+        theta = params["angle"].to("degree").magnitude
 
         lmp_file.write(f"{angle_type_idx + 1:d}\t{k:.16g}\t{theta:.16g}\n")
 
@@ -271,9 +271,9 @@ def _write_proper_coeffs(lmp_file: IO, interchange: Interchange):
     for proper_type_idx, smirks in proper_type_map.items():
         params = proper_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole")).magnitude
+        k = params["k"].to("kilocalorie / mole").magnitude
         n = int(params["periodicity"])
-        phase = params["phase"].to(unit.degree).magnitude
+        phase = params["phase"].to("degree").magnitude
         idivf = int(params["idivf"])
         k = k / idivf
 
@@ -294,9 +294,9 @@ def _write_improper_coeffs(lmp_file: IO, interchange: Interchange):
     for improper_type_idx, smirks in improper_type_map.items():
         params = improper_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole")).magnitude
+        k = params["k"].to("kilocalorie / mole").magnitude
         n = int(params["periodicity"])
-        phase = params["phase"].to(unit.degree).magnitude
+        phase = params["phase"].to("degree").magnitude
         idivf = int(params["idivf"])
         k = k / idivf
 
@@ -343,7 +343,7 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     vdw_handler = interchange["vdW"]
 
     charges = interchange["Electrostatics"].charges
-    positions = interchange.positions.m_as(unit.angstrom)  # type: ignore[union-attr]
+    positions = interchange.positions.m_as("angstrom")  # type: ignore[union-attr]
 
     """
     for molecule_index, molecule in enumerate(interchange.topology.molecules):

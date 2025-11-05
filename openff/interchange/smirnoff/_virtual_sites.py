@@ -3,7 +3,7 @@ import math
 from typing import Literal
 
 import numpy
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
@@ -217,7 +217,7 @@ class _BondChargeVirtualSite(_VirtualSite):
     def local_frame_coordinates(self) -> Quantity:
         return Quantity(
             numpy.array(
-                [self.distance.m_as(unit.nanometer), 180.0, 0.0],
+                [self.distance.m_as("nanometer"), 180.0, 0.0],
             ),
         )
 
@@ -239,8 +239,8 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_positions(self) -> Quantity:
-        theta = self.in_plane_angle.m_as(unit.radian)
-        phi = self.out_of_plane_angle.m_as(unit.radian)
+        theta = self.in_plane_angle.m_as("radian")
+        phi = self.out_of_plane_angle.m_as("radian")
 
         distance_unit = self.distance.units
 
@@ -258,9 +258,9 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
         return Quantity(
             numpy.array(
                 [
-                    self.distance.m_as(unit.nanometer),
-                    self.in_plane_angle.m_as(unit.degree),
-                    self.out_of_plane_angle.m_as(unit.degree),
+                    self.distance.m_as("nanometer"),
+                    self.in_plane_angle.m_as("degree"),
+                    self.out_of_plane_angle.m_as("degree"),
                 ],
             ),
         )
@@ -282,7 +282,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_positions(self) -> Quantity:
-        theta = self.out_of_plane_angle.m_as(unit.radian)
+        theta = self.out_of_plane_angle.m_as("radian")
 
         distance_unit = self.distance.units
 
@@ -300,9 +300,9 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
         return Quantity(
             numpy.array(
                 [
-                    self.distance.m_as(unit.nanometer),
+                    self.distance.m_as("nanometer"),
                     180.0,
-                    self.out_of_plane_angle.m_as(unit.degree),
+                    self.out_of_plane_angle.m_as("degree"),
                 ],
             ),
         )
@@ -333,7 +333,7 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
     def local_frame_coordinates(self) -> Quantity:
         return Quantity(
             numpy.array(
-                [self.distance.m_as(unit.nanometer), 180.0, 0.0],
+                [self.distance.m_as("nanometer"), 180.0, 0.0],
             ),
         )
 
@@ -421,7 +421,7 @@ def _build_local_coordinate_frames(
         orientation_coordinates = interchange.positions[
             virtual_site_key.orientation_atom_indices,
             :,
-        ].m_as(unit.nanometer)
+        ].m_as("nanometer")
 
         local_frame_weights = virtual_site.local_frame_weights
 
@@ -446,7 +446,7 @@ def _build_local_coordinate_frames(
 
     local_frames = numpy.stack([numpy.vstack(frames) for frames in stacked_frames])
 
-    return Quantity(local_frames, unit.nanometer)
+    return Quantity(local_frames, "nanometer")
 
 
 def _convert_local_coordinates(
@@ -503,10 +503,8 @@ def _generate_positions(
             local_coordinate_frames,
         )
 
-        return Quantity(
-            virtual_site_positions,
-            unit.nanometer,
-        )
+        return Quantity(virtual_site_positions, "nanometer")
+
     except AttributeError:
         # Handle case of virtual sites imported from OpenMM
         # TODO: Handle case of mixed SMIRNOFF and OpenMM virtual sites

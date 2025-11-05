@@ -65,8 +65,6 @@ def to_openmm_system(
         The corresponding OpenMM System object
 
     """
-    from openff.toolkit import unit as off_unit
-
     from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
     from openff.interchange.interop.openmm._valence import (
@@ -91,7 +89,7 @@ def to_openmm_system(
     system = openmm.System()
 
     if interchange.box is not None:
-        box = interchange.box.m_as(off_unit.nanometer)
+        box = interchange.box.m_as("nanometer")
         system.setDefaultPeriodicBoxVectors(*box)
 
     particle_map = _process_nonbonded_forces(
@@ -161,7 +159,7 @@ def _to_pdb(
     topology: "openmm.app.Topology",
     positions,
 ):
-    from openff.units.openmm import ensure_quantity
+    from openff.units import ensure_quantity
 
     # Deal with the possibility of `StringIO`
     manager: nullcontext[TextIO] | TextIO  # MyPy needs some help here

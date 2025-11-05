@@ -1,5 +1,5 @@
-import numpy as np
-from openff.toolkit import Molecule, Topology, unit
+import numpy
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.mbuild import offmol_to_compound, offtop_to_compound
@@ -17,8 +17,8 @@ class TestMBuildConversions:
         assert comp.n_particles == offmol.n_atoms
         assert comp.n_bonds == offmol.n_bonds
 
-        np.testing.assert_equal(
-            offmol.conformers[0].m_as(unit.nanometer),
+        numpy.testing.assert_equal(
+            offmol.conformers[0].m_as("nanometer"),
             comp.xyz,
         )
 
@@ -34,32 +34,32 @@ class TestMBuildConversions:
         offmol.generate_conformers(n_conformers=1)
         expected_conf = offmol.conformers[0]
 
-        np.testing.assert_equal(
-            expected_conf.m_as(unit.nanometer),
+        numpy.testing.assert_equal(
+            expected_conf.m_as("nanometer"),
             comp.xyz,
         )
 
     def test_mbuild_conversion_first_conformer_used(self):
         """Test that only the first conformer in an OFFMol is used"""
         offmol = Molecule.from_smiles("C1=CC=C(C=C1)C2=CC=C(C=C2)C3=CC=CC=C3")
-        offmol.generate_conformers(n_conformers=3, rms_cutoff=0.0 * unit.angstrom)
+        offmol.generate_conformers(n_conformers=3, rms_cutoff=Quantity(0.0, "angstrom"))
 
         comp = offmol_to_compound(offmol)
 
-        np.testing.assert_equal(
-            offmol.conformers[0].m_as(unit.nanometer),
+        numpy.testing.assert_equal(
+            offmol.conformers[0].m_as("nanometer"),
             comp.xyz,
         )
 
-        with np.testing.assert_raises(AssertionError):
-            np.testing.assert_equal(
-                offmol.conformers[1].m_as(unit.nanometer),
+        with numpy.testing.assert_raises(AssertionError):
+            numpy.testing.assert_equal(
+                offmol.conformers[1].m_as("nanometer"),
                 comp.xyz,
             )
 
-        with np.testing.assert_raises(AssertionError):
-            np.testing.assert_equal(
-                offmol.conformers[2].m_as(unit.nanometer),
+        with numpy.testing.assert_raises(AssertionError):
+            numpy.testing.assert_equal(
+                offmol.conformers[2].m_as("nanometer"),
                 comp.xyz,
             )
 
