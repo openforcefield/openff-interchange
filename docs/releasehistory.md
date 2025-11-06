@@ -11,7 +11,7 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.4.9 - 2025-11-06
 
 ### Behavior changes
 
@@ -21,7 +21,15 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1352 Improves speed of unit conversions in many submodules and OpenMM export in particular.
 
-### Bug fixes
+### Miscellaneous improvements
+
+* #1353 and #1355 Add some export performance benchmarks.
+* #1368 Fixes small molecule regression tests.
+
+### Documentation improvements
+
+* #1362 Document how to opt in to pseudo-vacuum approximation.
+* #1364 Fix some internal cross-references in documentation.
 
 ## 0.4.8 - 2025-10-09
 
