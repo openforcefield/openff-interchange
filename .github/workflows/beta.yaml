@@ -2,7 +2,7 @@ name: Tests against betas
 
 on:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 17 * * *"
   workflow_dispatch:
 
 defaults:
@@ -61,6 +61,10 @@ jobs:
         python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
+
+    - name: Install AmberTools
+      if: ${{ matrix.openeye == false }}
+      run: micromamba install "ambertools =24" -c conda-forge
 
     - name: Run mypy
       run: mypy --show-error-codes --namespace-packages -p "openff.interchange"
