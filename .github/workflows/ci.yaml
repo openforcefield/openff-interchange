@@ -110,7 +110,7 @@ jobs:
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
-        micromamba install "deepdiff =5" rich click -c conda-forge
+        micromamba install "deepdiff =5" "numpy=1" rich click -c conda-forge
         python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
 
         create_openmm_systems \
