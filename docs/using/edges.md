@@ -5,7 +5,7 @@
 
 SMIRNOFF force fields support a non-bonded treatment in which, for non-periodic systems, the vdW interactions are not truncated. OpenFF force fields commonly use this option (`nonperiodic_method="no-cutoff"`).
 
-OpenMM supports this with its `NoCutoff` method in `openmm.NonbondedForce` and similar forces. There is, however, no clear analog in GROMACS (with versions after 2020) or Amber. A common approach is to use the "pseudo-vacuum" approximation in which a very large box is used, i.e. 10 nm cubic box lengths for a system of a single molecule.
+OpenMM supports this with its `NoCutoff` method in `openmm.NonbondedForce` and similar forces. There is, however, no clear analog in GROMACS (with versions after 2020) or Amber. A common approach is to use the "pseudo-vacuum" approximation in which a very large box is used, i.e. 10 nm cubic box lengths for a system of a single small molecule.
 
 This approach is an approximation and therefore must be opted into by defining a periodic box, either on the input topology:
 
