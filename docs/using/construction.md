@@ -159,8 +159,7 @@ Positions and velocities are represented in nanometers and nanometers per
 femtosecond respectively both internally and when reported. However, they can
 be set with positions of other units, and can also be converted as desired.
 Internally, Interchange uses `openff-units` to store units, but units from the
-`openmm.units` or `unyt` packages are also supported. See []
-(interchange_units) for more details.
+`openmm.units` or `unyt` packages are also supported. See [](interchange_units) for more details.
 
 Interchange assumes positions and velocities without units are expressed in the
 default units above. The setter will immediately tag the unitless vectors with
