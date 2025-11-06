@@ -8,9 +8,10 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_executable, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import MoleculeWithConformer, shuffle_topology
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx, shuffle_topology
 from openff.interchange.components._packmol import pack_box
 from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.exceptions import NonperiodicNoCutoffNotSupportedError
 
 
 def test_issue_723():
@@ -167,3 +168,27 @@ def test_issue_1337(water):
     # just make sure this doesn't crash (original issue)
     # more extensive tests in openff/interchange/_tests/unit_tests/interop/openmm/test_constraints.py
     ff14sb_tip3p.create_interchange(water.to_topology())
+
+
+@needs_gmx
+def test_issue_1361_gromacs(caffeine, sage, tmp_path):
+    """Test that the 'how to opt in to pseudo-vacuum' message is communicated."""
+    interchange = sage.create_interchange(caffeine.to_topology())
+
+    with pytest.raises(
+        NonperiodicNoCutoffNotSupportedError,
+        match=r"GROMACS versions 2020 and newer do not support systems without periodicity",
+    ):
+        interchange.to_gromacs(prefix="foo")
+
+
+@pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
+def test_issue_1361_amber(caffeine, sage, tmp_path):
+    """Test that the 'how to opt in to pseudo-vacuum' message is communicated."""
+    interchange = sage.create_interchange(caffeine.to_topology())
+
+    with pytest.raises(
+        NonperiodicNoCutoffNotSupportedError,
+        match=r"vdW method no-cutoff not supported",
+    ):
+        interchange.to_amber(prefix="bar")

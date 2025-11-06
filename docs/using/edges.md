@@ -1,5 +1,39 @@
 # Sharp edges
 
+(no-cutoff-support)=
+## Some MM engines do not support "no-cutoff" non-bonded methods <!-- markdownlint-disable-line -->
+
+SMIRNOFF force fields support a non-bonded treatment in which, for non-periodic systems, the vdW interactions are not truncated. OpenFF force fields commonly use this option (`nonperiodic_method="no-cutoff"`).
+
+OpenMM supports this with its `NoCutoff` method in `openmm.NonbondedForce` and similar forces. There is, however, no clear analog in GROMACS (with versions after 2020) or Amber. A common approach is to use the "pseudo-vacuum" approximation in which a very large box is used, i.e. 10 nm cubic box lengths for a system of a single small molecule.
+
+This approach is an approximation and therefore must be opted into by defining a periodic box, either on the input topology:
+
+```python
+from openff.toolkit import Quantity, ForceField, Topology
+
+# do normal topology preparation ...
+my_topology = Topology.from_pdb("my_system.pdb")
+
+# ... and then set box vectors before `Interchange` creation
+my_topology.box_vectors = Quantity([10, 10, 10], "nanometer")
+
+my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topology)
+```
+
+or the created `Interchange` object:
+
+```python
+# do normal `Interchange` preparation ...
+my_topology = Topology.from_pdb("my_system.pdb")
+my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topology)
+
+# ... and then set the box after creating an `Interchange` object:
+my_interchange.box = Quantity([10, 10, 10], "nanometer")
+```
+
+You may also wish to make the vdW cut-off distance longer. This is typically accessible at `my_interchange['vdW'].cutoff`.
+
 ## Quirks of charge assignment
 
 ### Charge assignment hierarchy
