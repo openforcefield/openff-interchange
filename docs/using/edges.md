@@ -32,6 +32,8 @@ my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topolog
 my_interchange.box = Quantity([10, 10, 10], "nanometer")
 ```
 
+You may also wish to make the vdW cut-off distance longer. This is typically accessible at `my_interchange['vdW'].cutoff`.
+
 ## Quirks of charge assignment
 
 ### Charge assignment hierarchy
