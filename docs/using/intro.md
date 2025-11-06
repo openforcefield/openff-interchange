@@ -96,8 +96,7 @@ field modification.
 Converting in the reverse direction is a long term goal of the project.
 
 (interchange_units)=
-
-## Units in Interchange
+## Units in Interchange <!-- markdownlint-disable-line -->
 
 As a best practice, Interchange always associates explicit units with numerical
 values. Units are tagged using the [`openff-units`] package, which provides

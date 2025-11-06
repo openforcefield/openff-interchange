@@ -3,8 +3,7 @@
 `Interchange` provides several methods to produce input data for other software. Note that none of these methods write out all the information stored in an `Interchange`; they support a design where the principle source of truth is the rich chemical information in the `Interchange` object, and exported files are tools to perform some operation.
 
 (sec-mdconfig)=
-
-## Run control/config files
+## Run control/config files <!-- markdownlint-disable-line -->
 
 SMIRNOFF force fields include several parameters that many MD engines consider to be run configuration options rather than force field parameters. These values are essential for accurately simulating output from Interchange, but they are configured in the same files that are used for general control of simulation runtime behavior. As a result, Interchange cannot simply provide complete versions of these files. Instead, Interchange writes stub versions of MD engine run input files. These files must be modified and completed before they can be used to run a simulation.
 
