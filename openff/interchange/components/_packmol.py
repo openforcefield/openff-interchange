@@ -679,7 +679,7 @@ def pack_box(
     Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
     than 20.15.0, are accounted for by packing the
     `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
-    after shrinking each dimension by the `tolerance`. This introduces a small
+    after shrinking each dimension by the ``tolerance``. This introduces a small
     void at the edges of the box to avoid clashes. This void will quickly be
     filled in during equilibration.
 
@@ -930,7 +930,7 @@ def solvate_topology(
     Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
     than 20.15.0, are accounted for by packing the
     `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
-    after shrinking each dimension by the `tolerance`. This introduces a small
+    after shrinking each dimension by the ``tolerance``. This introduces a small
     void at the edges of the box to avoid clashes. This void will quickly be
     filled in during equilibration.
 
@@ -1106,7 +1106,7 @@ def solvate_topology_nonwater(
     Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
     than 20.15.0, are accounted for by packing the
     `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
-    after shrinking each dimension by the `tolerance`. This introduces a small
+    after shrinking each dimension by the ``tolerance``. This introduces a small
     void at the edges of the box to avoid clashes. This void will quickly be
     filled in during equilibration.
     """
