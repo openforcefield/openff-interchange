@@ -28,15 +28,11 @@ conda install openff-interchange -c conda-forge
 
 ## Getting started
 
-The `Iterchange` object serves primarily as a container object for parametrized data. It can currently take in [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) or [Foyer](https://foyer.mosdef.org/en/stable/) force fields
+The `Interchange` object serves primarily as a container object for parametrized data. It can currently take in [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) or [Foyer](https://foyer.mosdef.org/en/stable/) force fields
 and [chemical topologies](https://docs.openforcefield.org/projects/toolkit/en/stable/topology.html) prepared via the [OpenFF Toolkit](https://open-forcefield-toolkit.readthedocs.io/). The resulting object stores parametrized data and provides APIs for export to common formats.
 
 ```python3
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
-
-from openff.interchange import Interchange
-
+from openff.toolkit import ForceField, Molecule, Quantity
 
 # Use the OpenFF Toolkit to generate a molecule object from a SMILES pattern
 molecule = Molecule.from_smiles("CCO")
@@ -48,13 +44,13 @@ molecule.generate_conformers(n_conformers=1)
 topology = molecule.to_topology()
 
 # Define periodicity via box vectors
-topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
 # Load OpenFF 2.0.0 "Sage"
 sage = ForceField("openff-2.0.0.offxml")
 
-# Create an Interchange object
-out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+# Create an Interchange object - can also use Interchange.from_smirnoff()
+out = sage.create_interchange(force_field=sage, topology=topology)
 
 # Convert the Interchnage object to an OpenMM System
 system = out.to_openmm()
