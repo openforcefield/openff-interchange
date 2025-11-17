@@ -110,8 +110,8 @@ jobs:
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
-        micromamba install "deepdiff =5" rich click -c conda-forge
-        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
+        micromamba install "openmm=8.4.0" "deepdiff <=8" rich click -c conda-forge
+        python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@443480732f5caf3fc63f5442fdd763176c63e72f
 
         create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \
@@ -135,7 +135,6 @@ jobs:
         python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
-      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
