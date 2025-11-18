@@ -31,6 +31,7 @@ using/intro.md
 using/construction.rst
 using/output.md
 using/collections.md
+using/serialization.md
 using/migrating.md
 using/plugins.md
 using/status.md
