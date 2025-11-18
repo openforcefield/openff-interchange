@@ -1,4 +1,4 @@
-# Compiling OpenFF System's Documentation
+# Compiling Interchange documentation
 
 The docs for this project are built with [MyST](https://myst-parser.readthedocs.io/en/latest/index.html).
 To compile the docs, first ensure that the MyST parser is installed.
