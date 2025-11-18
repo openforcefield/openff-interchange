@@ -51,15 +51,24 @@ class TestPackmolWrapper:
             Quantity(234, "angstrom**3"),
         ],
     )
-    def test_scale_box(self, box, volume):
+    @pytest.mark.parametrize(
+        "factor",
+        [
+            0.9,
+            1.0,
+            1.1,
+            2.0,
+        ],
+    )
+    def test_scale_box(self, box, volume, factor):
         """Test that _scale_box() produces a box with the desired volume."""
-        scaled_box = _scale_box(box, volume)
+        scaled_box = _scale_box(box, volume, factor)
         a, b, c = scaled_box
 
         # | (a x b) . c | is the volume of the box
         # _scale_box uses numpy.linalg.det instead
         # linear dimensions are scaled by 1.1, so volumes are scaled by 1.1 ** 3
-        assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume * 1.1**3)
+        assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume * factor**3)
 
         assert str(scaled_box.u) == "angstrom"
 
@@ -487,6 +496,7 @@ class TestPackmolWrapper:
 
         topology = solvate_topology(
             solute.to_topology(),
+            target_density=Quantity(0.8, "gram / milliliter"),
             nacl_conc=Quantity(1e-3, "molar"),
             padding=Quantity(2, "nanometer"),
         )
