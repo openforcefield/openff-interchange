@@ -11,6 +11,16 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #1332 Introduces the following behavior changes to the private Packmol wrappers:
+  * Packmol version 20.15.0 or newer is recommended.
+  * Periodic boundary conditions are accounted for when placing molecules if the box is orthorhombic and Packmol version 20.15.0 or newer is installed; this is the minimum version supporting this feature.
+    * This is functionally the same as the previous behavior, so no workaround is needed to recover it.
+  * The `tolerance` parameter is subtracted from computed box lengths when placing molecules if a Packmol version older than 20.15.0 is installed; this is the previous behavior.
+  * The `target_density` is used in box size calculations with modification; previously, box volumes were scaled up by a factor of 1.1.
+    * The previous behavior can be restored by passing scaling the `target_density` argument down by a factor of 1.1.
+
 ## 0.4.9 - 2025-11-06
 
 ### Behavior changes
@@ -32,16 +42,6 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #1364 Fix some internal cross-references in documentation.
 
 ## 0.4.8 - 2025-10-09
-
-### Behavior changes
-
-* #1332 Introduces the following behavior changes to the private Packmol wrappers:
-  * Packmol version 20.15.0 or newer is recommended.
-  * Periodic boundary conditions are accounted for when placing molecules if the box is orthorhombic and Packmol version 20.15.0 or newer is installed; this is the minimum version supporting this feature.
-    * This is functionally the same as the previous behavior, so no workaround is needed to recover it.
-  * The `tolerance` parameter is subtracted from computed box lengths when placing molecules if a Packmol version older than 20.15.0 is installed; this is the previous behavior.
-  * The `target_density` is used in box size calculations with modification; previously, box volumes were scaled up by a factor of 1.1.
-    * The previous behavior can be restored by passing scaling the `target_density` argument down by a factor of 1.1.
 
 ### Bug fixes
 
