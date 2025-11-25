@@ -209,6 +209,9 @@ def test_base_virtual_site_eq():
     key3 = BaseVirtualSiteKey(orientation_atom_indices=[3, 2, 1], type="A", name="B")
     key4 = BaseVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B")
 
+    for key in [key1, key2, key3, key4]:
+        assert key == key
+
     assert key1 != key2
     assert key1 != key3
     assert key2 != key3
@@ -220,6 +223,9 @@ def test_smirnoff_virtual_site_eq():
     key1 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="once")
     key2 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="all_permutations")
     key3 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="once")
+
+    for key in [key1, key2, key3]:
+        assert key == key
 
     assert key1 != key2
     assert key1 == key3
