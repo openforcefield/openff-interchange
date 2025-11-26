@@ -223,6 +223,7 @@ def test_base_virtual_site_eq():
     assert hash(key1) == hash(key4)
 
 
+
 def test_smirnoff_virtual_site_eq():
     """This class is the same as BaseVirtualSiteKey but adds the `match` field."""
     key1 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="once")
@@ -239,6 +240,7 @@ def test_smirnoff_virtual_site_eq():
     assert hash(key1) != hash(key2)
     assert hash(key1) == hash(key3)
     assert hash(key2) != hash(key3)
+
 
 
 def test_virtual_site_key_repr():
