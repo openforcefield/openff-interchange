@@ -216,7 +216,7 @@ def test_base_virtual_site_eq():
     assert key1 != key3
     assert key2 != key3
     assert key1 == key4
-
+assert hash(key1) == hash(key4)
 
 def test_smirnoff_virtual_site_eq():
     """This class is the same as BaseVirtualSiteKey but adds the `match` field."""
