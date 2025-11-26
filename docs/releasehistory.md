@@ -21,6 +21,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
   * The `target_density` is used in box size calculations with modification; previously, box volumes were scaled up by a factor of 1.1.
     * The previous behavior can be restored by passing scaling the `target_density` argument down by a factor of 1.1.
 
+* #1376 Makes `Interchange.topology` not store positions. Use `Interchange.positions` instead.
+
 ## 0.4.9 - 2025-11-06
 
 ### Behavior changes

@@ -19,6 +19,7 @@ from openff.interchange._tests import (
     needs_lmp,
     needs_sander,
 )
+from openff.interchange.common._topology import InterchangeTopology
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
@@ -158,7 +159,7 @@ class TestInterchange:
         assert "ProperTorsions" in out.collections.keys()
         assert "vdW" in out.collections.keys()
 
-        assert type(out.topology) is Topology
+        assert type(out.topology) is InterchangeTopology
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
@@ -182,7 +183,7 @@ class TestInterchange:
         assert "ProperTorsions" in out.collections.keys()
         assert "vdW" in out.collections.keys()
 
-        assert type(out.topology) is Topology
+        assert type(out.topology) is InterchangeTopology
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
