@@ -230,7 +230,7 @@ def test_smirnoff_virtual_site_eq():
     assert key1 != key2
     assert key1 == key3
     assert key2 != key3
-
+assert hash(key1) == hash(key3)
 
 def test_virtual_site_key_repr():
     key = BaseVirtualSiteKey(orientation_atom_indices=[3, 4, 5], type="fOO", name="bAR")
