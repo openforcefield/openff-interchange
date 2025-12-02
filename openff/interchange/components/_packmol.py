@@ -115,7 +115,7 @@ def _validate_inputs(
     solute
         The OpenFF Topology to be solvated.
     box_vectors
-        The box vectors to fill in units compatible with angstroms. If `None`,
+        The box vectors to fill in units compatible with nanometer. If `None`,
         `target_density` must be provided.
     target_density
         Target mass density for final system with units compatible with g / mL.
@@ -596,7 +596,7 @@ def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
     solute: Topology | None = None,
-    tolerance: Quantity = Quantity(2.0, "angstrom"),
+    tolerance: Quantity = Quantity(0.2, "nanometer"),
     box_vectors: Quantity | None = None,
     target_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
@@ -868,7 +868,7 @@ def solvate_topology(
     padding: Quantity | None = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     target_density: Quantity = Quantity(0.9, "gram / milliliter"),
-    tolerance: Quantity = Quantity(2.0, "angstrom"),
+    tolerance: Quantity = Quantity(0.2, "nanometer"),
     working_directory: str | None = None,
 ) -> Topology:
     """
@@ -1049,7 +1049,7 @@ def solvate_topology_nonwater(
     target_density: Quantity,
     padding: Quantity | None = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
-    tolerance: Quantity = Quantity(2.0, "angstrom"),
+    tolerance: Quantity = Quantity(0.2, "nanometer"),
     working_directory: str | None = None,
 ) -> Topology:
     """
