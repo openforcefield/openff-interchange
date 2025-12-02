@@ -7,6 +7,7 @@ from openff.interchange.models import (
     ImproperTorsionKey,
     PotentialKey,
     ProperTorsionKey,
+    SMIRNOFFVirtualSiteKey,
     TopologyKey,
     VirtualSiteKey,
 )
@@ -200,6 +201,44 @@ def test_torsionkey_eq_hash():
         None,
         1.5,
     )
+
+
+def test_base_virtual_site_eq():
+    key1 = BaseVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B")
+    key2 = BaseVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="F", name="B")
+    key3 = BaseVirtualSiteKey(orientation_atom_indices=[3, 2, 1], type="A", name="B")
+    key4 = BaseVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B")
+
+    for key in [key1, key2, key3, key4]:
+        assert key == key
+
+    assert key1 != key2
+    assert key1 != key3
+    assert key2 != key3
+    assert key1 == key4
+
+    assert hash(key1) != hash(key2)
+    assert hash(key1) != hash(key3)
+    assert hash(key2) != hash(key3)
+    assert hash(key1) == hash(key4)
+
+
+def test_smirnoff_virtual_site_eq():
+    """This class is the same as BaseVirtualSiteKey but adds the `match` field."""
+    key1 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="once")
+    key2 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="all_permutations")
+    key3 = SMIRNOFFVirtualSiteKey(orientation_atom_indices=[1, 2, 3], type="A", name="B", match="once")
+
+    for key in [key1, key2, key3]:
+        assert key == key
+
+    assert key1 != key2
+    assert key1 == key3
+    assert key2 != key3
+
+    assert hash(key1) != hash(key2)
+    assert hash(key1) == hash(key3)
+    assert hash(key2) != hash(key3)
 
 
 def test_virtual_site_key_repr():

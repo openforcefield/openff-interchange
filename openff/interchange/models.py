@@ -348,13 +348,11 @@ class BaseVirtualSiteKey(TopologyKey):
     type: str = Field(description="The type of this virtual site parameter.")
     name: str = Field(description="The name of this virtual site parameter.")
 
-    def __hash__(self) -> int:
-        return hash(
-            (
-                self.orientation_atom_indices,
-                self.name,
-                self.type,
-            ),
+    def _tuple(self) -> tuple:
+        return (
+            self.orientation_atom_indices,
+            self.name,
+            self.type,
         )
 
     def __repr__(self) -> str:
@@ -380,15 +378,8 @@ class SMIRNOFFVirtualSiteKey(BaseVirtualSiteKey):
         description="The `match` attribute of the associated virtual site type",
     )
 
-    def __hash__(self) -> int:
-        return hash(
-            (
-                self.orientation_atom_indices,
-                self.name,
-                self.type,
-                self.match,
-            ),
-        )
+    def _tuple(self) -> tuple:
+        return (*super()._tuple(), self.match)
 
 
 VirtualSiteKey = SMIRNOFFVirtualSiteKey
