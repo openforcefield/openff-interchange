@@ -6,7 +6,7 @@ There are a few use cases in which this can be useful, including but not limited
 
 * You want to prepare system(s) on a laptop and run production simulations on a GPU cluster
 * You want to prepare system(s) now and do something else with them at a later date
-* You want to create a system once but make many modifications to it later (without re-running prep)
+* You want to create a system once and then make modified copies later without re-running prep
 * You want to run triplicate (or more) simulations for statistics
 * You want to run the same system in multiple engines and avoid run-to-run variance of a script
 
