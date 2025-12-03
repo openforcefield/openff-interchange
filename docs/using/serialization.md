@@ -10,29 +10,29 @@ There are a few use cases in which this can be useful, including but not limited
 * You want to run triplicate (or more) simulations for statistics
 * You want to run the same system in multiple engines and avoid run-to-run variance of a script
 
-In some cases, writing engine-specific files to disk may serve a similar purpose. For GROMACS, Amber, and LAMMPS, use `Interchange`'s `to_gromacs`, `to_amber`, or `to_lammps` methods which generate files directly. With OpenMM, `Interchange.to_openmm` returns an `openmm.System` which itself can be serialized with [OpenMM's API](https://docs.openmm.org/latest/api-python/generated/openmm.openmm.XmlSerializer.html#openmm.openmm.XmlSerializer.serialize).
+In some cases, writing engine-specific files to disk may serve a similar purpose. For GROMACS, Amber, and LAMMPS, use `Interchange`'s `to_gromacs`, `to_amber`, or `to_lammps` methods which generate files directly. With OpenMM, `Interchange.to_openmm` returns an `openmm.System` which itself can be serialized with [OpenMM's API](https://docs.openmm.org/latest/api-python/generated/openmm.openmm.XmlSerializer.html#openmm.openmm.XmlSerializer.serialize). Note that unlike JSON serialization, this doesn't let you later reconstitute the original Interchange.
 
 ## Basic usage
 
 ```python
 from openff.toolkit import ForceField, Molecule
-from openff.interchange import Interchange
 
 # prepare an Interchange object like normal
 my_topology = Molecule.from_smiles("c1ccccc1").to_topology()
 my_interchange = ForceField("openff-2.2.1.offxml").create_interchange(my_topology)
 
 # see what the JSON string looks like - output will be large!
-my_interchange.model_dump_json()
+print(my_interchange.model_dump_json())
 
 # or write directly to disk
 open("benzene_interchange.json", "w").write(my_interchange.model_dump_json())
 
 # read the same file back in
+from openff.interchange import Interchange
+
 my_interchange2 = Interchange.model_validate_json(
     open("benzene_interchange.json").read()
 )
-```
 
 ## Caveats
 
