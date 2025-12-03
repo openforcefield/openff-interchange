@@ -22,8 +22,9 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+include = [ 'openff.interchange*' ]
+exclude = [ 'openff.interchange._tests.data*' ]
 
 [tool.ruff]
 line-length = 119

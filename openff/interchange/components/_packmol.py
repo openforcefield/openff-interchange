@@ -14,6 +14,7 @@ import numpy
 from numpy.typing import ArrayLike, NDArray
 from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology
 from openff.utilities.utilities import requires_package, temporary_cd
+from packaging.version import Version
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
@@ -345,10 +346,14 @@ def _box_from_density(
     total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
     volume = total_mass / target_density
 
-    return _scale_box(box_shape, volume)
+    return _scale_box(
+        box=box_shape,
+        volume=volume,
+        box_scaleup_factor=1.0,
+    )
 
 
-def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quantity:
+def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float = 1.1) -> Quantity:
     """
     Scale the parallelepiped spanned by ``box`` to the given volume.
 
@@ -442,12 +447,33 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
     return pdb_file_names
 
 
+def _get_packmol_version() -> Version:
+    """Return the version of packmol installed."""
+    with temporary_cd(tempfile.mkdtemp()):
+        try:
+            result = subprocess.run(
+                _find_packmol(),
+                input="",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            found_version = Version(result.stdout.split("Version ")[1].split(" ")[0])
+
+        except Exception as error:
+            raise PACKMOLRuntimeError(f"Unexpected error ({type(error)}) while running Packmol.") from error
+
+    return found_version
+
+
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
     structure_to_solvate: str | None,
     box_size: Quantity,
     tolerance: Quantity,
+    rectangular: bool = False,
 ) -> tuple[str, str]:
     """
     Construct the packmol input file.
@@ -462,10 +488,11 @@ def _build_input_file(
         The path to the structure to solvate.
     box_size
         The lengths of each side of the box we want to fill. This is the box
-        size of the rectangular brick representation of the simulation box; the
-        packmol box will be shrunk by the tolerance.
+        size of the rectangular brick representation of the simulation box
     tolerance
         The packmol convergence tolerance.
+    rectangular
+        Whether the box is rectangular (True) or triclinic (False).
 
     Returns
     -------
@@ -475,7 +502,12 @@ def _build_input_file(
         The path to the output file.
 
     """
-    box_size = (box_size - tolerance).m_as("angstrom")
+    if rectangular:
+        PACKMOL_USE_PBC = _get_packmol_version() >= Version("20.15.0")
+    else:
+        PACKMOL_USE_PBC = False
+
+    box_size = box_size.m_as("angstrom") if PACKMOL_USE_PBC else (box_size - tolerance).m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
 
     # Add the global header options.
@@ -486,6 +518,9 @@ def _build_input_file(
         f"output {output_file_path}",
         "",
     ]
+
+    if PACKMOL_USE_PBC:
+        input_lines.append(f"pbc 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}")
 
     # Add the section of the molecule to solvate if provided.
     if structure_to_solvate is not None:
@@ -508,7 +543,7 @@ def _build_input_file(
             [
                 f"structure {file_name}",
                 f"  number {count}",
-                f"  inside box 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
+                "" if PACKMOL_USE_PBC else f"  inside box 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
                 "end structure",
                 "",
             ],
@@ -633,14 +668,20 @@ def pack_box(
 
     Notes
     -----
-    Returned topologies may have smaller or larger box vectors than what would be defined by the
-    target density if the box vectors are determined by `target_density`. When calling Packmol, each
-    linear dimension of the box is scaled up by 10%.  However, Packmol by default adds a small
-    buffer (defined by the `tolerance` argument which otherwise defines the minimum distance,
-    default 2 Angstrom) at the end of the packed box, which causes small voids when tiling copies of
-    each periodic image. This void is removed in hopes of faster equilibration times but the box
-    density is slightly increased as a result. These changes may cancel each other out or result in
-    larger or smaller densities than the target density, depending on argument values.
+    Packmol places molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subjected to energy minimization and equilibration
+    routines before being used in production simulations.
+
+    Orthorhombic periodic boundary conditions are accounted for during packing
+    if using Packmol version 20.15.0 or newer.
+
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
+    than 20.15.0, are accounted for by packing the
+    `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
+    after shrinking each dimension by the ``tolerance``. This introduces a small
+    void at the edges of the box to avoid clashes. This void will quickly be
+    filled in during equilibration.
 
     """
     # Make sure packmol can be found.
@@ -663,6 +704,8 @@ def pack_box(
         target_density,
     )
 
+    is_rectangular = numpy.all(box_shape == numpy.diag(numpy.diagonal(box_shape)))
+
     # Estimate the box_vectors from mass density if one is not provided.
     if target_density is not None:
         box_vectors = _box_from_density(
@@ -683,8 +726,7 @@ def pack_box(
             + "05_other_features.html#periodic-boundary-conditions",
         )
 
-    # Compute the dimensions of the equivalent brick - this is what packmol will
-    # fill
+    # Compute the dimensions of the equivalent brick - this is what packmol will fill
     brick_size = _compute_brick_from_box_vectors(box_vectors)
 
     # Center the solute
@@ -721,6 +763,7 @@ def pack_box(
             solute_pdb_filename,
             brick_size,
             tolerance,
+            rectangular=is_rectangular,
         )
 
         with open(input_file_path) as file_handle:
@@ -831,7 +874,7 @@ def solvate_topology(
     """
     Add water and ions to neutralise and solvate a topology.
 
-    The [SLTCAP](10.1021/acs.jctc.7b01254)  method is used to determine the number of each ion to add.
+    The [SLTCAP](10.1021/acs.jctc.7b01254) method is used to determine the number of each ion to add.
 
     Parameters
     ----------
@@ -876,8 +919,20 @@ def solvate_topology(
 
     Notes
     -----
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Packmol places solvent molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subjected to energy minimization and equilibration
+    routines before being used in production simulations.
+
+    Orthorhombic periodic boundary conditions are accounted for during packing
+    if using Packmol version 20.15.0 or newer.
+
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
+    than 20.15.0, are accounted for by packing the
+    `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
+    after shrinking each dimension by the ``tolerance``. This introduces a small
+    void at the edges of the box to avoid clashes. This void will quickly be
+    filled in during equilibration.
 
     Returned topologies may have ion concentrations higher than the value of the
     the `nacl_conc` argument.
@@ -1040,8 +1095,20 @@ def solvate_topology_nonwater(
 
     Notes
     -----
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Packmol places solvent molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subjected to energy minimization and equilibration
+    routines before being used in production simulations.
+
+    Orthorhombic periodic boundary conditions are accounted for during packing
+    if using Packmol version 20.15.0 or newer.
+
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
+    than 20.15.0, are accounted for by packing the
+    `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
+    after shrinking each dimension by the ``tolerance``. This introduces a small
+    void at the edges of the box to avoid clashes. This void will quickly be
+    filled in during equilibration.
     """
     _check_box_shape_shape(box_shape)
 

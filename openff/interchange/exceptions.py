@@ -44,6 +44,12 @@ class InvalidPositionsError(InterchangeException, ValueError):
     """
 
 
+class NoPositionsError(InterchangeException, NotImplementedError):
+    """
+    Exception for trying to access or set positions which are not stored.
+    """
+
+
 class InvalidTopologyError(InterchangeException, ValueError):
     """
     Generic exception for errors reading chemical topology data.

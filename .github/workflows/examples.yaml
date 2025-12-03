@@ -31,7 +31,7 @@ jobs:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -57,7 +57,7 @@ jobs:
 
     - name: Run example notebooks
       run: |
-        python -m pytest -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
+        python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/ \
           --ignore=examples/deprecated/ \
           --ignore=examples/experimental/ \
           --ignore=examples/lammps/

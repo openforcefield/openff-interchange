@@ -201,13 +201,11 @@ class Interchange(_BaseModel):
                 return self._visualize_nglview(include_virtual_sites=True)
 
             else:
-                # Interchange.topology might have its own positions;
-                # just use Interchange.positions
-                original_positions = self.topology.get_positions()
+                viz_topology = Topology(self.topology)
 
                 try:
-                    self.topology.set_positions(self.positions)
-                    widget = self.topology.visualize()
+                    viz_topology.set_positions(self.positions)
+                    return viz_topology.visualize()
                 except (
                     MissingConformersError,
                     IncompatibleUnitError,
@@ -216,16 +214,6 @@ class Interchange(_BaseModel):
                     raise MissingPositionsError(
                         "Cannot visualize system without positions.",
                     ) from error
-
-                # but don't modify them long-term
-                # work around https://github.com/openforcefield/openff-toolkit/issues/1820
-                if original_positions is not None:
-                    self.topology.set_positions(original_positions)
-                else:
-                    for molecule in self.topology.molecules:
-                        molecule._conformers = None
-
-                return widget
 
         else:
             raise UnsupportedExportError
