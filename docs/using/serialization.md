@@ -1,6 +1,6 @@
 # Serialization
 
-`Interchange` objects can be written to disk and read back at a later date (or on another machine, or by another person). Under the hood, serialization and de-serialization are largely handled by Pydantic, whose building block `pydantic.BaseModel` is a base class of `Interchange`. The serialization API is therefore inherited from Pydantic. It uses a mix of Python and Rust, so it's relatively fast.
+`Interchange` objects can be written to disk in JSON format and read back into an Interchange at a later date --- or on another machine, or by another person. Under the hood, serialization and de-serialization are largely handled by Pydantic, whose building block `pydantic.BaseModel` is a base class of `Interchange`. The serialization API is therefore inherited from Pydantic. It uses a mix of Python and Rust, so it's relatively fast.
 
 There are a few use cases in which this can be useful, including but not limited to:
 
