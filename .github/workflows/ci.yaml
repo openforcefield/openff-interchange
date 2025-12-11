@@ -42,8 +42,6 @@ jobs:
         openmm:
           - true
         exclude:
-          - python-version: "3.13"
-            openeye: true
           - ambertools: false
             openeye: false
 
