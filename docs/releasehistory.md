@@ -23,6 +23,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1376 Makes `Interchange.topology` not store positions. Use `Interchange.positions` instead.
 
+* #1387 Migrates version handling to `setuptools-scm`.
+
 ## 0.4.9 - 2025-11-06
 
 ### Behavior changes

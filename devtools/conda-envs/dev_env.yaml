@@ -5,7 +5,6 @@ channels:
 dependencies:
   # Core
   - python =3.12
-  - versioningit
   - numpy =2.2
   - pydantic >=2,<2.12
   # OpenFF stack
