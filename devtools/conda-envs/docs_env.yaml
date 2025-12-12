@@ -6,7 +6,6 @@ dependencies:
   # https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
   - python =3.11
   - setuptools !=76.0.0
-  - versioningit
   - pip
   - numpy =2
   - pydantic >=2,<2.12

@@ -3,7 +3,7 @@ build-backend = "setuptools.build_meta"
 
 requires = [
   "setuptools",
-  "versioningit",
+  "setuptools-scm>=8",
 ]
 
 [project]
@@ -25,6 +25,9 @@ dynamic = [ "version" ]
 [tool.setuptools.packages.find]
 include = [ 'openff.interchange*' ]
 exclude = [ 'openff.interchange._tests.data*' ]
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
 
 [tool.ruff]
 line-length = 119
@@ -96,5 +99,3 @@ module = [
   "lammps",
 ]
 ignore_missing_imports = true
-
-[tool.versioningit]
