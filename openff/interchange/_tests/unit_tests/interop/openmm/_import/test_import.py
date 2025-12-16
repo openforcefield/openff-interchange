@@ -9,7 +9,7 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import needs_gmx
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
@@ -309,15 +309,21 @@ class TestProcessTopology:
         )
 
     def test_openmm_roundtrip_missing_positions(self):
-        topology = Molecule.from_smiles("CCO").to_topology()
+        topology = MoleculeWithConformer.from_smiles("CCCCCCO").to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         interchange = ForceField("openff-2.2.1.offxml").create_interchange(topology)
 
-        Interchange.from_openmm(
+        roundtripped = Interchange.from_openmm(
             system=interchange.to_openmm_system(),
             topology=interchange.topology,
-            positions=None,
+        )
+
+        interchange.positions = topology.get_positions()
+        roundtripped.positions = topology.get_positions()
+
+        get_openmm_energies(interchange, combine_nonbonded_forces=False).compare(
+            get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
         )
 
 
