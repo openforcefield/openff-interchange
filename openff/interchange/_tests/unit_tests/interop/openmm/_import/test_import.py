@@ -308,6 +308,18 @@ class TestProcessTopology:
             },
         )
 
+    def test_openmm_roundtrip_missing_positions(self):
+        topology = Molecule.from_smiles("CCO").to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        interchange = ForceField("openff-2.2.1.offxml").create_interchange(topology)
+
+        Interchange.from_openmm(
+            system=interchange.to_openmm_system(),
+            topology=interchange.topology,
+            positions=None,
+        )
+
 
 @skip_if_missing("openmm")
 class TestConvertNonbondedForce:
