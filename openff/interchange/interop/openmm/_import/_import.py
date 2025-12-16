@@ -9,13 +9,14 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import ValidationError
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+from openff.interchange.common._topology import InterchangeTopology
 from openff.interchange.common._valence import (
     AngleCollection,
     BondCollection,
     ConstraintCollection,
     ProperTorsionCollection,
 )
-from openff.interchange.exceptions import UnsupportedImportError
+from openff.interchange.exceptions import NoPositionsError, UnsupportedImportError
 from openff.interchange.interop.openmm._import._virtual_sites import _convert_virtual_sites
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
 from openff.interchange.models import ImportedVirtualSiteKey
@@ -59,11 +60,17 @@ def from_openmm(
 
         particle_map = openff_topology._particle_map
 
-    elif isinstance(topology, Topology):
+    elif isinstance(topology, (Topology, InterchangeTopology)):
+        # could split this out into separate cases, but behavior is similar
         openff_topology = topology
-        positions = openff_topology.get_positions()
 
         particle_map = {index: index for index in range(topology.n_atoms)}
+
+        try:
+            positions = openff_topology.get_positions()
+        except NoPositionsError:
+            # InterchangeTopology.get_positions() raises this
+            positions = None
 
     else:
         raise ValueError(
