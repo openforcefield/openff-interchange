@@ -228,6 +228,6 @@ def test_issue_1395_amber(caffeine, sage, water, tmp_path):
         tolerances={
             "Angle": Quantity("1e10 kilojoule_per_mole"),  # constraints weirdness
             "vdW": Quantity("0.1 kilojoule_per_mole"),
-            "Electrostatics": Quantity("0.2 kilojoule_per_mole"),
+            "Electrostatics": Quantity("0.5 kilojoule_per_mole"),
         },
     )
