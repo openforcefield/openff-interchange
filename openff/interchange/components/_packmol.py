@@ -452,7 +452,7 @@ def _get_packmol_version() -> Version:
     with temporary_cd(tempfile.mkdtemp()):
         try:
             result = subprocess.run(
-                _find_packmol(),
+                _find_packmol(),  # type: ignore[arg-type]
                 input="",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -704,7 +704,7 @@ def pack_box(
         target_density,
     )
 
-    is_rectangular = numpy.all(box_shape == numpy.diag(numpy.diagonal(box_shape)))
+    is_rectangular = bool(numpy.all(box_shape == numpy.diag(numpy.diagonal(box_shape))))
 
     # Estimate the box_vectors from mass density if one is not provided.
     if target_density is not None:
