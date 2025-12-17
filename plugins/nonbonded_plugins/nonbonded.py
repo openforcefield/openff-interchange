@@ -202,7 +202,7 @@ class SMIRNOFFBuckinghamCollection(_SMIRNOFFNonbondedCollection):
             self.potentials[potential_key] = potential
 
     @classmethod
-    def create(  # type: ignore[override]
+    def create(
         cls: _CollectionAlias,
         parameter_handler: BuckinghamHandler,
         topology: Topology,
