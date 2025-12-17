@@ -486,7 +486,12 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         prmtop.write("%FLAG CHARGE\n%FORMAT(5E16.8)\n")
         charges = (
-            interchange["Electrostatics"].get_charge_array().m_as("elementary_charge") * AMBER_COULOMBS_CONSTANT
+            interchange["Electrostatics"]  # type: ignore[attr-defined]
+            .get_charge_array()
+            .m_as(
+                "elementary_charge",
+            )
+            * AMBER_COULOMBS_CONSTANT
         ).tolist()
         text_blob = "".join([f"{val:16.8E}" for val in charges])
         _write_text_blob(prmtop, text_blob)

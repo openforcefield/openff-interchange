@@ -196,6 +196,10 @@ def test_issue_1361_amber(caffeine, sage, tmp_path):
 
 def test_issue_1395_amber(caffeine, sage, water, tmp_path):
     """Test that water charges are correctly ordered in ligand + water systems to Amber."""
+
+    # turn off switching to make energy comparisons easier
+    sage["vdW"].switch_width = Quantity(0.0, "nanometer")
+
     parmed = pytest.importorskip("parmed")
 
     topology = solvate_topology(
@@ -222,8 +226,8 @@ def test_issue_1395_amber(caffeine, sage, water, tmp_path):
     get_openmm_energies(interchange, combine_nonbonded_forces=False).compare(
         get_amber_energies(interchange),
         tolerances={
-            "Angle": Quantity("1e10 kilojoule_per_mole"),
-            "vdW": Quantity("0.5 kilojoule_per_mole"),
-            "Electrostatics": Quantity("0.5 kilojoule_per_mole"),
+            "Angle": Quantity("1e10 kilojoule_per_mole"),  # constraints weirdness
+            "vdW": Quantity("0.1 kilojoule_per_mole"),
+            "Electrostatics": Quantity("0.2 kilojoule_per_mole"),
         },
     )
