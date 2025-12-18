@@ -16,6 +16,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Bug fixes
 
 * #1396 Fixes charge ordering in Amber files
+* #1378 Fix virtual site key equality definition
 
 ## 0.4.9 - 2025-11-06
 
