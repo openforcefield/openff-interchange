@@ -65,12 +65,12 @@ def from_openmm(
         openff_topology = topology
 
         particle_map = {index: index for index in range(topology.n_atoms)}
-
         try:
             positions = openff_topology.get_positions()
         except NoPositionsError:
+            # fall pack to positions argument,
             # InterchangeTopology.get_positions() raises this
-            positions = None
+            pass
 
     else:
         raise ValueError(

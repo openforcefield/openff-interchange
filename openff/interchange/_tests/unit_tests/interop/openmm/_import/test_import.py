@@ -308,19 +308,31 @@ class TestProcessTopology:
             },
         )
 
-    def test_openmm_roundtrip_missing_positions(self):
+    @pytest.mark.parametrize("use_original_topology", [True, False])
+    def test_openmm_roundtrip_missing_positions(self, use_original_topology):
         topology = MoleculeWithConformer.from_smiles("CCCCCCO").to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         interchange = ForceField("openff-2.2.1.offxml").create_interchange(topology)
 
-        roundtripped = Interchange.from_openmm(
-            system=interchange.to_openmm_system(),
-            topology=interchange.topology,
-        )
+        if use_original_topology:
+            roundtripped = Interchange.from_openmm(
+                system=interchange.to_openmm_system(),
+                topology=topology,
+            )
+        else:
+            # need to pass positions if using Interchange.topology
 
-        assert interchange.positions == topology.get_positions()
-        assert roundtripped.positions == topology.get_positions()
+            roundtripped = Interchange.from_openmm(
+                system=interchange.to_openmm_system(),
+                topology=interchange.topology,
+                positions=interchange.positions,
+            )
+
+            assert roundtripped.positions is not None
+
+        assert numpy.allclose(interchange.positions.m_as("nanometer"), topology.get_positions().m_as("nanometer"))
+        assert numpy.allclose(roundtripped.positions.m_as("nanometer"), topology.get_positions().m_as("nanometer"))
 
         get_openmm_energies(interchange, combine_nonbonded_forces=False).compare(
             get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
