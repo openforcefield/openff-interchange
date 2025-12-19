@@ -9,11 +9,12 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import needs_gmx
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._import import _convert_nonbonded_force
+from openff.interchange.warnings import MissingPositionsWarning
 
 if has_package("openmm"):
     import openmm.app
@@ -306,6 +307,48 @@ class TestProcessTopology:
                 "Angle": Quantity(0.001, "kilojoule / mole"),
                 "Nonbonded": Quantity(0.001, "kilojoule / mole"),
             },
+        )
+
+    @pytest.mark.parametrize("use_original_topology", [True, False])
+    def test_openmm_roundtrip_missing_positions(self, use_original_topology):
+        topology = MoleculeWithConformer.from_smiles("CCCCCCO").to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        interchange = ForceField("openff-2.2.1.offxml").create_interchange(topology)
+
+        if use_original_topology:
+            roundtripped = Interchange.from_openmm(
+                system=interchange.to_openmm_system(),
+                topology=topology,
+            )
+        else:
+            # need to pass positions if using Interchange.topology since
+            # Interchange.topology.get_positions() doesn't work. Split into two test cases
+
+            # when passed no positions (default value), valid use case but warning is thrown
+            with pytest.warns(MissingPositionsWarning):
+                roundtripped = Interchange.from_openmm(
+                    system=interchange.to_openmm_system(),
+                    topology=interchange.topology,
+                    positions=None,
+                )
+
+            assert roundtripped.positions is None
+
+            # when positions **are** passed, they should be used
+            roundtripped = Interchange.from_openmm(
+                system=interchange.to_openmm_system(),
+                topology=interchange.topology,
+                positions=interchange.positions,
+            )
+
+            assert roundtripped.positions is not None
+
+        assert numpy.allclose(interchange.positions.m_as("nanometer"), topology.get_positions().m_as("nanometer"))
+        assert numpy.allclose(roundtripped.positions.m_as("nanometer"), topology.get_positions().m_as("nanometer"))
+
+        get_openmm_energies(interchange, combine_nonbonded_forces=False).compare(
+            get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
         )
 
 
