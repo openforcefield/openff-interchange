@@ -319,8 +319,8 @@ class TestProcessTopology:
             topology=interchange.topology,
         )
 
-        interchange.positions = topology.get_positions()
-        roundtripped.positions = topology.get_positions()
+        assert interchange.positions == topology.get_positions()
+        assert roundtripped.positions == topology.get_positions()
 
         get_openmm_energies(interchange, combine_nonbonded_forces=False).compare(
             get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
