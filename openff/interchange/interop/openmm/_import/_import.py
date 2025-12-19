@@ -68,7 +68,7 @@ def from_openmm(
         try:
             positions = openff_topology.get_positions()
         except NoPositionsError:
-            # fall pack to positions argument,
+            # fall back to positions argument,
             # InterchangeTopology.get_positions() raises this
             pass
 
