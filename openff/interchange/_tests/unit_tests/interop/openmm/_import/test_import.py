@@ -14,6 +14,7 @@ from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._import import _convert_nonbonded_force
+from openff.interchange.warnings import MissingPositionsWarning
 
 if has_package("openmm"):
     import openmm.app
@@ -321,8 +322,20 @@ class TestProcessTopology:
                 topology=topology,
             )
         else:
-            # need to pass positions if using Interchange.topology
+            # need to pass positions if using Interchange.topology since
+            # Interchange.topology.get_positions() doesn't work. Split into two test cases
 
+            # when passed no positions (default value), valid use case but warning is thrown
+            with pytest.warns(MissingPositionsWarning):
+                roundtripped = Interchange.from_openmm(
+                    system=interchange.to_openmm_system(),
+                    topology=interchange.topology,
+                    positions=None,
+                )
+
+            assert roundtripped.positions is None
+
+            # when positions **are** passed, they should be used
             roundtripped = Interchange.from_openmm(
                 system=interchange.to_openmm_system(),
                 topology=interchange.topology,
