@@ -164,7 +164,7 @@ nglview = "*"
 
 [tool.pixi.feature.examples.tasks]
 test = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
-run_examples = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/ --ignore=examples/experimental/ --ignore=examples/lammps/"
+run_examples = "python -m pytest -x -c pyproject.toml -p no:randomly --nbval-lax --dist loadscope -n logical --durations=20 examples/ --ignore=examples/experimental/ --ignore=examples/lammps/"
 
 [tool.pixi.feature.typing.dependencies]
 mypy = "*"
