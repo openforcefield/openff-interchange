@@ -176,4 +176,3 @@ python = "3.11.*"
 
 [tool.pixi.environments]
 py311 = { features = [ "py311", "test", "regression_tests", "engines" ] }
-py311examples = { features = [ "py311", "examples", "engines" ] }
