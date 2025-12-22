@@ -25,8 +25,12 @@ jobs:
           - ubuntu-latest
         environment:
           - py311
-          - py311oe
+          - py311openeye
           - py311examples
+          - py311
+          - py312openeye
+          - py312examples
+          - py313
         openeye:
           - true
         openmm:
@@ -46,8 +50,7 @@ jobs:
         environments: ${{ matrix.environment }}
 
     - name: Install and license OpenEye Toolkits
-      # needs to be `if 'oe' in matrix.environment` ...
-      if: ${{ matrix.environment == 'py311oe' }}
+      if: ${{ contains(matrix.environment, 'openeye') }}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         pixi run -e ${{ matrix.environment }} python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
@@ -70,12 +73,11 @@ jobs:
       run: pixi run -e ${{ matrix.environment }} test
 
     - name: Run examples
-      # would like to do `if "examples" in matrix.environment` type of logic ...
-      if: ${{ matrix.environment == 'py311examples' }}
+      if: ${{ contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} run_examples
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.environment == 'py311oe' }}
+      if: ${{ contains(matrix.environment, 'openeye') }}
       run: |
         pixi run -e ${{ matrix.environment }} python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@443480732f5caf3fc63f5442fdd763176c63e72f
 

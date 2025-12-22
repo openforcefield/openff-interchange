@@ -126,7 +126,7 @@ fail-under = 90
 
 [tool.pixi.workspace]
 channels = [ "conda-forge", "openeye" ]
-platforms = [ "linux-64", "osx-arm64", "osx-64" ]
+platforms = [ "linux-64", "osx-arm64" ]
 
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
@@ -137,7 +137,7 @@ numpy = "*"
 setuptools_scm = "*"
 pydantic = "=2"
 openff-toolkit = "0.18.*"
-ambertools = "=24.8"
+ambertools = "24.*"
 rdkit = ">=2024"
 openmm = "8.4.*"
 
@@ -184,10 +184,19 @@ dependencies = { gromacs = "*", lammps = "*" }
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
-# add in py312, py313 later
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
 
 [tool.pixi.environments]
 py311 = { features = [ "py311", "test", "typing", "regression_tests", "engines" ] }
-py311oe = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ] }
-py311examples = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines", "examples" ] }
-dev = { features = [ "py311", "openeye", "test", "typing", "dev", "engines" ] }
+py311openeye = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ] }
+py311examples = { features = [ "py311", "openeye", "test", "regression_tests", "engines", "examples" ] }
+py312 = { features = [ "py312", "test", "typing", "regression_tests", "engines" ] }
+py312openeye = { features = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ] }
+py312examples = { features = [ "py312", "openeye", "test", "regression_tests", "engines", "examples" ] }
+py313 = { features = [ "py313", "test", "typing", "regression_tests", "engines" ] }
+py313openeye = { features = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ] }
+py313examples = { features = [ "py313", "openeye", "test", "regression_tests", "engines", "examples" ] }
+dev = { features = [ "py312", "openeye", "test", "typing", "dev", "engines" ] }
