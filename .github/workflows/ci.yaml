@@ -66,8 +66,7 @@ jobs:
         pixi run -e ${{ matrix.environment }} python -m mypy plugins/nonbonded_plugins/
 
     - name: Run tests
-      # would like to do `if "examples" not in matrix.environment` type of logic ...
-      if: ${{ matrix.environment != 'py311examples' }}
+      if: ${{ !contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} test
 
     - name: Run examples
