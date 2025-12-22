@@ -161,6 +161,7 @@ pytest-xdist = "*"
 pytest-cov = "*"
 nbval = "*"
 nglview = "*"
+jax = "*"
 
 [tool.pixi.feature.examples.tasks]
 test = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
