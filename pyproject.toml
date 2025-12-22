@@ -182,6 +182,9 @@ click = ">=8.1.8,<9"
 [tool.pixi.feature.engines]
 dependencies = { gromacs = "*", lammps = "*" }
 
+[tool.pixi.feature.mosdef]
+dependencies = { mbuild = "*", foyer = "*" }
+
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
 [tool.pixi.feature.py312.dependencies]
@@ -190,11 +193,11 @@ python = "3.12.*"
 python = "3.13.*"
 
 [tool.pixi.environments]
-py311 = { features = [ "py311", "test", "typing", "regression_tests", "engines" ] }
-py311openeye = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ] }
+py311 = { features = [ "py311", "test", "typing", "regression_tests", "engines", "mosdef" ] }
+py311openeye = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines", "mosdef" ] }
 py311examples = { features = [ "py311", "openeye", "test", "regression_tests", "engines", "examples" ] }
-py312 = { features = [ "py312", "test", "typing", "regression_tests", "engines" ] }
-py312openeye = { features = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ] }
+py312 = { features = [ "py312", "test", "typing", "regression_tests", "engines", "mosdef" ] }
+py312openeye = { features = [ "py312", "openeye", "test", "typing", "regression_tests", "engines", "mosdef" ] }
 py312examples = { features = [ "py312", "openeye", "test", "regression_tests", "engines", "examples" ] }
 py313 = { features = [ "py313", "test", "typing", "regression_tests", "engines" ] }
 py313openeye = { features = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ] }
