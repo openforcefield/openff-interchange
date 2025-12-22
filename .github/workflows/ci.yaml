@@ -35,7 +35,6 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
-      SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     steps:
     - uses: actions/checkout@v6
@@ -45,6 +44,15 @@ jobs:
       with:
         pixi-version: v0.41.4
         environments: ${{ matrix.environment }}
+
+    - name: Install and license OpenEye Toolkits
+      # needs to be `if 'oe' in matrix.environment` ...
+      if: ${{ matrix.environment == 'py311oe' }}
+      run: |
+        echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
+        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+      env:
+        SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Install editable build and test plugins
       run: pixi run -e ${{ matrix.environment }} postinstall
