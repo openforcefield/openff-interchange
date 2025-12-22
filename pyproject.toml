@@ -149,7 +149,7 @@ pytest-randomly = "*"
 intermol = "*"
 
 [tool.pixi.feature.test.tasks]
-test = "python -m pytest -v -n logical openff/interchange/"
+test = "python -m pytest --durations=20 -n logical openff/interchange/"
 
 [tool.pixi.feature.examples.dependencies]
 mdtraj = "*"
@@ -160,10 +160,10 @@ nbval = "*"
 nglview = "*"
 
 [tool.pixi.feature.examples.tasks]
-test = "python -m pytest -vx -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
+test = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
 
 [tool.pixi.feature.regression_tests.dependencies]
-deepdiff = "5.*"
+deepdiff = "<=8"
 rich = ">=14.0.0,<15"
 click = ">=8.1.8,<9"
 
