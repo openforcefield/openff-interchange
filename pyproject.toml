@@ -187,8 +187,8 @@ dependencies = { gromacs = "*" }
 dependencies = { mbuild-base = "*", foyer = "*" }
 
 [tool.pixi.feature.betas]
-dependencies = { openeye-toolkits = "*", openmm = "*"}
-channels = ["openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge"]
+dependencies = { openeye-toolkits = "*", openmm = "*" }
+channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
