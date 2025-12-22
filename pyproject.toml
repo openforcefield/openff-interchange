@@ -180,10 +180,15 @@ rich = ">=14.0.0,<15"
 click = ">=8.1.8,<9"
 
 [tool.pixi.feature.engines]
-dependencies = { gromacs = "*", lammps = "*" }
+# TODO: Add LAMMPS back
+dependencies = { gromacs = "*" }
 
 [tool.pixi.feature.mosdef]
-dependencies = { mbuild = "*", foyer = "*" }
+dependencies = { mbuild-base = "*", foyer = "*" }
+
+[tool.pixi.feature.betas]
+dependencies = { openeye-toolkits = "*", openmm = "*"}
+channels = ["openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge"]
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
@@ -203,3 +208,4 @@ py313 = { features = [ "py313", "test", "typing", "regression_tests", "engines" 
 py313openeye = { features = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ] }
 py313examples = { features = [ "py313", "openeye", "test", "regression_tests", "engines", "examples" ] }
 dev = { features = [ "py312", "openeye", "test", "typing", "dev", "engines" ] }
+betas = { features = [ "py311", "test", "typing", "regression_tests", "engines", "mosdef", "betas" ] }

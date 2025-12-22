@@ -31,6 +31,7 @@ jobs:
           - py312openeye
           - py312examples
           - py313
+          - betas
         openeye:
           - true
         openmm:
