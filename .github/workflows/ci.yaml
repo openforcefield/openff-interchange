@@ -50,7 +50,7 @@ jobs:
       if: ${{ matrix.environment == 'py311oe' }}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
-        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+        pixi run -e ${{ matrix.environment }} python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
