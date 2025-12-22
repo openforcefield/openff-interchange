@@ -64,7 +64,7 @@ jobs:
     - name: Run small molecule regression tests
       if: ${{ matrix.openeye == true && matrix.openmm == true }}
       run: |
-        pixi run -e ${{ matrix.environment }} python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@7c98afd2b4ea425276dfe1687e639e0a56b636b4
+        pixi run -e ${{ matrix.environment }} python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@443480732f5caf3fc63f5442fdd763176c63e72f
 
         pixi run -e ${{ matrix.environment }} create_openmm_systems \
           --input             "regression_tests/small-molecule/input-topologies.json" \

@@ -140,6 +140,7 @@ openff-toolkit = "0.18.*"
 ambertools = "=24.8"
 rdkit = ">=2024"
 openeye-toolkits = "*"
+openmm = "8.4.*"
 
 [tool.pixi.feature.test.dependencies]
 pytest = "*"
