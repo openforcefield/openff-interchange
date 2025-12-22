@@ -74,7 +74,7 @@ exclude_lines = [
 [tool.mypy]
 mypy_path = "stubs/"
 python_version = "3.11"
-plugins = "numpy.typing.mypy_plugin,pydantic.mypy"
+plugins = "pydantic.mypy"
 warn_unused_configs = true
 warn_unused_ignores = true
 warn_incomplete_stub = true
@@ -139,8 +139,10 @@ pydantic = "=2"
 openff-toolkit = "0.18.*"
 ambertools = "=24.8"
 rdkit = ">=2024"
-openeye-toolkits = "*"
 openmm = "8.4.*"
+
+[tool.pixi.feature.openeye.dependencies]
+openeye-toolkits = "*"
 
 [tool.pixi.feature.test.dependencies]
 pytest = "*"
@@ -162,6 +164,7 @@ nglview = "*"
 
 [tool.pixi.feature.examples.tasks]
 test = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
+run_examples = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/ --ignore=examples/experimental/ --ignore=examples/lammps/"
 
 [tool.pixi.feature.typing.dependencies]
 mypy = "*"
@@ -184,4 +187,6 @@ python = "3.11.*"
 
 [tool.pixi.environments]
 py311 = { features = [ "py311", "test", "typing", "regression_tests", "engines" ] }
-dev = { features = [ "py311", "test", "typing", "dev", "engines" ] }
+py311oe = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ] }
+py311examples = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines", "examples" ] }
+dev = { features = [ "py311", "openeye", "test", "typing", "dev", "engines" ] }

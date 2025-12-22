@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}, RDKit ${{ matrix.rdkit }}, AmberTools ${{ matrix.ambertools }}, NAGL ${{ matrix.nagl }}
+    name: Test on ${{ matrix.os }}, ${{ matrix.environment }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,6 +25,8 @@ jobs:
           - ubuntu-latest
         environment:
           - py311
+          - py311oe
+          - py311examples
         openeye:
           - true
         openmm:
@@ -33,6 +35,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
+      SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     steps:
     - uses: actions/checkout@v6
@@ -42,14 +45,6 @@ jobs:
       with:
         pixi-version: v0.41.4
         environments: ${{ matrix.environment }}
-
-    - name: Install and license OpenEye Toolkits
-      if: ${{ matrix.openeye == true }}
-      run: |
-        echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
-        python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
-      env:
-        SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
     - name: Install editable build and test plugins
       run: pixi run -e ${{ matrix.environment }} postinstall
@@ -63,14 +58,17 @@ jobs:
         pixi run -e ${{ matrix.environment }} python -m mypy plugins/nonbonded_plugins/
 
     - name: Run tests
-      run: |
-        # https://github.com/openforcefield/openff-units/issues/111
-        pixi run python -c "from openff.toolkit import *"
+      # would like to do `if "examples" not in matrix.environment` type of logic ...
+      if: ${{ matrix.environment != 'py311examples' }}
+      run: pixi run -e ${{ matrix.environment }} test
 
-        pixi run -e ${{ matrix.environment }} test
+    - name: Run examples
+      # would like to do `if "examples" in matrix.environment` type of logic ...
+      if: ${{ matrix.environment == 'py311examples' }}
+      run: pixi run -e ${{ matrix.environment }} run_examples
 
     - name: Run small molecule regression tests
-      if: ${{ matrix.openeye == true && matrix.openmm == true }}
+      if: ${{ matrix.environment == 'py311oe' }}
       run: |
         pixi run -e ${{ matrix.environment }} python -m pip install git+https://github.com/openforcefield/interchange-regression-testing.git@443480732f5caf3fc63f5442fdd763176c63e72f
 
@@ -94,14 +92,6 @@ jobs:
           --n-procs           4
 
         pixi run -e ${{ matrix.environment }} python devtools/scripts/molecule-regressions.py
-
-    - name: Run mypy
-      run: |
-        # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
-        # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875
-        pixi remove jax
-        pixi run -e ${{ matrix.environment }} python -m mypy -p "openff.interchange" --exclude "openff/interchange/_tests/"
-        pixi run -e ${{ matrix.environment }} python -m mypy plugins/nonbonded_plugins/
 
     - name: Codecov
       uses: codecov/codecov-action@v5
