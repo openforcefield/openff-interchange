@@ -2,11 +2,12 @@ import subprocess
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ElectrostaticsHandler,
     ParameterHandler,
 )
+from openff.utilities import temporary_cd
 from openff.utilities.testing import skip_if_missing
 from pydantic import ValidationError
 
@@ -16,10 +17,13 @@ from openff.interchange._tests import (
     get_test_file_path,
     needs_gmx,
     needs_lmp,
+    needs_sander,
 )
-from openff.interchange.drivers import get_openmm_energies
+from openff.interchange.common._topology import InterchangeTopology
+from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import (
     ExperimentalFeatureException,
+    InvalidPositionsError,
     InvalidTopologyError,
     MissingParameterHandlerError,
     MissingParametersError,
@@ -38,7 +42,7 @@ class TestInterchange:
         out.box = [4, 4, 4]
 
         assert not out.positions
-        numpy.testing.assert_equal(out["box"].m, (4 * numpy.eye(3) * unit.nanometer).m)
+        numpy.testing.assert_equal(out["box"].m, 4 * numpy.eye(3))
         numpy.testing.assert_equal(out["box"].m, out["box_vectors"].m)
 
         assert out["Bonds"] == out.collections["Bonds"]
@@ -79,7 +83,7 @@ class TestInterchange:
         tip3p.deregister_parameter_handler("Electrostatics")
 
         topology = water.to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], units=unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         with pytest.raises(MissingParameterHandlerError, match="modify partial"):
             Interchange.from_smirnoff(tip3p, topology)
@@ -90,11 +94,11 @@ class TestInterchange:
 
         Interchange.from_smirnoff(tip3p, topology)
 
-        tip3p["Electrostatics"].cutoff = 7.89 * unit.angstrom
+        tip3p["Electrostatics"].cutoff = Quantity(7.89, "angstrom")
 
         out = Interchange.from_smirnoff(tip3p, topology)
 
-        assert out["Electrostatics"].cutoff == 7.89 * unit.angstrom
+        assert out["Electrostatics"].cutoff == Quantity(7.89, "angstrom")
 
     def test_box_setter(self):
         tmp = Interchange(topology=Molecule.from_smiles("O").to_topology())
@@ -105,14 +109,14 @@ class TestInterchange:
     def test_input_topology_not_modified(self, sage):
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
-        molecule.conformers[0] += 1 * unit.angstrom
+        molecule.conformers[0] += Quantity(1, "angstrom")
         topology = molecule.to_topology()
         original = next(topology.molecules).conformers[0]
 
         Interchange.from_smirnoff(force_field=sage, topology=topology)
         new = next(topology.molecules).conformers[0]
 
-        assert numpy.sum((original - new).m_as(unit.angstrom)) == pytest.approx(0)
+        assert numpy.sum((original - new).m_as("angstrom")) == pytest.approx(0)
 
     @pytest.mark.skip("LAMMPS export experimental")
     @needs_gmx
@@ -124,9 +128,7 @@ class TestInterchange:
 
         from openff.interchange import Interchange
         from openff.interchange.drivers import (
-            get_gromacs_energies,
             get_lammps_energies,
-            get_openmm_energies,
         )
 
         oplsaa = foyer.forcefields.load_OPLSAA()
@@ -157,7 +159,7 @@ class TestInterchange:
         assert "ProperTorsions" in out.collections.keys()
         assert "vdW" in out.collections.keys()
 
-        assert type(out.topology) is Topology
+        assert type(out.topology) is InterchangeTopology
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
@@ -181,7 +183,7 @@ class TestInterchange:
         assert "ProperTorsions" in out.collections.keys()
         assert "vdW" in out.collections.keys()
 
-        assert type(out.topology) is Topology
+        assert type(out.topology) is InterchangeTopology
         assert isinstance(out.topology, Topology)
 
     @skip_if_missing("openmm")
@@ -196,7 +198,7 @@ class TestInterchange:
 
         if generate_conformers:
             molecule.generate_conformers(n_conformers=1)
-            expected_positions = molecule.conformers[0].m_as(unit.nanometer)
+            expected_positions = molecule.conformers[0].m_as("nanometer")
         else:
             expected_positions = numpy.zeros((molecule.n_atoms, 3))
 
@@ -215,7 +217,7 @@ class TestInterchange:
         import openmm.unit
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         simulation = sage.create_interchange(topology).to_openmm_simulation(
             integrator=default_integrator,
@@ -245,7 +247,7 @@ class TestInterchange:
 
         with pytest.raises(
             MissingPositionsError,
-            match="Cannot visualize system without positions.",
+            match="Cannot visualize system without positions",
         ):
             out.visualize()
 
@@ -322,7 +324,7 @@ class TestUnimplementedSMIRNOFFCases:
         sage.register_parameter_handler(bogus_parameter_handler)
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError,
-            match="not implemented in Interchange:.*bogus",
+            match=r"not implemented in Interchange:.*bogus",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -338,7 +340,7 @@ class TestBadExports:
         # with pytest.raises(ValidationError):
         with pytest.raises(
             InvalidTopologyError,
-            match="Could not process topology argument.*openmm.*",
+            match=r"Could not process topology argument.*openmm.*",
         ):
             Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -357,7 +359,7 @@ class TestBadExports:
         )
         zero_positions.positions = Quantity(
             numpy.zeros((zero_positions.topology.n_atoms, 3)),
-            unit.nanometer,
+            "nanometer",
         )
 
         zero_positions.box = [4, 4, 4]
@@ -379,7 +381,7 @@ class TestInterchangeSerialization:
         for molecule in topology.molecules:
             molecule.generate_conformers(n_conformers=1)
 
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         original = Interchange.from_smirnoff(
             force_field=sage,
@@ -401,7 +403,7 @@ class TestWrappedCalls:
         mol = Molecule.from_smiles("CCO")
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
-        top.box_vectors = Quantity(numpy.eye(3) * 4, unit.nanometer)
+        top.box_vectors = Quantity(numpy.eye(3) * 4, "nanometer")
 
         return Interchange.from_smirnoff(force_field=sage, topology=top)
 
@@ -423,6 +425,7 @@ class TestWrappedCalls:
             box_vectors=box,
         )
 
+    @needs_sander
     def test_to_amber(self, simple_interchange):
         simple_interchange.to_amber(prefix="blargh")
 
@@ -432,7 +435,7 @@ class TestWrappedCalls:
             shell=True,
         )
 
-    def test_from_gromacs_called(self, monkeypatch, simple_interchange):
+    def test_from_gromacs_called(self, simple_interchange, monkeypatch):
         monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
         simple_interchange.to_gromacs(prefix="tmp_")
@@ -441,6 +444,75 @@ class TestWrappedCalls:
             topology_file="tmp_.top",
             gro_file="tmp_.gro",
         )
+
+    @needs_gmx
+    def test_set_positions_from_gro_same_coordinates(self, simple_interchange):
+        """Write and read back the same coordinates, make sure energies match."""
+        with temporary_cd():
+            simple_interchange.positions = simple_interchange.positions.round(3)
+            simple_interchange.to_gromacs(prefix="test12")
+
+            original_energies = get_gromacs_energies(simple_interchange)
+
+            simple_interchange.set_positions_from_gro(gro_file="test12.gro")
+
+            new_energies = get_gromacs_energies(simple_interchange)
+
+            # if energies match, positions must also match
+            assert original_energies.energies.keys() == new_energies.energies.keys()
+
+            for key in original_energies.energies:
+                assert numpy.allclose(
+                    original_energies[key].m,
+                    new_energies[key].m,
+                )
+
+    @needs_gmx
+    def test_set_positions_from_gro_minimize(self, simple_interchange):
+        """Write, minimize, and read new coordinates, make sure energy descreased."""
+        with temporary_cd():
+            simple_interchange.positions = simple_interchange.positions.round(3)
+
+            # with 0.001 nm precision, not guaranteed a difference between conformer-generation
+            # coordinates and MM-minimized coordinates, so just perturb a little bit
+            simple_interchange.positions[-1] += Quantity([0.03, 0.03, 0.03], "nanometer")
+            simple_interchange.to_gromacs(prefix="test13")
+
+            original_energies = get_gromacs_energies(simple_interchange)
+
+            mdp = get_test_file_path("mdp/em.mdp")
+
+            for cmd in [
+                f"gmx grompp -f {mdp} -c test13.gro -p test13.top -o test13.tpr",
+                "gmx mdrun -s test13.tpr -c final_coords.gro",
+                "echo 0 | gmx trjconv -f final_coords.gro -s test13.tpr -o final_coords_wrapped.gro -pbc whole",
+            ]:
+                subprocess.check_output(cmd, shell=True)
+
+            simple_interchange.set_positions_from_gro(gro_file="final_coords_wrapped.gro")
+
+            new_energies = get_gromacs_energies(simple_interchange)
+
+            assert new_energies.total_energy < original_energies.total_energy
+
+    @needs_gmx
+    def test_set_positions_from_gro_wrong_coordinates(self, sage):
+        with temporary_cd():
+            eth = sage.create_interchange(MoleculeWithConformer.from_smiles("CCO").to_topology())
+            eth.box = Quantity([4, 4, 4], "nanometer")
+            eth.to_gromacs(prefix="ethanol")
+            benzene = sage.create_interchange(MoleculeWithConformer.from_smiles("c1ccccc1").to_topology())
+            benzene.box = Quantity([4, 4, 4], "nanometer")
+            benzene.to_gromacs(prefix="benzene")
+
+            with pytest.raises(InvalidPositionsError, match=r"12.*9"):
+                eth.set_positions_from_gro(gro_file="benzene.gro")
+
+            with pytest.raises(
+                InvalidPositionsError,
+                match=r"9.*12",
+            ):
+                benzene.set_positions_from_gro(gro_file="ethanol.gro")
 
     @skip_if_missing("openmm")
     def test_minimize(self, simple_interchange):

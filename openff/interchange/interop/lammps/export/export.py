@@ -4,14 +4,16 @@ from pathlib import Path
 from typing import IO
 
 import numpy
-from openff.toolkit.topology.molecule import Atom, unit
+import packaging.version
+from openff.toolkit.topology import Atom
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
+from openff.interchange.interop.lammps.export.provenance import get_lammps_version
 from openff.interchange.models import PotentialKey
 
 
-def to_lammps(interchange: Interchange, file_path: Path | str):
+def to_lammps(interchange: Interchange, file_path: Path | str, include_type_labels: bool = False):
     """Write an Interchange object to a LAMMPS data file."""
     if isinstance(file_path, str):
         path = Path(file_path)
@@ -64,13 +66,13 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
         # write types section
 
         x_min, y_min, z_min = numpy.min(
-            interchange.positions.to(unit.angstrom),  # type: ignore[union-attr]
+            interchange.positions.to("angstrom"),  # type: ignore[union-attr]
             axis=0,
         ).magnitude
         if interchange.box is None:
             L_x, L_y, L_z = 100, 100, 100
         elif (interchange.box.m == numpy.diag(numpy.diagonal(interchange.box.m))).all():
-            L_x, L_y, L_z = numpy.diag(interchange.box.to(unit.angstrom).magnitude)
+            L_x, L_y, L_z = numpy.diag(interchange.box.to("angstrom").magnitude)
         else:
             raise NotImplementedError(
                 "Interchange does not yet support exporting non-rectangular boxes to LAMMPS",
@@ -83,6 +85,20 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
         )
 
         lmp_file.write("0.0 0.0 0.0 xy xz yz\n")
+
+        if include_type_labels:
+            # type labels added in 15Sep2022, see PR #1208
+            assert get_lammps_version() > packaging.version.Version("2022.09.15")
+
+            _write_atom_type_labels(lmp_file=lmp_file, interchange=interchange)
+            if n_bonds > 0:
+                _write_bond_type_labels(lmp_file=lmp_file, interchange=interchange)
+            if n_angles > 0:
+                _write_angle_type_labels(lmp_file=lmp_file, interchange=interchange)
+            if n_propers > 0:
+                _write_proper_type_labels(lmp_file=lmp_file, interchange=interchange)
+            if n_impropers > 0:
+                _write_improper_type_labels(lmp_file=lmp_file, interchange=interchange)
 
         lmp_file.write("\nMasses\n\n")
 
@@ -130,6 +146,66 @@ def to_lammps(interchange: Interchange, file_path: Path | str):
             _write_impropers(lmp_file=lmp_file, interchange=interchange)
 
 
+def _write_atom_type_labels(lmp_file: IO, interchange: Interchange):
+    """Write the Atom Type Labels section of a LAMMPS data file."""
+    lmp_file.write("\nAtom Type Labels\n\n")
+
+    vdw_handler = interchange["vdW"]
+    atom_type_map = dict(enumerate(vdw_handler.potentials))
+
+    for atom_type_idx, smirks in atom_type_map.items():
+        atom_type_label = f"{smirks.id}"
+        lmp_file.write(f"{atom_type_idx + 1:d}\t{atom_type_label}\n")
+
+
+def _write_bond_type_labels(lmp_file: IO, interchange: Interchange):
+    """Write the Bond Type Labels section of a LAMMPS data file."""
+    lmp_file.write("\nBond Type Labels\n\n")
+
+    bond_handler = interchange["Bonds"]
+    bond_type_map = dict(enumerate(bond_handler.potentials))
+
+    for bond_type_idx, smirks in bond_type_map.items():
+        bond_type_label = f"{smirks.id}"
+        lmp_file.write(f"{bond_type_idx + 1:d}\t{bond_type_label}\n")
+
+
+def _write_angle_type_labels(lmp_file: IO, interchange: Interchange):
+    """Write the Angle Type Labels section of a LAMMPS data file."""
+    lmp_file.write("\nAngle Type Labels\n\n")
+
+    angle_handler = interchange["Angles"]
+    angle_type_map = dict(enumerate(angle_handler.potentials))
+
+    for angle_type_idx, smirks in angle_type_map.items():
+        angle_type_label = f"{smirks.id}"
+        lmp_file.write(f"{angle_type_idx + 1:d}\t{angle_type_label}\n")
+
+
+def _write_proper_type_labels(lmp_file: IO, interchange: Interchange):
+    """Write the Dihedral Type Labels section of a LAMMPS data file."""
+    lmp_file.write("\nDihedral Type Labels\n\n")
+
+    proper_handler = interchange["ProperTorsions"]
+    proper_type_map = dict(enumerate(proper_handler.potentials))
+
+    for proper_type_idx, smirks in proper_type_map.items():
+        proper_type_label = f"{smirks.id}mult:{smirks.mult}"
+        lmp_file.write(f"{proper_type_idx + 1:d}\t{proper_type_label}\n")
+
+
+def _write_improper_type_labels(lmp_file: IO, interchange: Interchange):
+    """Write the Improper Type Labels section of a LAMMPS data file."""
+    lmp_file.write("\nImproper Type Labels\n\n")
+
+    improper_handler = interchange["ImproperTorsions"]
+    improper_type_map = dict(enumerate(improper_handler.potentials))
+
+    for improper_type_idx, smirks in improper_type_map.items():
+        improper_type_label = f"{smirks.id}"
+        lmp_file.write(f"{improper_type_idx + 1:d}\t{improper_type_label}\n")
+
+
 def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     """Write the Pair Coeffs section of a LAMMPS data file."""
     lmp_file.write("Pair Coeffs\n\n")
@@ -139,8 +215,8 @@ def _write_pair_coeffs(lmp_file: IO, interchange: Interchange, atom_type_map: di
     for atom_type_idx, smirks in atom_type_map.items():
         params = vdw_handler.potentials[smirks].parameters
 
-        sigma = params["sigma"].to(unit.angstrom).magnitude
-        epsilon = params["epsilon"].to(unit.Unit("kilocalorie / mole")).magnitude
+        sigma = params["sigma"].to("angstrom").magnitude
+        epsilon = params["epsilon"].to("kilocalorie / mole").magnitude
 
         lmp_file.write(f"{atom_type_idx + 1:d}\t{epsilon:.8g}\t{sigma:.8g}\n")
 
@@ -157,11 +233,11 @@ def _write_bond_coeffs(lmp_file: IO, interchange: Interchange):
     for bond_type_idx, smirks in bond_type_map.items():
         params = bond_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole / angstrom ** 2")).magnitude
+        k = params["k"].to("kilocalorie / mole / angstrom ** 2").magnitude
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
-        length = params["length"].to(unit.angstrom).magnitude
+        length = params["length"].to("angstrom").magnitude
 
-        lmp_file.write(f"{bond_type_idx + 1:d} harmonic\t{k:.16g}\t{length:.16g}\n")
+        lmp_file.write(f"{bond_type_idx + 1:d}\t{k:.16g}\t{length:.16g}\n")
 
     lmp_file.write("\n")
 
@@ -176,11 +252,11 @@ def _write_angle_coeffs(lmp_file: IO, interchange: Interchange):
     for angle_type_idx, smirks in angle_type_map.items():
         params = angle_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole / radian ** 2")).magnitude
+        k = params["k"].to("kilocalorie / mole / radian ** 2").magnitude
         k = k * 0.5  # Account for LAMMPS wrapping 1/2 into k
-        theta = params["angle"].to(unit.degree).magnitude
+        theta = params["angle"].to("degree").magnitude
 
-        lmp_file.write(f"{angle_type_idx + 1:d} harmonic\t{k:.16g}\t{theta:.16g}\n")
+        lmp_file.write(f"{angle_type_idx + 1:d}\t{k:.16g}\t{theta:.16g}\n")
 
     lmp_file.write("\n")
 
@@ -195,14 +271,14 @@ def _write_proper_coeffs(lmp_file: IO, interchange: Interchange):
     for proper_type_idx, smirks in proper_type_map.items():
         params = proper_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole")).magnitude
+        k = params["k"].to("kilocalorie / mole").magnitude
         n = int(params["periodicity"])
-        phase = params["phase"].to(unit.degree).magnitude
+        phase = params["phase"].to("degree").magnitude
         idivf = int(params["idivf"])
         k = k / idivf
 
         lmp_file.write(
-            f"{proper_type_idx + 1:d} fourier 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n",
+            f"{proper_type_idx + 1:d} 1\t{k:.16g}\t{n:d}\t{phase:.16g}\n",
         )
 
     lmp_file.write("\n")
@@ -218,9 +294,9 @@ def _write_improper_coeffs(lmp_file: IO, interchange: Interchange):
     for improper_type_idx, smirks in improper_type_map.items():
         params = improper_handler.potentials[smirks].parameters
 
-        k = params["k"].to(unit.Unit("kilocalorie / mole")).magnitude
+        k = params["k"].to("kilocalorie / mole").magnitude
         n = int(params["periodicity"])
-        phase = params["phase"].to(unit.degree).magnitude
+        phase = params["phase"].to("degree").magnitude
         idivf = int(params["idivf"])
         k = k / idivf
 
@@ -267,7 +343,7 @@ def _write_atoms(lmp_file: IO, interchange: Interchange, atom_type_map: dict):
     vdw_handler = interchange["vdW"]
 
     charges = interchange["Electrostatics"].charges
-    positions = interchange.positions.m_as(unit.angstrom)  # type: ignore[union-attr]
+    positions = interchange.positions.m_as("angstrom")  # type: ignore[union-attr]
 
     """
     for molecule_index, molecule in enumerate(interchange.topology.molecules):
@@ -413,8 +489,8 @@ def _write_impropers(lmp_file: IO, interchange: Interchange):
         lmp_file.write(
             f"{improper_index + 1:d}\t"
             f"{improper_map[pot_key] + 1:d}\t"
-            f"{indices[1] + 1:d}\t"
             f"{indices[0] + 1:d}\t"
+            f"{indices[1] + 1:d}\t"
             f"{indices[2] + 1:d}\t"
             f"{indices[3] + 1:d}\n",
         )

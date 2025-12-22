@@ -3,7 +3,7 @@ Helper functions for exporting virutal sites to GROMACS.
 """
 
 import numpy
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 
 from openff.interchange import Interchange
 from openff.interchange.interop._virtual_sites import _get_separation_by_atom_indices
@@ -13,7 +13,7 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite3,
     GROMACSVirtualSite3fad,
 )
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey
 from openff.interchange.smirnoff._virtual_sites import (
     _BondChargeVirtualSite,
     _DivalentLonePairVirtualSite,
@@ -25,8 +25,8 @@ from openff.interchange.smirnoff._virtual_sites import (
 def _create_gromacs_virtual_site(
     interchange: Interchange,
     virtual_site: "_VirtualSite",
-    virtual_site_key: VirtualSiteKey,
-    particle_map: dict[int | VirtualSiteKey, int],
+    virtual_site_key: BaseVirtualSiteKey,
+    particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> GROMACSVirtualSite:
     # Orientation atom indices are topology indices, but here they need to be indexed as molecule
     # indices. Store the difference between an orientation atom's molecule and topology indices.
@@ -53,7 +53,7 @@ def _create_gromacs_virtual_site(
         )
         distance = virtual_site.distance
 
-        ratio = (distance / separation).m_as(unit.dimensionless)
+        ratio = (distance / separation).m_as("dimensionless")
 
         # TODO: This will create name collisions in many molecules
         return GROMACSVirtualSite2(
@@ -87,13 +87,10 @@ def _create_gromacs_virtual_site(
                 numpy.arccos(
                     (r23**2 - r12**2 - r13**2) / (-2 * r12 * r13),
                 ),
-                unit.radian,
+                "radian",
             )
 
-            r1mid = Quantity(
-                numpy.cos(theta.m_as(unit.radian) / 2) * r12.m_as(unit.nanometer),
-                unit.nanometer,
-            )
+            r1mid = Quantity(numpy.cos(theta.m_as("radian") / 2) * r12.m_as("nanometer"), "nanometer")
 
             w1 = 1 + distance / r1mid
 
@@ -125,8 +122,8 @@ def _create_gromacs_virtual_site(
             name=virtual_site_key.name,
             site=particle_map[virtual_site_key] - offset + 1,
             orientation_atoms=gromacs_indices,
-            theta=virtual_site.in_plane_angle.m_as(unit.degree),
-            d=virtual_site.distance.m_as(unit.nanometer),
+            theta=virtual_site.in_plane_angle.m_as("degree"),
+            d=virtual_site.distance.m_as("nanometer"),
         )
 
     raise NotImplementedError()

@@ -244,7 +244,9 @@ class ImproperTorsionKey(ProperTorsionKey):
     """
     A unique identifier of the atoms associated in an improper torsion potential.
 
-    The central atom is the second atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`.
+    The central atom is the first atom in the `atom_indices` tuple, or accessible via `get_central_atom_index`. Note
+    that SMIRNOFF parameters list the central atom second and molecular simulation engines may list atoms in yet
+    another order.
 
     Examples
     --------
@@ -268,7 +270,7 @@ class ImproperTorsionKey(ProperTorsionKey):
 
     def get_central_atom_index(self) -> int:
         """Get the index of the central atom of this improper torsion."""
-        return self.atom_indices[1]
+        return self.atom_indices[0]
 
 
 class LibraryChargeTopologyKey(_BaseModel):
@@ -332,11 +334,7 @@ class ChargeIncrementTopologyKey(_BaseModel):
         return hash((self.this_atom_index, self.other_atom_indices))
 
 
-class VirtualSiteKey(TopologyKey):
-    """
-    A unique identifier of a virtual site in the scope of a chemical topology.
-    """
-
+class BaseVirtualSiteKey(TopologyKey):
     # TODO: Overriding the attribute of a parent class is clumsy, but less grief than
     #       having this not inherit from `TopologyKey`. It might be useful to just have
     #       orientation_atom_indices point to the same thing.
@@ -349,17 +347,42 @@ class VirtualSiteKey(TopologyKey):
     )
     type: str = Field(description="The type of this virtual site parameter.")
     name: str = Field(description="The name of this virtual site parameter.")
-    match: Literal["once", "all_permutations"] = Field(
-        description="The `match` attribute of the associated virtual site type",
-    )
 
-    def _tuple(self) -> tuple[tuple[int, ...], str, str, str]:
+    def _tuple(self) -> tuple:
         return (
             self.orientation_atom_indices,
             self.name,
             self.type,
-            self.match,
         )
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} with orientation atom indices {self.orientation_atom_indices}"
+
+
+class ImportedVirtualSiteKey(BaseVirtualSiteKey):
+    """
+    A unique identifier of a virtual site in the scope of a chemical topology.
+
+    Meant to be used with data imported from OpenMM or other engines.
+
+    Use the engine-specific identifier, like `openmm.ThreeParticleAverageSite`, in the "type" field.
+    """
+
+    pass
+
+
+class SMIRNOFFVirtualSiteKey(BaseVirtualSiteKey):
+    """A unique identifier of a SMIRNOFF virtual site in the scope of a chemical topology."""
+
+    match: Literal["once", "all_permutations"] = Field(
+        description="The `match` attribute of the associated virtual site type",
+    )
+
+    def _tuple(self) -> tuple:
+        return (*super()._tuple(), self.match)
+
+
+VirtualSiteKey = SMIRNOFFVirtualSiteKey
 
 
 class PotentialKey(_BaseModel):

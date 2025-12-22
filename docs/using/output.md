@@ -3,8 +3,7 @@
 `Interchange` provides several methods to produce input data for other software. Note that none of these methods write out all the information stored in an `Interchange`; they support a design where the principle source of truth is the rich chemical information in the `Interchange` object, and exported files are tools to perform some operation.
 
 (sec-mdconfig)=
-
-## Run control/config files
+## Run control/config files <!-- markdownlint-disable-line -->
 
 SMIRNOFF force fields include several parameters that many MD engines consider to be run configuration options rather than force field parameters. These values are essential for accurately simulating output from Interchange, but they are configured in the same files that are used for general control of simulation runtime behavior. As a result, Interchange cannot simply provide complete versions of these files. Instead, Interchange writes stub versions of MD engine run input files. These files must be modified and completed before they can be used to run a simulation.
 
@@ -34,7 +33,15 @@ interchange.to_gromacs("mysim")  # Produces the same three files
 
 Note that the MDP file generated is configured for a single-point energy calculation and must be modified to run other simulations.
 
+### ITP files
+
 By default, the topology is written to as a monolithic file, which can be large. To split this into separate files with the `#include "molecule.itp"` convention, use `monolithic=False`. This produces a functionally equivalent topology file which splits non-bonded interactions into a file `mysim_nonbonded.itp` and each molecule's parameters in a separate file named according to the `Molecule.name` attribute.
+
+### Molecule names
+
+Molecule names in GROMACS files (both in `[ moleculetype ]` and `[ molecules ]` directives) are determined based on the value of the `Molecule.name` attribute of each molecule in the topology. The toolkit allows setting this attribute to any string.
+
+The default value of `Molecule.name` is `None`, which is not suitable for GROMACS files. In this case, Interchange will attempt to generate unique molecule names on the fly. These may look like `MOL_0`, `MOL_1`, potentially incrementing to larger numbers.
 
 ## LAMMPS
 
@@ -42,6 +49,9 @@ An [`Interchange`] object can be written to LAMMPS data and run input files with
 
 ```python
 interchange.to_lammps("data")  # Produces `data.lmp` and `data_pointenergy.in`
+interchange.to_lammps(
+    "data", include_type_labels=True
+)  # includes LAMMPS type labels in `data.lmp`
 ```
 
 Note that the generated run input file will run a single-point energy calculation and should be modified for the desired simulation.

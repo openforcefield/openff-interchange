@@ -2,12 +2,19 @@
 Helper functions for producing `openmm.Force` objects for valence terms.
 """
 
-from openff.toolkit import unit as off_unit
+import functools
+
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.models import VirtualSiteKey
+from openff.interchange.models import BaseVirtualSiteKey, PotentialKey
+from openff.interchange.smirnoff._valence import (
+    SMIRNOFFAngleCollection,
+    SMIRNOFFBondCollection,
+    SMIRNOFFImproperTorsionCollection,
+    SMIRNOFFProperTorsionCollection,
+)
 
 if has_package("openmm"):
     import openmm
@@ -16,7 +23,7 @@ if has_package("openmm"):
 def _process_constraints(
     interchange,
     openmm_sys,
-    particle_map: dict[int | VirtualSiteKey, int],
+    particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> set[tuple[int, ...]]:
     """
     Process the Constraints section of an Interchange object.
@@ -30,11 +37,12 @@ def _process_constraints(
 
     for top_key, pot_key in constraint_handler.key_map.items():
         openff_indices = top_key.atom_indices
+
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
         params = constraint_handler.potentials[pot_key].parameters
         distance = params["distance"]
-        distance_omm = distance.m_as(off_unit.nanometer)
+        distance_omm = distance.m_as("nanometer")
 
         constrained_pairs.add(tuple(sorted(openmm_indices)))
         openmm_sys.addConstraint(
@@ -46,12 +54,25 @@ def _process_constraints(
     return constrained_pairs
 
 
+@functools.lru_cache
+def _lookup_bond_parameters_from_potential_key(
+    collection: SMIRNOFFBondCollection,
+    potential_key: PotentialKey,
+) -> tuple[float, float]:
+    parameters = collection.potentials[potential_key].parameters
+
+    return (
+        parameters["k"].m_as("kilojoule / nanometer ** 2 / mole"),
+        parameters["length"].m_as("nanometer"),
+    )
+
+
 def _process_bond_forces(
     interchange,
     openmm_sys,
     add_constrained_forces: bool,
     constrained_pairs: set[tuple[int, ...]],
-    particle_map: dict[int | VirtualSiteKey, int],
+    particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     """
     Process the Bonds section of an Interchange object.
@@ -84,11 +105,7 @@ def _process_bond_forces(
                 # This bond's length is constrained, dpo so not add a bond force
                 continue
 
-        params = bond_handler.potentials[pot_key].parameters
-        k = params["k"].m_as(
-            off_unit.kilojoule / off_unit.nanometer**2 / off_unit.mol,
-        )
-        length = params["length"].m_as(off_unit.nanometer)
+        k, length = _lookup_bond_parameters_from_potential_key(bond_handler, pot_key)
 
         harmonic_bond_force.addBond(
             particle1=openmm_indices[0],
@@ -96,6 +113,19 @@ def _process_bond_forces(
             length=length,
             k=k,
         )
+
+
+@functools.lru_cache
+def _lookup_angle_parameters_from_potential_key(
+    collection: SMIRNOFFAngleCollection,
+    potential_key: PotentialKey,
+) -> tuple[float, float]:
+    parameters = collection.potentials[potential_key].parameters
+
+    return (
+        parameters["k"].m_as("kilojoule / radian / mole"),
+        parameters["angle"].m_as("radian"),
+    )
 
 
 def _process_angle_forces(
@@ -165,9 +195,7 @@ def _process_angle_forces(
             )
 
         else:
-            params = angle_handler.potentials[pot_key].parameters
-            k = params["k"].m_as(off_unit.kilojoule / off_unit.rad / off_unit.mol)
-            angle = params["angle"].m_as(off_unit.radian)
+            k, angle = _lookup_angle_parameters_from_potential_key(angle_handler, pot_key)
 
             harmonic_angle_force.addAngle(
                 particle1=openmm_indices[0],
@@ -185,6 +213,22 @@ def _process_torsion_forces(interchange, openmm_sys, particle_map):
         _process_rb_torsion_forces(interchange, openmm_sys, particle_map)
 
 
+@functools.lru_cache
+def _lookup_torsion_parameters_from_potential_key(
+    collection: SMIRNOFFProperTorsionCollection | SMIRNOFFImproperTorsionCollection,
+    potential_key: PotentialKey,
+) -> tuple[float, int, float, int]:
+    parameters = collection.potentials[potential_key].parameters
+
+    # float rounding can sometimes make Quantity(1) into 0.9999999999999999
+    return (
+        parameters["k"].m_as("kilojoule / mole"),
+        int(round(parameters["periodicity"], 10)),
+        parameters["phase"].m_as("radian"),
+        int(round(parameters["idivf"], 10)),
+    )
+
+
 def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process the Propers section of an Interchange object.
@@ -198,29 +242,11 @@ def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
-        params = proper_torsion_handler.potentials[pot_key].parameters
+        k, periodicity, phase, idivf = _lookup_torsion_parameters_from_potential_key(proper_torsion_handler, pot_key)
 
-        k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
-        periodicity = int(params["periodicity"])
-        phase = params["phase"].m_as(off_unit.radian)
-        # Work around a pint gotcha:
-        # >>> import pint
-        # >>> u = pint.UnitRegistry()
-        # >>> val
-        # <Quantity(1.0, 'dimensionless')>
-        # >>> val.m
-        # 0.9999999999
-        # >>> int(val)
-        # 0
-        # >>> int(round(val, 0))
-        # 1
-        # >>> round(val.m_as(u.dimensionless), 0)
-        # 1.0
-        # >>> round(val, 0).m
-        # 1.0
-        idivf = params["idivf"].m_as(off_unit.dimensionless)
         if idivf == 0:
             raise RuntimeError("Found an idivf of 0.")
+
         torsion_force.addTorsion(
             openmm_indices[0],
             openmm_indices[1],
@@ -247,12 +273,12 @@ def _process_rb_torsion_forces(interchange, openmm_sys, particle_map):
 
         params = rb_torsion_handler.potentials[pot_key].parameters
 
-        c0 = params["c0"].m_as(off_unit.kilojoule / off_unit.mol)
-        c1 = params["c1"].m_as(off_unit.kilojoule / off_unit.mol)
-        c2 = params["c2"].m_as(off_unit.kilojoule / off_unit.mol)
-        c3 = params["c3"].m_as(off_unit.kilojoule / off_unit.mol)
-        c4 = params["c4"].m_as(off_unit.kilojoule / off_unit.mol)
-        c5 = params["c5"].m_as(off_unit.kilojoule / off_unit.mol)
+        c0 = params["c0"].m_as("kilojoule / mole")
+        c1 = params["c1"].m_as("kilojoule / mole")
+        c2 = params["c2"].m_as("kilojoule / mole")
+        c3 = params["c3"].m_as("kilojoule / mole")
+        c4 = params["c4"].m_as("kilojoule / mole")
+        c5 = params["c5"].m_as("kilojoule / mole")
 
         rb_force.addTorsion(
             openmm_indices[0],
@@ -288,12 +314,7 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
         openff_indices = top_key.atom_indices
         openmm_indices = tuple(particle_map[index] for index in openff_indices)
 
-        params = improper_torsion_handler.potentials[pot_key].parameters
-
-        k = params["k"].m_as(off_unit.kilojoule / off_unit.mol)
-        periodicity = int(params["periodicity"])
-        phase = params["phase"].m_as(off_unit.radian)
-        idivf = int(params["idivf"])
+        k, periodicity, phase, idivf = _lookup_torsion_parameters_from_potential_key(improper_torsion_handler, pot_key)
 
         torsion_force.addTorsion(
             openmm_indices[0],

@@ -1,5 +1,5 @@
 import networkx
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Quantity, Topology
 
 from openff.interchange import Interchange
 from openff.interchange._experimental import experimental
@@ -36,12 +36,11 @@ def to_interchange(
     """
     Convert a GROMACS system to an Interchange object.
 
-    .. warning :: This API is experimental and subject to change.
-    .. warning :: This method is experimental and not officially suitable for production.
+    .. warning :: This method is experimental.
 
     Parameters
     ----------
-    system: GROMACSSystem
+    system
         The GROMACS system to convert.
 
     Returns
@@ -264,17 +263,14 @@ def to_interchange(
 
                 if isinstance(
                     dihedral,
-                    (PeriodicProperDihedral, PeriodicImproperDihedral),
+                    PeriodicProperDihedral | PeriodicImproperDihedral,
                 ):
                     potential = Potential(
                         parameters={
-                            "periodicity": Quantity(
-                                dihedral.multiplicity,
-                                unit.dimensionless,
-                            ),
+                            "periodicity": Quantity(dihedral.multiplicity, "dimensionless"),
                             "phase": dihedral.phi,
                             "k": dihedral.k,
-                            "idivf": 1 * unit.dimensionless,
+                            "idivf": Quantity(1, "dimensionless"),
                         },
                     )
 

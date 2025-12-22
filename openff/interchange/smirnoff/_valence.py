@@ -1,7 +1,7 @@
 import warnings
 from typing import Literal, Self
 
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -10,6 +10,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     ProperTorsionHandler,
 )
+from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
 from packaging.version import Version
 
 from openff.interchange.common._valence import (
@@ -33,7 +34,6 @@ from openff.interchange.models import (
 )
 from openff.interchange.smirnoff._base import (
     SMIRNOFFCollection,
-    _check_all_valence_terms_assigned,
 )
 from openff.interchange.warnings import ForceFieldModificationWarning
 
@@ -172,15 +172,6 @@ class SMIRNOFFBondCollection(SMIRNOFFCollection, BondCollection):
             )
 
             self.key_map[topology_key] = potential_key
-
-        valence_terms = self.valence_terms(topology)
-
-        _check_all_valence_terms_assigned(
-            handler=parameter_handler,
-            topology=topology,
-            assigned_terms=matches,
-            valence_terms=valence_terms,
-        )
 
     def store_potentials(self, parameter_handler: BondHandler) -> None:
         """
@@ -350,14 +341,14 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
             self.key_map = dict()
 
         try:
-            constraint_handler = [p for p in parameter_handlers if type(p) is ConstraintHandler][0]
-        except IndexError:
+            constraint_handler = next(p for p in parameter_handlers if type(p) is ConstraintHandler)
+        except (StopIteration, IndexError):
             return
 
         constraint_matches = constraint_handler.find_matches(topology)
 
         if any([type(p) is BondHandler for p in parameter_handlers]):
-            bond_handler = [p for p in parameter_handlers if type(p) is BondHandler][0]
+            bond_handler = next(p for p in parameter_handlers if type(p) is BondHandler)
             # This should be passed in as a parameter
             assert bonds is not None
         else:
@@ -400,8 +391,17 @@ class SMIRNOFFConstraintCollection(SMIRNOFFCollection):
                         "of this constraint is not specified.",
                     )
 
-                # ... so use the same PotentialKey instance as the BondHandler to look up the distance
-                potential_key = bonds.key_map[topology_key]  # type: ignore[union-attr]
+                try:
+                    # ... so use the same PotentialKey instance as the BondHandler to look up the distance
+                    potential_key = bonds.key_map[topology_key]  # type: ignore[union-attr]
+                except KeyError:
+                    raise SMIRNOFFSpecError(
+                        "Error while processing a constraint with no distance specified and no harmonic "
+                        f"bond parameters associated with atoms {topology_key.atom_indices=}. This is "
+                        "unsupported in the SMIRNOFF specification. Consider adding a distance to the "
+                        "constraint parameter or instead constraining other atoms which are bonded and "
+                        "have harmonic bond parameters.",
+                    )
 
                 self.key_map[topology_key] = potential_key
 
@@ -483,6 +483,11 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
         """Return a list of names of parameters included in each potential in this colletion."""
         return ["k", "periodicity", "phase", "idivf"]
 
+    @classmethod
+    def valence_terms(cls, topology):
+        """Return all (proper) torsions in this topology."""
+        return list(topology.propers)
+
     def store_matches(
         self,
         parameter_handler: ProperTorsionHandler,
@@ -538,13 +543,6 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
 
                 self.key_map[topology_key] = potential_key
 
-        _check_all_valence_terms_assigned(
-            handler=parameter_handler,
-            topology=topology,
-            assigned_terms=matches,
-            valence_terms=list(topology.propers),
-        )
-
     def store_potentials(self, parameter_handler: ProperTorsionHandler) -> None:
         """
         Populate self.potentials with key-val pairs of [PotentialKey, Potential].
@@ -567,9 +565,9 @@ class SMIRNOFFProperTorsionCollection(SMIRNOFFCollection, ProperTorsionCollectio
                 for map_key in map_keys:
                     parameters = {
                         "k": parameter.k_bondorder[n][map_key],
-                        "periodicity": parameter.periodicity[n] * unit.dimensionless,
+                        "periodicity": Quantity(parameter.periodicity[n], "dimensionless"),
                         "phase": parameter.phase[n],
-                        "idivf": parameter.idivf[n] * unit.dimensionless,
+                        "idivf": Quantity(parameter.idivf[n], "dimensionless"),
                     }
                     pots.append(
                         Potential(
@@ -721,14 +719,14 @@ class SMIRNOFFImproperTorsionCollection(SMIRNOFFCollection, ImproperTorsionColle
                 # Assumed to be list here
                 idivf = parameter.idivf[n]
                 if idivf is not None:
-                    idivf = idivf * unit.dimensionless
+                    idivf = Quantity(idivf, "dimensionless")
 
             if idivf is None:
                 if _default_idivf == "auto":
-                    idivf = 3.0 * unit.dimensionless
+                    idivf = Quantity(3.0, "dimensionless")
                 else:
                     # Assumed to be a numerical value
-                    idivf = _default_idivf * unit.dimensionless
+                    idivf = Quantity(_default_idivf, "dimensionless")
 
             # parameter keys happen to be the same as keys in proper torsions
             self.potentials[potential_key] = Potential(

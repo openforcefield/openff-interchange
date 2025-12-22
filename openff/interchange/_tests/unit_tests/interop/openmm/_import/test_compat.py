@@ -35,19 +35,36 @@ class TestUnsupportedCases:
                 topology=other_topology.to_openmm(),
             )
 
-    def test_found_virtual_sites(self, tip4p, water):
-        topology = water.to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+    def test_found_out_of_plane_virtual_site(self, water_dimer):
+        pytest.importorskip("openmm")
 
-        system = tip4p.create_openmm_system(topology)
+        import openmm.app
+
+        modeller = openmm.app.Modeller(
+            topology=water_dimer.to_openmm(),
+            positions=water_dimer.get_positions().to("nanometer").to_openmm(),
+        )
+
+        forcefield = openmm.app.ForceField("tip5p.xml")
+
+        modeller.addExtraParticles(forcefield=forcefield)
+
+        system = forcefield.createSystem(
+            modeller.topology,
+            nonbondedMethod=openmm.app.PME,
+            nonbondedCutoff=1.0 * openmm.unit.nanometers,
+            constraints=openmm.app.HBonds,
+            rigidWater=True,
+            ewaldErrorTolerance=0.0005,
+        )
 
         with pytest.raises(
             UnsupportedImportError,
-            match="A particle is a virtual site, which is not yet supported.",
+            match=r"A particle is a virtual site of type.*OutOfPlane.*which is not yet supported.",
         ):
             from_openmm(
                 system=system,
-                topology=topology.to_openmm(),
+                topology=modeller.topology,
             )
 
     def test_missing_positions_warning(self, sage, water):

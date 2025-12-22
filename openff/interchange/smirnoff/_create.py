@@ -1,7 +1,7 @@
 import warnings
 
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
-from openff.toolkit.typing.engines.smirnoff import ParameterHandler
+from openff.toolkit.typing.engines.smirnoff import AngleHandler, BondHandler, ParameterHandler, ProperTorsionHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from packaging.version import Version
 
@@ -14,7 +14,7 @@ from openff.interchange.exceptions import (
     SMIRNOFFHandlersNotImplementedError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
-from openff.interchange.smirnoff._base import SMIRNOFFCollection
+from openff.interchange.smirnoff._base import SMIRNOFFCollection, _check_all_valence_terms_assigned
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -50,9 +50,7 @@ _PLUGIN_CLASS_MAPPING: dict[
 ] = dict()
 
 for collection_plugin in load_smirnoff_plugins():
-    parameter_handlers: list[type["ParameterHandler"]] = collection_plugin.allowed_parameter_handlers()
-
-    for parameter_handler in parameter_handlers:
+    for parameter_handler in collection_plugin.allowed_parameter_handlers():
         if parameter_handler in load_handler_plugins():
             _SUPPORTED_PARAMETER_HANDLERS.add(parameter_handler._TAGNAME)
             _PLUGIN_CLASS_MAPPING[parameter_handler] = collection_plugin
@@ -69,7 +67,7 @@ def _check_supported_handlers(force_field: ForceField):
     unsupported = list()
 
     for handler_name in force_field.registered_parameter_handlers:
-        if handler_name in {"ToolkitAM1BCC"}:
+        if handler_name in {"ToolkitAM1BCC", "NAGLCharges"}:
             continue
         if handler_name not in _SUPPORTED_PARAMETER_HANDLERS:
             unsupported.append(handler_name)
@@ -176,7 +174,57 @@ def _create_interchange(
         interchange.topology,
         bonds=interchange.collections.get("Bonds", None),  # type: ignore[arg-type]
     )
+    if "Bonds" in force_field.registered_parameter_handlers:
+        assigned_bond_indices = {tuple(key.atom_indices) for key in interchange["Bonds"].key_map}
+
+        # need to filter the list of _all_ constraints to those that are bond-like, since constraints
+        # can also be used to freeze i-k atoms in angles and other things, and we don't want those to
+        # be interpreted as over-assigned bond terms
+        topological_bond_indices = {
+            (
+                interchange.topology.atom_index(bond.atom1),
+                interchange.topology.atom_index(bond.atom2),
+            )
+            for bond in interchange.topology.bonds
+        }
+        all_assigned_constraint_indices = {tuple(key.atom_indices) for key in interchange["Constraints"].key_map}
+        bond_like_assigned_constraint_indices = {
+            constraint for constraint in all_assigned_constraint_indices if constraint in topological_bond_indices
+        }
+
+        _check_all_valence_terms_assigned(
+            handler_class=BondHandler,
+            topology=interchange.topology,
+            assigned_atom_indices=assigned_bond_indices.union(bond_like_assigned_constraint_indices),
+            valence_terms=interchange["Bonds"].valence_terms(interchange.topology),
+        )
+
     _angles(interchange, force_field, interchange.topology)
+
+    if "Angles" in force_field.registered_parameter_handlers:
+        assigned_angle_indices = {tuple(key.atom_indices) for key in interchange["Angles"].key_map}
+
+        # need to filter the list of angles whose i-k atoms are convered by constraints
+        topological_angle_indices = {
+            (
+                interchange.topology.atom_index(angle[0]),
+                interchange.topology.atom_index(angle[1]),
+                interchange.topology.atom_index(angle[2]),
+            )
+            for angle in interchange.topology.angles
+        }
+        all_assigned_constraint_indices = {tuple(key.atom_indices) for key in interchange["Constraints"].key_map}
+        angles_mimicked_by_constraints = {
+            pair for pair in topological_angle_indices if tuple((pair[0], pair[2])) in all_assigned_constraint_indices
+        }
+
+        _check_all_valence_terms_assigned(
+            handler_class=AngleHandler,
+            topology=interchange.topology,
+            assigned_atom_indices=assigned_angle_indices.union(angles_mimicked_by_constraints),
+            valence_terms=interchange["Angles"].valence_terms(interchange.topology),
+        )
+
     _propers(
         interchange,
         force_field,
@@ -184,6 +232,20 @@ def _create_interchange(
         partial_bond_orders_from_molecules,
     )
     _impropers(interchange, force_field, interchange.topology)
+
+    for handler_name, handler_class in zip(
+        ["ProperTorsions"],
+        [ProperTorsionHandler],
+    ):
+        if handler_name in force_field.registered_parameter_handlers:
+            _check_all_valence_terms_assigned(
+                handler_class=handler_class,
+                topology=interchange.topology,
+                assigned_atom_indices={
+                    *{tuple(key.atom_indices) for key in interchange[handler_name].key_map},
+                },
+                valence_terms=interchange[handler_name].valence_terms(interchange.topology),  # type: ignore[attr-defined]
+            )
 
     _vdw(interchange, force_field, interchange.topology)
     _electrostatics(
@@ -348,6 +410,7 @@ def _electrostatics(
                         force_field._parameter_handlers.get(name, None)
                         for name in [
                             "Electrostatics",
+                            "NAGLCharges",
                             "ChargeIncrementModel",
                             "ToolkitAM1BCC",
                             "LibraryCharges",
@@ -422,6 +485,39 @@ def _virtual_sites(
     interchange.collections.update({"VirtualSites": virtual_site_handler})
 
 
+def _build_collection(
+    collection_class: type[SMIRNOFFCollection],
+    handler_classes: list[type[ParameterHandler]],
+    interchange: Interchange,
+    force_field: ForceField,
+    topology: Topology,
+):
+    kwargs = {}
+
+    # Always attach handlers
+    if len(handler_classes) == 1:
+        kwargs["parameter_handler"] = force_field[handler_classes[0]._TAGNAME]
+    else:
+        kwargs["parameter_handler"] = [force_field[cls._TAGNAME] for cls in handler_classes]
+
+    kwargs["topology"] = topology
+
+    # VirtualSite collections need vdW + Electrostatics collections, and we can identify
+    # them by the allowed_vdw_parameter_handlers class method.
+    if hasattr(collection_class, "allowed_vdw_parameter_handlers"):
+        vdw_tagnames = [x._TAGNAME for x in collection_class.allowed_vdw_parameter_handlers()]
+
+        if (n_vdw_tagnames := len(vdw_tagnames)) != 1:
+            raise NotImplementedError(
+                f"Collection {collection_class} requires {n_vdw_tagnames} vdW handlers, but only one is supported.",
+            )
+
+        kwargs["vdw_collection"] = interchange[vdw_tagnames[0]]
+        kwargs["electrostatics_collection"] = interchange["Electrostatics"]
+
+    return collection_class.create(**kwargs)
+
+
 def _plugins(
     interchange: Interchange,
     force_field: ForceField,
@@ -441,49 +537,7 @@ def _plugins(
         if len(handler_classes) == 0:
             continue
 
-        if len(handler_classes) == 1:
-            handler_class = handler_classes[0]
-            try:
-                collection = collection_class.create(
-                    parameter_handler=force_field[handler_class._TAGNAME],
-                    topology=topology,
-                )
-            except TypeError:
-                tagnames = [x._TAGNAME for x in collection_class.allowed_parameter_handlers()]
-
-                if len(tagnames) > 1:
-                    raise NotImplementedError(
-                        f"Collection {collection} requires multiple handlers, but only one was provided.",
-                    )
-
-                try:
-                    collection = collection_class.create(  # type: ignore[call-arg]
-                        parameter_handler=force_field[handler_class._TAGNAME],
-                        topology=topology,
-                        vdw_collection=interchange[tagnames[0]],
-                        electrostatics_collection=interchange["Electrostatics"],
-                    )
-                except TypeError:
-                    collection = collection_class.create(  # type: ignore[call-arg]
-                        parameter_handler=force_field[handler_class._TAGNAME],
-                        topology=topology,
-                        vdw_collection=interchange[tagnames[0]],
-                        electrostatics_collection=interchange["Electrostatics"],
-                    )
-        else:
-            # If this collection takes multiple handlers, pass it a list. Consider making this type the default.
-            handlers: list[ParameterHandler] = [
-                force_field[handler_class._TAGNAME] for handler_class in _PLUGIN_CLASS_MAPPING.keys()
-            ]
-
-            collection = collection_class.create(
-                parameter_handler=handlers,
-                topology=topology,
-            )
+        collection = _build_collection(collection_class, handler_classes, interchange, force_field, topology)
 
         # No matter if this collection takes one or multiple handlers, key it by its own name
-        interchange.collections.update(
-            {
-                collection.type: collection,
-            },
-        )
+        interchange.collections[collection.type] = collection

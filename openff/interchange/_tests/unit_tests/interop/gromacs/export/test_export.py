@@ -3,11 +3,10 @@ from importlib import resources
 from math import exp
 
 import numpy
-import parmed
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
-from openff.units.openmm import ensure_quantity
+from openff.units import ensure_quantity
 from openff.utilities import (
     get_data_file_path,
     has_package,
@@ -114,10 +113,13 @@ class TestGROMACSGROFile(_NeedsGROMACS):
         assert numpy.allclose(box, openmm_box)
 
     @skip_if_missing("intermol")
+    @pytest.mark.skip("don't run parmed tests")
     def test_load_gro_nonstandard_precision(self):
+        pytest.importorskip("intermol")
+
         file = self._INTERMOL_PATH / "lj3_bulk/lj3_bulk.gro"
 
-        coords = _read_coordinates(file).m_as(unit.nanometer)
+        coords = _read_coordinates(file).m_as("nanometer")
 
         # OpenMM seems to assume a precision of 3. Use InterMol instead here.
         from intermol.gromacs.grofile_parser import GromacsGroParser
@@ -193,7 +195,7 @@ class TestGROMACSGROFile(_NeedsGROMACS):
             out.topology.hierarchy_iterator("residues"),
         ):
             assert found_residue.name == original_residue.residue_name
-            found_index = [*original_residue.atoms][0].metadata["residue_number"]
+            found_index = next(iter(original_residue.atoms)).metadata["residue_number"]
             assert str(found_residue.resSeq) == found_index
 
     def test_fill_in_residue_ids(self, sage):
@@ -221,7 +223,7 @@ class TestGROMACSGROFile(_NeedsGROMACS):
 
         topology = Topology.from_molecules(2 * [water])
 
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         # Can't just update atoms' metadata, neeed to create these scheme/element objects
         # and need to also modify the residue objects themselves
@@ -315,19 +317,20 @@ class TestGROMACS(_NeedsGROMACS):
         get_gromacs_energies(out).compare(
             get_gromacs_energies(converted),
             tolerances={
-                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
-                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+                "Bond": Quantity(0.002 * molecule.n_bonds, "kilojoule / mol"),
+                "Electrostatics": Quantity(0.05, "kilojoule / mol"),
             },
         )
 
-    @skip_if_missing("parmed")
     def test_num_impropers(self, sage):
+        parmed = pytest.importorskip("parmed")
+
         out = Interchange.from_smirnoff(
             sage,
             MoleculeWithConformer.from_smiles("CC1=CC=CC=C1").to_topology(),
         )
 
-        out.box = unit.Quantity(4 * numpy.eye(3), units=unit.nanometer)
+        out.box = Quantity(4 * numpy.eye(3), "nanometer")
         out.to_top("tmp.top")
 
         # Sanity check; toluene should have some improper(s)
@@ -371,8 +374,9 @@ class TestGROMACS(_NeedsGROMACS):
     @skip_if_missing("openmm")
     def test_residue_info(self, sage):
         """Test that residue information is passed through to .top files."""
-        import parmed
         from openff.units.openmm import from_openmm
+
+        parmed = pytest.importorskip("parmed")
 
         protein = get_protein("MainChain_HIE")
 
@@ -417,12 +421,11 @@ class TestGROMACS(_NeedsGROMACS):
         top = Topology.from_molecules([mol, mol])
 
         # http://www.sklogwiki.org/SklogWiki/index.php/Argon#Buckingham_potential
-        erg_mol = unit.erg / unit.mol * float(unit.avogadro_number)
-        A = 1.69e-8 * erg_mol
-        B = 1 / (0.273 * unit.angstrom)
-        C = 102e-12 * erg_mol * unit.angstrom**6
+        A = Quantity(1.69e-8, "erg / mol * avogadro_number")
+        B = Quantity(1 / 0.273, "1/angstrom")
+        C = Quantity(102e-12, "erg/mol * avogadro_number * angstrom**6")
 
-        r = 0.3 * unit.nanometer
+        r = Quantity(0.3, "nanometer")
 
         buck = BuckinghamvdWCollection()
         coul = SMIRNOFFElectrostaticsCollection(method="pme")
@@ -436,13 +439,13 @@ class TestGROMACS(_NeedsGROMACS):
 
             coul.key_map.update({top_key: pot_key})
             coul.potentials.update(
-                {pot_key: Potential(parameters={"charge": 0 * unit.elementary_charge})},
+                {pot_key: Potential(parameters={"charge": Quantity(0, "elementary_charge")})},
             )
 
         for molecule in top.molecules:
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 molecule.n_atoms * [0],
-                unit.elementary_charge,
+                "elementary_charge",
             )
 
         buck.potentials[pot_key] = pot
@@ -451,8 +454,8 @@ class TestGROMACS(_NeedsGROMACS):
         out.collections["Buckingham-6"] = buck
         out.collections["Electrostatics"] = coul
         out.topology = top
-        out.box = [10, 10, 10] * unit.nanometer
-        out.positions = [[0, 0, 0], [0.3, 0, 0]] * unit.nanometer
+        out.box = Quantity([10, 10, 10], "nanometer")
+        out.positions = Quantity([[0, 0, 0], [0.3, 0, 0]], "nanometer")
         out.to_gro("out.gro")
         out.to_top("out.top")
 
@@ -460,7 +463,7 @@ class TestGROMACS(_NeedsGROMACS):
         by_hand = A * exp(-B * r) - C * r**-6
 
         resid = omm_energies.energies["vdW"] - by_hand
-        assert resid < 1e-5 * unit.kilojoule / unit.mol
+        assert resid < Quantity(1e-5, "kilojoule / mol")
 
         # TODO: Add back comparison to GROMACS energies once GROMACS 2020+
         # supports Buckingham potentials
@@ -473,21 +476,21 @@ class TestGROMACS(_NeedsGROMACS):
 
         for index, molecule in enumerate(molecules):
             molecule.generate_conformers(n_conformers=1)
-            molecule.conformers[0] += unit.Quantity(3 * [5 * index], unit.angstrom)
+            molecule.conformers[0] += Quantity(3 * [5 * index], "angstrom")
 
         topology = Topology.from_molecules(molecules)
-        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         out = Interchange.from_smirnoff(sage_unconstrained, topology)
 
         get_gromacs_energies(out).compare(
             get_openmm_energies(out, combine_nonbonded_forces=True),
-            {"Nonbonded": 0.5 * unit.kilojoule_per_mole},
+            {"Nonbonded": Quantity(0.5, "kilojoule / mole")},
         )
 
     @pytest.mark.parametrize("name", ["MOL0", "MOL999", ""])
     def test_exisiting_mol0_names_overwritten(self, name, sage, ethanol, cyclohexane):
-        pytest.importorskip("parmed")
+        parmed = pytest.importorskip("parmed")
 
         ethanol.name = name
         cyclohexane.name = name
@@ -564,13 +567,13 @@ class TestGROMACS(_NeedsGROMACS):
         get_gromacs_energies(combined).compare(
             get_gromacs_energies(converted_combined),
             tolerances={
-                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+                "Electrostatics": Quantity(0.05, "kilojoule / mole"),
             },
         )
         get_gromacs_energies(combined).compare(
             get_gromacs_energies(combined_from_converted),
             tolerances={
-                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+                "Electrostatics": Quantity(0.05, "kilojoule / mole"),
             },
         )
 
@@ -621,10 +624,10 @@ class TestSettles(_NeedsGROMACS):
 
         settles = system.molecule_types["WAT"].settles[0]
 
-        assert settles.oxygen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
+        assert settles.oxygen_hydrogen_distance.m_as("angstrom") == pytest.approx(
             0.9572,
         )
-        assert settles.hydrogen_hydrogen_distance.m_as(unit.angstrom) == pytest.approx(
+        assert settles.hydrogen_hydrogen_distance.m_as("angstrom") == pytest.approx(
             1.513900654525,
         )
 
@@ -691,8 +694,8 @@ class TestMergeAtomTypes(_NeedsGROMACS):
         get_gromacs_energies(out).compare(
             get_gromacs_energies(out, _merge_atom_types=True),
             tolerances={
-                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
-                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+                "Bond": Quantity(0.002 * molecule.n_bonds, "kilojoule / mol"),
+                "Electrostatics": Quantity(0.05, "kilojoule / mol"),
             },
         )
 
@@ -740,8 +743,8 @@ class TestMergeAtomTypes(_NeedsGROMACS):
         get_gromacs_energies(converted_merged).compare(
             get_gromacs_energies(converted),
             tolerances={
-                "Bond": 0.002 * molecule.n_bonds * unit.kilojoule / unit.mol,
-                "Electrostatics": 0.05 * unit.kilojoule / unit.mol,
+                "Bond": Quantity(0.002 * molecule.n_bonds, "kilojoule / mol"),
+                "Electrostatics": Quantity(0.05, "kilojoule / mol"),
             },
         )
 
@@ -759,7 +762,7 @@ class TestMergeAtomTypes(_NeedsGROMACS):
         molecule_list,
         sage,
     ):
-        pytest.importorskip("parmed")
+        parmed = pytest.importorskip("parmed")
 
         topology = Topology.from_molecules(
             [Molecule.from_smiles(smi) for smi in molecule_list],
@@ -786,11 +789,11 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
         return VirtualSiteHandler.VirtualSiteBondChargeType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
+            distance=Quantity(1.4 * "angstrom"),
             type="BondCharge",
             match="once",
-            charge_increment1=0.1 * unit.elementary_charge,
-            charge_increment2=0.2 * unit.elementary_charge,
+            charge_increment1=Quantity(0.1, "elementary_charge"),
+            charge_increment2=Quantity(0.2, "elementary_charge"),
         )
 
     @pytest.fixture
@@ -801,14 +804,14 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
         carbonyl_type = VirtualSiteHandler.VirtualSiteType(
             name="EP",
             smirks="[O:1]=[C:2]-[*:3]",
-            distance=0.3 * unit.angstrom,
+            distance=Quantity(0.3, "angstrom"),
             type="MonovalentLonePair",
             match="all_permutations",
-            outOfPlaneAngle=0.0 * unit.degree,
-            inPlaneAngle=120.0 * unit.degree,
-            charge_increment1=0.05 * unit.elementary_charge,
-            charge_increment2=0.1 * unit.elementary_charge,
-            charge_increment3=0.15 * unit.elementary_charge,
+            outOfPlaneAngle=Quantity(0.0, "degree"),
+            inPlaneAngle=Quantity(120.0, "degree"),
+            charge_increment1=Quantity(0.05, "elementary_charge"),
+            charge_increment2=Quantity(0.1, "elementary_charge"),
+            charge_increment3=Quantity(0.15, "elementary_charge"),
         )
 
         virtual_site_handler.add_parameter(parameter=carbonyl_type)
@@ -820,6 +823,8 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, sage_with_sigma_hole):
         """Test that a single-molecule sigma hole example runs"""
+        parmed = pytest.importorskip("parmed")
+
         molecule = MoleculeWithConformer.from_smiles("CCl", name="Chloromethane")
 
         out = Interchange.from_smirnoff(

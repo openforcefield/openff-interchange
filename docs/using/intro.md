@@ -1,3 +1,4 @@
+<!-- markdownlint-configure-file { "table-column-style": { "style": "aligned"} } -->
 # Introduction
 
 OpenFF Interchange is a Python package developed by the Open Force Field
@@ -96,8 +97,7 @@ field modification.
 Converting in the reverse direction is a long term goal of the project.
 
 (interchange_units)=
-
-## Units in Interchange
+## Units in Interchange <!-- markdownlint-disable-line -->
 
 As a best practice, Interchange always associates explicit units with numerical
 values. Units are tagged using the [`openff-units`] package, which provides
@@ -115,7 +115,7 @@ commonly used in molecular mechanics software. This forms a coherent set of
 units compatible with SI:
 
 | Quantity        | Unit            | Symbol |
-|-----------------|-----------------|--------|
+| --------------- |---------------- |------- |
 | Length          | nanometre       | nm     |
 | Time            | picosecond      | ps     |
 | Temperature     | Kelvin          | K      |

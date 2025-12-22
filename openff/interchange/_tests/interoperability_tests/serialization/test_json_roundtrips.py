@@ -30,3 +30,41 @@ class TestJSONRoundtrips:
             get_openmm_energies(interchange2),
             tolerances={key: tolerance for key in ["Bond", "Angle", "Torsion", "Nonbonded"]},
         )
+
+    def test_charge_increments(self, sage_charge_increment_handler, carbonyl_planar):
+        """Test JSON roundtrip when charges are assigned with a ChargeIncrementModelHandler."""
+        pytest.importorskip("openmm")
+
+        out = sage_charge_increment_handler.create_interchange(carbonyl_planar.to_topology())
+
+        roundtripped = Interchange.model_validate_json(out.model_dump_json())
+
+        get_openmm_energies(
+            out,
+            combine_nonbonded_forces=False,
+        ).compare(
+            get_openmm_energies(
+                roundtripped,
+                combine_nonbonded_forces=False,
+            ),
+        )
+
+    def test_nagl_charges(self, sage_230, carbonyl_planar):
+        """Test JSON roundtrip when charges are assigned with a ChargeIncrementModelHandler."""
+
+        pytest.importorskip("openmm")
+        pytest.importorskip("openff.nagl")
+
+        out = sage_230.create_interchange(carbonyl_planar.to_topology())
+
+        roundtripped = Interchange.model_validate_json(out.model_dump_json())
+
+        get_openmm_energies(
+            out,
+            combine_nonbonded_forces=False,
+        ).compare(
+            get_openmm_energies(
+                roundtripped,
+                combine_nonbonded_forces=False,
+            ),
+        )

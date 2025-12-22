@@ -3,7 +3,7 @@ import math
 from typing import Literal
 
 import numpy
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
     VirtualSiteHandler,
@@ -17,7 +17,8 @@ from openff.interchange.components.toolkit import (
     _lookup_virtual_site_parameter,
     _validated_list_to_array,
 )
-from openff.interchange.models import PotentialKey, VirtualSiteKey
+from openff.interchange.interop._virtual_sites import _ThreeParticleAverageSite
+from openff.interchange.models import BaseVirtualSiteKey, ImportedVirtualSiteKey, PotentialKey, SMIRNOFFVirtualSiteKey
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
@@ -38,14 +39,14 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
     A handler which stores the information necessary to construct virtual sites (virtual particles).
     """
 
-    key_map: dict[VirtualSiteKey, PotentialKey] = Field(
+    key_map: dict[BaseVirtualSiteKey, PotentialKey] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects and PotentialKey objects.",
     )  # type: ignore[assignment]
 
     type: Literal["VirtualSites"] = "VirtualSites"
     expression: Literal[""] = ""
-    virtual_site_key_topology_index_map: dict[VirtualSiteKey, int] = Field(
+    virtual_site_key_topology_index_map: dict[BaseVirtualSiteKey, int] = Field(
         dict(),
         description="A mapping between VirtualSiteKey objects (stored analogously to TopologyKey objects"
         "in other handlers) and topology indices describing the associated virtual site",
@@ -107,7 +108,7 @@ class SMIRNOFFVirtualSiteCollection(SMIRNOFFCollection):
                 for orientation in orientations:
                     orientation_indices = orientation.topology_atom_indices
 
-                    virtual_site_key = VirtualSiteKey(
+                    virtual_site_key = SMIRNOFFVirtualSiteKey(
                         parent_atom_index=parent_index,
                         orientation_atom_indices=orientation_indices,
                         type=parameter.type,
@@ -216,7 +217,7 @@ class _BondChargeVirtualSite(_VirtualSite):
     def local_frame_coordinates(self) -> Quantity:
         return Quantity(
             numpy.array(
-                [self.distance.m_as(unit.nanometer), 180.0, 0.0],
+                [self.distance.m_as("nanometer"), 180.0, 0.0],
             ),
         )
 
@@ -238,8 +239,8 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_positions(self) -> Quantity:
-        theta = self.in_plane_angle.m_as(unit.radian)
-        phi = self.out_of_plane_angle.m_as(unit.radian)
+        theta = self.in_plane_angle.m_as("radian")
+        phi = self.out_of_plane_angle.m_as("radian")
 
         distance_unit = self.distance.units
 
@@ -257,9 +258,9 @@ class _MonovalentLonePairVirtualSite(_VirtualSite):
         return Quantity(
             numpy.array(
                 [
-                    self.distance.m_as(unit.nanometer),
-                    self.in_plane_angle.m_as(unit.degree),
-                    self.out_of_plane_angle.m_as(unit.degree),
+                    self.distance.m_as("nanometer"),
+                    self.in_plane_angle.m_as("degree"),
+                    self.out_of_plane_angle.m_as("degree"),
                 ],
             ),
         )
@@ -281,7 +282,7 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
 
     @property
     def local_frame_positions(self) -> Quantity:
-        theta = self.out_of_plane_angle.m_as(unit.radian)
+        theta = self.out_of_plane_angle.m_as("radian")
 
         distance_unit = self.distance.units
 
@@ -299,9 +300,9 @@ class _DivalentLonePairVirtualSite(_VirtualSite):
         return Quantity(
             numpy.array(
                 [
-                    self.distance.m_as(unit.nanometer),
+                    self.distance.m_as("nanometer"),
                     180.0,
-                    self.out_of_plane_angle.m_as(unit.degree),
+                    self.out_of_plane_angle.m_as("degree"),
                 ],
             ),
         )
@@ -332,46 +333,63 @@ class _TrivalentLonePairVirtualSite(_VirtualSite):
     def local_frame_coordinates(self) -> Quantity:
         return Quantity(
             numpy.array(
-                [self.distance.m_as(unit.nanometer), 180.0, 0.0],
+                [self.distance.m_as("nanometer"), 180.0, 0.0],
             ),
         )
 
 
 def _create_virtual_site_object(
-    virtual_site_key: VirtualSiteKey,
+    virtual_site_key: BaseVirtualSiteKey,
     virtual_site_potential,
     # interchange: "Interchange",
     # non_bonded_force: openmm.NonbondedForce,
 ) -> _VirtualSite:
     orientations = virtual_site_key.orientation_atom_indices
 
-    if virtual_site_key.type == "BondCharge":
-        return _BondChargeVirtualSite(
-            type="BondCharge",
-            distance=virtual_site_potential.parameters["distance"],
-            orientations=orientations,
-        )
-    elif virtual_site_key.type == "MonovalentLonePair":
-        return _MonovalentLonePairVirtualSite(
-            type="MonovalentLonePair",
-            distance=virtual_site_potential.parameters["distance"],
-            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
-            in_plane_angle=virtual_site_potential.parameters["inPlaneAngle"],
-            orientations=orientations,
-        )
-    elif virtual_site_key.type == "DivalentLonePair":
-        return _DivalentLonePairVirtualSite(
-            type="DivalentLonePair",
-            distance=virtual_site_potential.parameters["distance"],
-            out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
-            orientations=orientations,
-        )
-    elif virtual_site_key.type == "TrivalentLonePair":
-        return _TrivalentLonePairVirtualSite(
-            type="TrivalentLonePair",
-            distance=virtual_site_potential.parameters["distance"],
-            orientations=orientations,
-        )
+    # this check is basically "is this a SMIRNOFF virtual site?"
+    # see commment at its class definition
+    if isinstance(virtual_site_key, SMIRNOFFVirtualSiteKey):
+        if virtual_site_key.type == "BondCharge":
+            return _BondChargeVirtualSite(
+                type="BondCharge",
+                distance=virtual_site_potential.parameters["distance"],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "MonovalentLonePair":
+            return _MonovalentLonePairVirtualSite(
+                type="MonovalentLonePair",
+                distance=virtual_site_potential.parameters["distance"],
+                out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+                in_plane_angle=virtual_site_potential.parameters["inPlaneAngle"],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "DivalentLonePair":
+            return _DivalentLonePairVirtualSite(
+                type="DivalentLonePair",
+                distance=virtual_site_potential.parameters["distance"],
+                out_of_plane_angle=virtual_site_potential.parameters["outOfPlaneAngle"],
+                orientations=orientations,
+            )
+        elif virtual_site_key.type == "TrivalentLonePair":
+            return _TrivalentLonePairVirtualSite(
+                type="TrivalentLonePair",
+                distance=virtual_site_potential.parameters["distance"],
+                orientations=orientations,
+            )
+
+        else:
+            raise NotImplementedError(virtual_site_key.type)
+
+    # TODO: This case shouldn't be in openff/interchange/smirnoff!
+    elif isinstance(virtual_site_key, ImportedVirtualSiteKey):
+        if virtual_site_key.type == "ThreeParticleAverageSite":
+            return _ThreeParticleAverageSite(  # type: ignore[return-value]
+                particles=virtual_site_key.orientation_atom_indices,
+                weights=virtual_site_potential.parameters["weights"],
+            )
+
+        else:
+            raise NotImplementedError(virtual_site_key.type)
 
     else:
         raise NotImplementedError(virtual_site_key.type)
@@ -403,7 +421,7 @@ def _build_local_coordinate_frames(
         orientation_coordinates = interchange.positions[
             virtual_site_key.orientation_atom_indices,
             :,
-        ].m_as(unit.nanometer)
+        ].m_as("nanometer")
 
         local_frame_weights = virtual_site.local_frame_weights
 
@@ -428,7 +446,7 @@ def _build_local_coordinate_frames(
 
     local_frames = numpy.stack([numpy.vstack(frames) for frames in stacked_frames])
 
-    return Quantity(local_frames, unit.nanometer)
+    return Quantity(local_frames, "nanometer")
 
 
 def _convert_local_coordinates(
@@ -464,28 +482,42 @@ def _generate_positions(
     conformer: _Quantity | None = None,
 ) -> Quantity:
     # TODO: Capture these objects instead of generating them on-the-fly so many times
+    try:
+        local_frame_coordinates = numpy.vstack(
+            [
+                _create_virtual_site_object(
+                    virtual_site_key,
+                    virtual_site_collection.potentials[potential_key],
+                ).local_frame_coordinates
+                for virtual_site_key, potential_key in virtual_site_collection.key_map.items()
+            ],
+        )
 
-    local_frame_coordinates = numpy.vstack(
-        [
-            _create_virtual_site_object(
-                virtual_site_key,
-                virtual_site_collection.potentials[potential_key],
-            ).local_frame_coordinates
-            for virtual_site_key, potential_key in virtual_site_collection.key_map.items()
-        ],
-    )
+        local_coordinate_frames = _build_local_coordinate_frames(
+            interchange,
+            virtual_site_collection,
+        )
 
-    local_coordinate_frames = _build_local_coordinate_frames(
-        interchange,
-        virtual_site_collection,
-    )
+        virtual_site_positions = _convert_local_coordinates(
+            local_frame_coordinates,
+            local_coordinate_frames,
+        )
 
-    virtual_site_positions = _convert_local_coordinates(
-        local_frame_coordinates,
-        local_coordinate_frames,
-    )
+        return Quantity(virtual_site_positions, "nanometer")
 
-    return Quantity(
-        virtual_site_positions,
-        unit.nanometer,
-    )
+    except AttributeError:
+        # Handle case of virtual sites imported from OpenMM
+        # TODO: Handle case of mixed SMIRNOFF and OpenMM virtual sites
+        _virtual_site_positions: list[Quantity] = list()
+
+        for key, val in virtual_site_collection.key_map.items():
+            atom_indices = key.orientation_atom_indices
+            weights = virtual_site_collection.potentials[val].parameters["weights"].m
+
+            assert len(atom_indices) == len(weights)
+
+            _virtual_site_positions.append(
+                sum(interchange.positions[atom_indices[i]] * weights[i] for i in range(len(weights))),
+            )
+
+        return numpy.vstack(_virtual_site_positions)

@@ -2,8 +2,6 @@
 
 A project (and object) for storing, manipulating, and converting molecular mechanics data.
 
-**Please note that this software in an early and experimental state and unsuitable for production.**
-
 ```{toctree}
 ---
 caption: Installation
@@ -33,6 +31,7 @@ using/intro.md
 using/construction.rst
 using/output.md
 using/collections.md
+using/serialization.md
 using/migrating.md
 using/plugins.md
 using/status.md

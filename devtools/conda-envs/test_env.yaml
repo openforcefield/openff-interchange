@@ -4,26 +4,19 @@ channels:
 dependencies:
   # Core
   - python
-  - versioningit
-  - numpy
-  - pydantic =2
+  - numpy =2.2
+  - pydantic >=2,<2.12
   # OpenFF stack
-  - openff-toolkit-base ~=0.16.8
-  - openff-units =0.3
-  - ambertools =24
-  # Needs to be explicitly listed to not be dropped when AmberTools is removed
-  - rdkit
+  - openff-toolkit-base =0.17
+  - openff-units
   # Optional features
-  - openmm =8.2
-  - openff-nagl
-  - openff-nagl-models
+  - openmm
   - nglview
   # Drivers
   - gromacs
-  - panedr
+  - pyedr
   # Testing
   - mdtraj
-  - intermol
   - jax
   - pytest
   - pytest-cov

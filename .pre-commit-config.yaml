@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: check-yaml
   - id: end-of-file-fixer
@@ -8,40 +8,31 @@ repos:
     exclude: '\.(pdb|gro|top|sdf)$'
   - id: debug-statements
 - repo: https://github.com/asottile/add-trailing-comma
-  rev: v3.1.0
+  rev: v4.0.0
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.2
+  rev: v0.14.9
   hooks:
-    - id: ruff
+    - id: ruff-check
       args: ["--fix"]
     - id: ruff-format
-- repo: https://github.com/econchick/interrogate
-  rev: 1.7.0
-  hooks:
-    - id: interrogate
-      args: ["openff/interchange/", "-e", "openff/interchange/_tests/"]
-      pass_filenames: false
 - repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.19.1
+  rev: 1.20.0
   hooks:
   - id: blacken-docs
     files: ^docs/
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.44.0
+  rev: v0.47.0
   hooks:
   - id: markdownlint
     exclude: .github
-    args: ["--disable", "MD013", "MD033", "MD024", "MD046", "--ignore", "docs/using/experimental.md", "--ignore", "docs/using/status.md", "--"]
 - repo: https://github.com/kynan/nbstripout
-  rev: 0.8.1
+  rev: 0.8.2
   hooks:
     - id: nbstripout
       files: ^examples
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.19.1
+- repo: https://github.com/tox-dev/pyproject-fmt
+  rev: v2.11.1
   hooks:
-  - id: pyupgrade
-    args:
-      - --py310-plus
+    - id: pyproject-fmt

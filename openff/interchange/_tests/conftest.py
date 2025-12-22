@@ -1,7 +1,7 @@
 """Pytest configuration."""
 
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondType,
     ChargeIncrementModelHandler,
@@ -13,19 +13,26 @@ from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file
 
 
 @pytest.fixture
-def sage():
+def sage() -> ForceField:
     return ForceField("openff-2.0.0.offxml")
 
 
 @pytest.fixture
-def sage_unconstrained():
+def sage_unconstrained() -> ForceField:
     return ForceField("openff_unconstrained-2.0.0.offxml")
 
 
 @pytest.fixture
-def sage_no_switch(sage):
+def sage_no_switch(sage) -> ForceField:
     sage["vdW"].switch_width = Quantity(0.0, "angstrom")
     return sage
+
+
+@pytest.fixture
+def sage_with_tip4p() -> ForceField:
+    # re-build off of existing fixtures if this gets implemented
+    # https://github.com/openforcefield/openff-toolkit/issues/1948
+    return ForceField("openff-2.0.0.offxml", "tip4p_fb.offxml")
 
 
 @pytest.fixture
@@ -46,7 +53,7 @@ def sage_with_bond_charge(sage):
             type="BondCharge",
             match="all_permutations",
             distance="0.8 * angstrom ** 1",
-            charge_increment1="0.0 * elementary_charge ** 1",
+            charge_increment1="0.123 * elementary_charge ** 1",
             charge_increment2="0.0 * elementary_charge ** 1",
         ),
     )
@@ -82,11 +89,11 @@ def sage_with_sigma_hole(sage):
         parameter=VirtualSiteType(
             name="EP",
             smirks="[#6:1]-[#17:2]",
-            distance=1.4 * unit.angstrom,
+            distance=Quantity(1.4, "angstrom"),
             type="BondCharge",
             match="all_permutations",
-            charge_increment1=0.1 * unit.elementary_charge,
-            charge_increment2=0.2 * unit.elementary_charge,
+            charge_increment1=Quantity(0.1, "elementary_charge"),
+            charge_increment2=Quantity(0.2, "elementary_charge"),
         ),
     )
 
@@ -177,6 +184,19 @@ def sage_with_off_center_hydrogen(sage):
         },
     )
 
+    return sage
+
+
+@pytest.fixture
+def sage_nagl(sage):
+    sage.get_parameter_handler(
+        "NAGLCharges",
+        {
+            "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            "version": "0.3",
+        },
+    )
+    sage.deregister_parameter_handler("ToolkitAM1BCC")
     return sage
 
 
@@ -294,6 +314,7 @@ def ff14sb() -> ForceField:
 
 @pytest.fixture
 def ligand():
+    pytest.importorskip("openeye")
     return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O", allow_undefined_stereo=True)
 
 
@@ -305,7 +326,7 @@ def caffeine():
 @pytest.fixture
 def basic_top() -> Topology:
     topology = MoleculeWithConformer.from_smiles("C").to_topology()
-    topology.box_vectors = Quantity([5, 5, 5], unit.nanometer)
+    topology.box_vectors = Quantity([5, 5, 5], "nanometer")
     return topology
 
 
@@ -332,7 +353,7 @@ def water_tip4p() -> Molecule:
                 [-0.7569503, -0.5858823, 0.0],
                 [0.7569503, -0.5858823, 0.0],
             ],
-            unit.angstrom,
+            "angstrom",
         ),
     ]
 
@@ -361,7 +382,7 @@ def ammonia_tetrahedral() -> Molecule:
                 [0.4427786006, -0.2556383443, 0],
                 [-0.4427786006, 0.2556383443, 0],
             ],
-            unit.angstrom,
+            "angstrom",
         ),
     ]
 
@@ -392,7 +413,7 @@ def ethanol() -> Molecule:
 
     ethanol.partial_charges = Quantity(
         [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4],
-        unit.elementary_charge,
+        "elementary_charge",
     )
 
     return ethanol
@@ -422,7 +443,7 @@ def reversed_ethanol() -> Molecule:
 
     ethanol.partial_charges = Quantity(
         [0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4],
-        unit.elementary_charge,
+        "elementary_charge",
     )
 
     return ethanol
@@ -582,7 +603,6 @@ def hydrogen_cyanide_reversed():
 def hexane_diol():
     molecule = Molecule.from_smiles("OCCCCCCO")
     molecule.assign_partial_charges(partial_charge_method="gasteiger")
-    molecule.partial_charges.m
     return molecule
 
 
@@ -608,7 +628,7 @@ def methane_with_conformer(methane):
     methane.add_conformer(
         Quantity(
             _rng.random((methane.n_atoms, 3)),
-            unit.angstrom,
+            "angstrom",
         ),
     )
     return methane
@@ -619,7 +639,7 @@ def ethanol_with_conformer(ethanol):
     ethanol.add_conformer(
         Quantity(
             _rng.random((ethanol.n_atoms, 3)),
-            unit.angstrom,
+            "angstrom",
         ),
     )
     return ethanol
@@ -639,6 +659,21 @@ def no_charges() -> ForceField:
     )
 
     return sage
+
+
+@pytest.fixture
+def sage_charge_increment_handler(sage):
+    sage.deregister_parameter_handler("ToolkitAM1BCC")
+    sage.register_parameter_handler(
+        ChargeIncrementModelHandler(version=0.3, partial_charge_method="gasteiger"),
+    )
+
+    return sage
+
+
+@pytest.fixture
+def sage_230():
+    return ForceField("openff-2.3.0-rc1.offxml")
 
 
 @pytest.fixture

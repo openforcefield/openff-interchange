@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import Molecule, Topology, unit
+from openff.toolkit import Molecule, Quantity, Topology
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer
@@ -28,12 +28,12 @@ class TestToInterchange:
         ):
             molecule = Molecule.from_mapped_smiles(smiles)
             molecule.generate_conformers(n_conformers=1)
-            molecule.conformers[0] += numpy.array([index, 0, 0]) * unit.nanometer
+            molecule.conformers[0] += Quantity(numpy.array([index, 0, 0]), "nanometer")
             molecule.name = name
 
             topology.add_molecule(molecule)
 
-        topology.box_vectors = [4, 4, 4] * unit.nanometer
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         return sage_unconstrained.create_interchange(topology)
 
@@ -63,7 +63,7 @@ class TestConvertTopology:
         molecule = Molecule.from_smiles("CCO")
         molecule.generate_conformers(n_conformers=1)
         topology = Topology.from_molecules([molecule])
-        topology.box_vectors = [4, 4, 4] * unit.nanometer
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         return _convert(sage_unconstrained.create_interchange(topology))
 
@@ -71,7 +71,7 @@ class TestConvertTopology:
     def water_dimer(self, sage_unconstrained, water):
         water.name = "WAT"
         topology = Topology.from_molecules([water, water])
-        topology.box_vectors = [4, 4, 4] * unit.nanometer
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         return _convert(sage_unconstrained.create_interchange(topology))
 

@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm }}, OpenEye ${{ matrix.openeye }}, RDKit ${{ matrix.rdkit }}, AmberTools ${{ matrix.ambertools }}, NAGL ${{ matrix.nagl }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,6 +26,7 @@ jobs:
         environment:
           - py311
           - py312
+          - py313
         openeye:
           - true
         openmm:
@@ -36,9 +37,7 @@ jobs:
       COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v6
 
     - name: Set up virtual environment
       uses: prefix-dev/setup-pixi@v0.8.4
@@ -91,7 +90,6 @@ jobs:
         pixi run -e ${{ matrix.environment }} python devtools/scripts/molecule-regressions.py
 
     - name: Run mypy
-      if: ${{ matrix.python-version == '3.11' }}
       run: |
         # As of 01/23, JAX with mypy is too slow to use without a pre-built cache
         # https://github.com/openforcefield/openff-interchange/pull/578#issuecomment-1369979875

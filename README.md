@@ -1,7 +1,7 @@
 # OpenFF Interchange
 
 | **Test status** | [![CI Status](https://github.com/openforcefield/openff-interchange/workflows/ci/badge.svg)](https://github.com/openforcefield/openff-interchange/actions?query=branch%3Amain+workflow%3Aci) | [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/openforcefield/openff-interchange/main.svg)](https://results.pre-commit.ci/latest/github/openforcefield/openff-interchange/main) |
-|:-|:-|:-|
+| :-- | :-- | :-- |
 | **Code quality** | [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit) | [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openff-interchange.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openff-interchange) |
 | **Latest release** | ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/openforcefield/openff-interchange?include_prereleases) | |
 | **User support** | [![Documentation Status](https://readthedocs.org/projects/openff-interchange/badge/?version=latest)](https://openff-interchange.readthedocs.io/en/latest/?badge=latest) | [![Discussions](https://img.shields.io/badge/Discussions-GitHub-blue?logo=github)](https://github.com/openforcefield/discussions/discussions) |
@@ -14,7 +14,7 @@ Documentation for Interchange, including examples, a brief user guide, release h
 
 ## How to cite
 
-Please cite Interchange using the [Zenodo record](https://doi.org/10.5281/zenodo.10068101) of the [latest release](https://zenodo.org/doi/10.5281/zenodo.8147764) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/record/8147764/export/hx).
+Please cite Interchange using the [Zenodo record](https://doi.org/10.5281/zenodo.10068101) of the [latest release](https://zenodo.org/doi/10.5281/zenodo.8147764) or the version that was used. The BibTeX reference of the latest release can be found [at this link](https://zenodo.org/record/8147764/export/hx).
 
 ## Installation
 
@@ -28,15 +28,11 @@ conda install openff-interchange -c conda-forge
 
 ## Getting started
 
-The `Iterchange` object serves primarily as a container object for parametrized data. It can currently take in [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) or [Foyer](https://foyer.mosdef.org/en/stable/) force fields
+The `Interchange` object serves primarily as a container object for parametrized data. It can currently take in [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) or [Foyer](https://foyer.mosdef.org/en/stable/) force fields
 and [chemical topologies](https://docs.openforcefield.org/projects/toolkit/en/stable/topology.html) prepared via the [OpenFF Toolkit](https://open-forcefield-toolkit.readthedocs.io/). The resulting object stores parametrized data and provides APIs for export to common formats.
 
 ```python3
-from openff.toolkit import ForceField, Molecule
-from openff.units import unit
-
-from openff.interchange import Interchange
-
+from openff.toolkit import ForceField, Molecule, Quantity
 
 # Use the OpenFF Toolkit to generate a molecule object from a SMILES pattern
 molecule = Molecule.from_smiles("CCO")
@@ -48,13 +44,13 @@ molecule.generate_conformers(n_conformers=1)
 topology = molecule.to_topology()
 
 # Define periodicity via box vectors
-topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
 # Load OpenFF 2.0.0 "Sage"
 sage = ForceField("openff-2.0.0.offxml")
 
-# Create an Interchange object
-out = Interchange.from_smirnoff(force_field=sage, topology=topology)
+# Create an Interchange object - can also use Interchange.from_smirnoff()
+out = sage.create_interchange(force_field=sage, topology=topology)
 
 # Convert the Interchnage object to an OpenMM System
 system = out.to_openmm()
@@ -70,8 +66,6 @@ json_blob = out.json()
 For more information, please consult the [full documentation](https://openff-interchange.readthedocs.io/).
 
 For more examples specific to Interchange, navigate to the `examples/` directory.
-
-**Please note that this software in an early and experimental state without a stable API or guarantees of long-term stability.**
 
 ## Copyright
 

@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from typing import Literal
 
-from openff.toolkit import Quantity, Topology, unit
+from openff.toolkit import Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
 
 # TODO: Move build_dimension_type functionality here
@@ -40,8 +40,8 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
     solvent_dielectric: _DimensionlessQuantity = Quantity(78.5, "dimensionless")
     solute_dielectric: _DimensionlessQuantity = Quantity(1.0, "dimensionless")
     sa_model: str | None = "ACE"
-    surface_area_penalty: _KcalMolA2 = 5.4 * kcal_mol_a2
-    solvent_radius: _LengthQuantity = 1.4 * unit.angstrom
+    surface_area_penalty: _KcalMolA2 = Quantity(5.4, kcal_mol_a2)
+    solvent_radius: _LengthQuantity = Quantity(1.4, "angstrom")
 
     @classmethod
     def allowed_parameter_handlers(cls):
@@ -75,10 +75,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
             potential = Potential(
                 parameters={
                     "radius": force_field_parameters.radius,
-                    "scale": Quantity(
-                        force_field_parameters.scale,
-                        unit.dimensionless,
-                    ),
+                    "scale": Quantity(force_field_parameters.scale, "dimensionless"),
                 },
             )
 

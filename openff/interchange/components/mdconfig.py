@@ -5,12 +5,13 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from pydantic import Field
 
 from openff.interchange._annotations import _DistanceQuantity
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
+    NonperiodicNoCutoffNotSupportedError,
     UnsupportedCutoffMethodError,
     UnsupportedExportError,
 )
@@ -48,7 +49,7 @@ class MDConfig(_BaseModel):
         description="The method used to calculate the vdW interactions.",
     )
     vdw_cutoff: _DistanceQuantity = Field(
-        Quantity(9.0, unit.angstrom),
+        Quantity(9.0, "angstrom"),
         description="The distance at which pairwise interactions are truncated",
     )
     mixing_rule: str = Field(
@@ -61,7 +62,7 @@ class MDConfig(_BaseModel):
         description="Whether or not to use a switching function for the vdw interactions",
     )
     switching_distance: _DistanceQuantity = Field(
-        Quantity(0.0, unit.angstrom),
+        Quantity(0.0, "angstrom"),
         description="The distance at which the switching function is applied",
     )
     coul_method: str = Field(
@@ -69,7 +70,7 @@ class MDConfig(_BaseModel):
         description="The method used to compute pairwise electrostatic interactions",
     )
     coul_cutoff: _DistanceQuantity = Field(
-        Quantity(9.0, unit.angstrom),
+        Quantity(9.0, "angstrom"),
         description=(
             "The distance at which electrostatic interactions are truncated or transition from short- to long-range."
         ),
@@ -115,7 +116,7 @@ class MDConfig(_BaseModel):
         """Attempt to apply these settings to an Interchange object."""
         if self.periodic:
             if interchange.box is None:
-                interchange.box = [10, 10, 10] * unit.nanometer
+                interchange.box = Quantity([10, 10, 10], "nanometer")
         else:
             interchange.box = None
 
@@ -133,7 +134,7 @@ class MDConfig(_BaseModel):
             if self.switching_function:
                 vdw_collection.switch_width = self.vdw_cutoff - self.switching_distance
             else:
-                vdw_collection.switch_width = 0.0 * unit.angstrom
+                vdw_collection.switch_width = Quantity(0.0, "angstrom")
 
         if "Electrostatics" in interchange.collections:
             electrostatics = interchange["Electrostatics"]
@@ -144,7 +145,14 @@ class MDConfig(_BaseModel):
             electrostatics.cutoff = self.coul_cutoff
 
     def write_mdp_file(self, mdp_file: str = "auto_generated.mdp") -> None:
-        """Write a GROMACS `.mdp` file for running single-point energies."""
+        """
+        Write a GROMACS `.mdp` file for running single-point energies.
+
+        Parameters
+        ----------
+        mdp_file
+            The name of the file to write the input to, defaults to `auto_generated.mdp`.
+        """
         # Construct the MDP file in memory so nothing is written to disk if an
         # error is encountered.
         with StringIO() as mdp:
@@ -157,7 +165,7 @@ class MDConfig(_BaseModel):
 
             mdp.write(f"constraints              = {self.constraints}\n")
 
-            coul_cutoff = round(self.coul_cutoff.m_as(unit.nanometer), 4)
+            coul_cutoff = round(self.coul_cutoff.m_as("nanometer"), 4)
 
             if self.coul_method == "cutoff":
                 mdp.write("coulombtype              = Cut-off\n")
@@ -195,12 +203,12 @@ class MDConfig(_BaseModel):
                     f"vdW method {self.vdw_method} not supported",
                 )
 
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.nanometer), 4)
+            vdw_cutoff = round(self.vdw_cutoff.m_as("nanometer"), 4)
             mdp.write(f"rvdw                     = {vdw_cutoff}\n")
 
             if self.switching_function and self.vdw_method == "cutoff":
                 mdp.write("vdw-modifier             = Potential-switch\n")
-                distance = round(self.switching_distance.m_as(unit.nanometer), 4)
+                distance = round(self.switching_distance.m_as("nanometer"), 4)
                 mdp.write(f"rvdw-switch              = {distance}\n")
             else:
                 mdp.write("vdw-modifier             = None\n")
@@ -215,7 +223,18 @@ class MDConfig(_BaseModel):
         input_file: str = "run.in",
         data_file: str = "out.lmp",
     ) -> None:
-        """Write a LAMMPS input file for running single-point energies."""
+        """
+        Write a LAMMPS input file for running single-point energies.
+
+        Parameters
+        ----------
+        interchange
+            The `Interchange` used when preparing this LAMMPS input.
+        input_file
+            The name of the file to write the input to, defaults to `run.in`.
+        data_file
+            The name of the file to write the data to, defaults to `out.lmp`.
+        """
         # TODO: Get constrained angles
         # TODO: Process rigid water
 
@@ -287,14 +306,14 @@ class MDConfig(_BaseModel):
             )
 
             if len(interchange["Bonds"].key_map) > 0:
-                lmp.write("bond_style hybrid harmonic\n")
+                lmp.write("bond_style harmonic\n")
 
             if len(interchange["Angles"].key_map) > 0:
-                lmp.write("angle_style hybrid harmonic\n")
+                lmp.write("angle_style harmonic\n")
 
             try:
                 if len(interchange["ProperTorsions"].key_map) > 0:
-                    lmp.write("dihedral_style hybrid fourier\n")
+                    lmp.write("dihedral_style fourier\n")
             except LookupError:
                 # no torsions here
                 pass
@@ -334,8 +353,8 @@ class MDConfig(_BaseModel):
                 "\n",
             )
 
-            vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
-            coul_cutoff = round(self.coul_cutoff.m_as(unit.angstrom), 4)
+            vdw_cutoff = round(self.vdw_cutoff.m_as("angstrom"), 4)
+            coul_cutoff = round(self.coul_cutoff.m_as("angstrom"), 4)
 
             if self.coul_method == _PME:
                 lmp.write(f"pair_style lj/cut/coul/long {vdw_cutoff} {coul_cutoff}\n")
@@ -389,8 +408,19 @@ class MDConfig(_BaseModel):
             # No errors, safe to write to disk!
             Path(input_file).write_text(lmp.getvalue())
 
-    def write_sander_input_file(self, input_file: str = "run.in") -> None:
-        """Write a Sander input file for running single-point energies."""
+    def write_sander_input_file(
+        self,
+        input_file: str = "run.in",
+    ) -> None:
+        """
+        Write a Sander input file for running single-point energies.
+
+        Parameters
+        ----------
+        input_file
+            The name of the file to write the input to, defaults to `run.in`.
+
+        """
         # Construct the file in memory so nothing is written to disk if an
         # error is encountered.
         with StringIO() as sander:
@@ -426,10 +456,10 @@ class MDConfig(_BaseModel):
                 )
 
             if self.vdw_method == "cutoff":
-                vdw_cutoff = round(self.vdw_cutoff.m_as(unit.angstrom), 4)
+                vdw_cutoff = round(self.vdw_cutoff.m_as("angstrom"), 4)
                 sander.write(f"cut={vdw_cutoff},\n")
             else:
-                raise UnsupportedExportError(
+                raise NonperiodicNoCutoffNotSupportedError(
                     f"vdW method {self.vdw_method} not supported",
                 )
 
@@ -478,15 +508,28 @@ def _infer_constraints(interchange: "Interchange") -> str:
 
 
 def get_smirnoff_defaults(periodic: bool = False) -> MDConfig:
-    """Return an `MDConfig` object that matches settings used in SMIRNOFF force fields (through Sage)."""
+    """
+    Return an `MDConfig` object that matches settings used in SMIRNOFF force fields (through Sage).
+
+    Parameters
+    ----------
+    periodic
+        Whether to use periodic boundary conditions.
+
+    Returns
+    -------
+    config
+        An `MDConfig` object with settings that match those used in SMIRNOFF force fields.
+
+    """
     return MDConfig(
         periodic=periodic,
         constraints="h-bonds",
         vdw_method="cutoff",
-        vdw_cutoff=0.9 * unit.nanometer,
+        vdw_cutoff=Quantity(0.9, "nanometer"),
         mixing_rule="lorentz-berthelot",
         switching_function=True,
-        switching_distance=0.8 * unit.nanometer,
+        switching_distance=Quantity(0.8, "nanometer"),
         coul_method="PME" if periodic else "Coulomb",
     )
 
@@ -504,12 +547,12 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
 
     Parameters
     ----------
-    periodic: bool, default=False
+    periodic
         Whether to use periodic boundary conditions.
 
     Returns
     -------
-    config: MDConfig
+    config
         An `MDConfig` object with settings that match those used in InterMol tests.
 
     """
@@ -522,5 +565,5 @@ def get_intermol_defaults(periodic: bool = False) -> MDConfig:
         switching_function=False,
         switching_distance=Quantity(0.0, "angstrom"),
         coul_method="PME" if periodic else "cutoff",
-        coul_cutoff=(0.9 * unit.nanometer if periodic else 2.0 * unit.nanometer),
+        coul_cutoff=Quantity(0.9, "nanometer") if periodic else Quantity(2.0, "nanometer"),
     )

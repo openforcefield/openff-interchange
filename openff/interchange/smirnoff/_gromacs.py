@@ -3,9 +3,9 @@ import re
 from collections import defaultdict
 from typing import TypeAlias
 
-from openff.toolkit import Molecule, Quantity, unit
+from openff.toolkit import Molecule, Quantity
+from openff.toolkit.topology import Atom
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Atom
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange._annotations import PositiveFloat
@@ -36,10 +36,10 @@ from openff.interchange.interop.gromacs.models.models import (
     RyckaertBellemansDihedral,
 )
 from openff.interchange.models import (
+    BaseVirtualSiteKey,
     BondKey,
     LibraryChargeTopologyKey,
     TopologyKey,
-    VirtualSiteKey,
 )
 
 MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
@@ -89,11 +89,11 @@ def _convert(
     ] = interchange.topology.identical_molecule_groups
 
     virtual_site_molecule_map: dict[
-        VirtualSiteKey,
+        BaseVirtualSiteKey,
         int,
     ] = _virtual_site_parent_molecule_mapping(interchange)
 
-    molecule_virtual_site_map: dict[int, list[VirtualSiteKey]] = defaultdict(list)
+    molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]] = defaultdict(list)
 
     for virtual_site_key, molecule_index in virtual_site_molecule_map.items():
         molecule_virtual_site_map[molecule_index].append(virtual_site_key)
@@ -140,7 +140,7 @@ def _convert(
             # when looking up parameters, use the topology index, not the particle index ...
             # ... or so I think is the expectation of the `TopologyKey`s in the vdW collection
             topology_index = interchange.topology.atom_index(atom)
-            key: TopologyKey | VirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(
+            key: TopologyKey | BaseVirtualSiteKey | LibraryChargeTopologyKey = TopologyKey(
                 atom_indices=(topology_index,),
             )
 
@@ -152,10 +152,10 @@ def _convert(
                 bonding_type="",
                 atomic_number=atom.atomic_number,
                 mass=MASSES[atom.atomic_number],
-                charge=Quantity(0.0, unit.elementary_charge),
+                charge=Quantity(0.0, "elementary_charge"),
                 particle_type="A",
-                sigma=vdw_parameters["sigma"].to(unit.nanometer),
-                epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
+                sigma=vdw_parameters["sigma"].to("nanometer"),
+                epsilon=vdw_parameters["epsilon"].to("kilojoule_per_mole"),
             )
 
         for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
@@ -171,20 +171,20 @@ def _convert(
                 name=_atom_atom_type_map[virtual_site_key],
                 bonding_type="",
                 atomic_number=0,
-                mass=Quantity(0.0, unit.dalton),
-                charge=Quantity(0.0, unit.elementary_charge),
+                mass=Quantity(0.0, "dalton"),
+                charge=Quantity(0.0, "elementary_charge"),
                 particle_type="D",
-                sigma=vdw_parameters["sigma"].to(unit.nanometer),
-                epsilon=vdw_parameters["epsilon"].to(unit.kilojoule_per_mole),
+                sigma=vdw_parameters["sigma"].to("nanometer"),
+                epsilon=vdw_parameters["epsilon"].to("kilojoule_per_mole"),
             )
 
-    _partial_charges: dict[int | VirtualSiteKey, float] = dict()
+    _partial_charges: dict[int | BaseVirtualSiteKey, float] = dict()
 
     # Indexed by particle (atom or virtual site) indices
     for key, charge in interchange["Electrostatics"].charges.items():
         if type(key) is TopologyKey:
             _partial_charges[key.atom_indices[0]] = charge
-        elif type(key) is VirtualSiteKey:
+        elif isinstance(key, BaseVirtualSiteKey):
             _partial_charges[key] = charge
         else:
             raise RuntimeError()
@@ -292,7 +292,7 @@ def _convert(
     else:
         system.positions = interchange.positions
 
-    system.molecules = [(key, len(list(group))) for key, group in itertools.groupby(_ordered_molecules)]
+    system.molecules = [(key, len(list(group))) for key, group in itertools.groupby(_ordered_molecules)]  # type: ignore[misc]
 
     system.box = interchange.box
 
@@ -341,8 +341,8 @@ def _create_single_bond(
         atom1=top_key.atom_indices[0] - offset + 1,
         atom2=top_key.atom_indices[1] - offset + 1,
         function=1,
-        length=params["length"].to(unit.nanometer),
-        k=params["k"].to(unit.kilojoule_per_mole / unit.nanometer**2),
+        length=params["length"].to("nanometer"),
+        k=params["k"].to("kilojoule_per_mole / nanometer**2"),
     )
 
 
@@ -388,8 +388,8 @@ def _create_single_angle(
         atom1=top_key.atom_indices[0] - offset + 1,
         atom2=top_key.atom_indices[1] - offset + 1,
         atom3=top_key.atom_indices[2] - offset + 1,
-        angle=params["angle"].to(unit.degree),
-        k=params["k"].to(unit.kilojoule_per_mole / unit.radian**2),
+        angle=params["angle"].to("degree"),
+        k=params["k"].to("kilojoule_per_mole / radian**2"),
     )
 
 
@@ -484,8 +484,8 @@ def _convert_dihedrals(
                             atom2=molecule_indices[0] + 1,
                             atom3=molecule_indices[2] + 1,
                             atom4=molecule_indices[3] + 1,
-                            phi=params["phase"].to(unit.degree),
-                            k=params["k"].to(unit.kilojoule_per_mole) / idivf,
+                            phi=params["phase"].to("degree"),
+                            k=params["k"].to("kilojoule_per_mole") / idivf,
                             multiplicity=int(params["periodicity"]),
                         ),
                     )
@@ -506,8 +506,8 @@ def _create_single_dihedral(
         atom2=top_key.atom_indices[1] - offset + 1,
         atom3=top_key.atom_indices[2] - offset + 1,
         atom4=top_key.atom_indices[3] - offset + 1,
-        phi=params["phase"].to(unit.degree),
-        k=params["k"].to(unit.kilojoule_per_mole) / idivf,
+        phi=params["phase"].to("degree"),
+        k=params["k"].to("kilojoule_per_mole") / idivf,
         multiplicity=int(
             params["periodicity"].m,
         ),  # skip  dimension check, trust it's demensionless
@@ -543,6 +543,9 @@ def _convert_virtual_sites(
     _atom_atom_type_map,
 ):
     if "VirtualSites" not in interchange.collections:
+        return
+
+    if len(molecule_virtual_site_map) == 0:
         return
 
     for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
@@ -585,7 +588,7 @@ def _convert_virtual_sites(
                 residue_name=molecule.atoms[0].residue_name,
                 charge_group_number=1,
                 charge=interchange["Electrostatics"].charges[virtual_site_key],
-                mass=Quantity(0.0, unit.dalton),
+                mass=Quantity(0.0, "dalton"),
             ),
         )
 
@@ -711,7 +714,7 @@ def _apply_hmr(
     def _is_water(molecule: Molecule) -> bool:
         return molecule.is_isomorphic_with(water)
 
-    _hydrogen_mass = hydrogen_mass * unit.dalton
+    _hydrogen_mass = Quantity(hydrogen_mass, "dalton")
 
     for bond in toolkit_molecule.bonds:
         heavy_atom, hydrogen_atom = bond.atoms

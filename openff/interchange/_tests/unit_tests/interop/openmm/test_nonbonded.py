@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Molecule, unit
+from openff.toolkit import Molecule, Quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.exceptions import (
@@ -27,14 +27,14 @@ class TestUnsupportedCases:
         interchange = sage.create_interchange(Molecule.from_smiles("CC").to_topology())
 
         if periodic:
-            interchange.box = [4, 4, 4] * unit.nanometer
+            interchange.box = Quantity([4, 4, 4], "nanometer")
             interchange["Electrostatics"].periodic_potential = "cutoff"
         else:
             interchange["Electrostatics"].nonperiodic_potential = "cutoff"
 
         with pytest.raises(
             UnsupportedCutoffMethodError,
-            match="does not support.*Consider using",
+            match=r"does not support.*Consider using",
         ):
             interchange.to_openmm(combine_nonbonded_forces=combine)
 

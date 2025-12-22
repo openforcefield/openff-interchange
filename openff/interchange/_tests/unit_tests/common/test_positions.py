@@ -1,6 +1,5 @@
 import numpy
 from openff.toolkit import Quantity, Topology
-from openff.units import unit
 
 from openff.interchange._tests import _rng
 from openff.interchange.common._positions import _infer_positions
@@ -10,20 +9,20 @@ class TestInferPositions:
     def test_short_circuit(self, methane):
         positions = Quantity(
             _rng.random((methane.n_atoms, 3)),
-            unit.angstrom,
+            "angstrom",
         )
 
         assert numpy.array_equal(
-            _infer_positions(methane.to_topology(), positions).m_as(unit.angstrom),
-            positions.m_as(unit.angstrom),
+            _infer_positions(methane.to_topology(), positions).m_as("angstrom"),
+            positions.m_as("angstrom"),
         )
 
     def test_basic(self, methane_with_conformer):
         assert numpy.array_equal(
             _infer_positions(methane_with_conformer.to_topology(), None).m_as(
-                unit.angstrom,
+                "angstrom",
             ),
-            methane_with_conformer.conformers[0].m_as(unit.angstrom),
+            methane_with_conformer.conformers[0].m_as("angstrom"),
         )
 
     def test_multimolecule(self, methane_with_conformer, ethanol_with_conformer):
@@ -37,12 +36,12 @@ class TestInferPositions:
                     ethanol_with_conformer.conformers[0].m,
                 ],
             ),
-            unit.angstrom,
+            "angstrom",
         )
 
         assert numpy.array_equal(
-            _infer_positions(topology).m_as(unit.angstrom),
-            expected_positions.m_as(unit.angstrom),
+            _infer_positions(topology).m_as("angstrom"),
+            expected_positions.m_as("angstrom"),
         )
 
     def test_mixed_conformers(self, methane_with_conformer, ethanol):

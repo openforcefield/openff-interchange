@@ -13,15 +13,141 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #1332 Introduces the following behavior changes to the private Packmol wrappers:
+  * Packmol version 20.15.0 or newer is recommended.
+  * Periodic boundary conditions are accounted for when placing molecules if the box is orthorhombic and Packmol version 20.15.0 or newer is installed; this is the minimum version supporting this feature.
+    * This is functionally the same as the previous behavior, so no workaround is needed to recover it.
+  * The `tolerance` parameter is subtracted from computed box lengths when placing molecules if a Packmol version older than 20.15.0 is installed; this is the previous behavior.
+  * The `target_density` is used in box size calculations without modification; previously, box volumes were scaled up by a factor of 1.1.
+    * The previous behavior can be restored by passing scaling the `target_density` argument down by a factor of 1.1.
+
+* #1376 Makes `Interchange.topology` not store positions. Use `Interchange.positions` instead.
+
+* #1387 Migrates version handling to `setuptools-scm`.
+
+### Bug fixes
+
+* #1396 Fixes charge ordering in Amber files
+
+## 0.4.9 - 2025-11-06
+
 ### Behavior changes
 
+* #1352 `Collection` and its subclasses (likely anything with "Collection" in its name) now define equality by identity.
+
+### Performance improvements
+
+* #1352 Improves speed of unit conversions in many submodules and OpenMM export in particular.
+
+### Miscellaneous improvements
+
+* #1353 and #1355 Add some export performance benchmarks.
+* #1368 Fixes small molecule regression tests.
+
+### Documentation improvements
+
+* #1362 Document how to opt in to pseudo-vacuum approximation.
+* #1364 Fix some internal cross-references in documentation.
+
+## 0.4.8 - 2025-10-09
+
+### Bug fixes
+
+* #1340 Fixes JSON deserialization issues when charges come from `NAGLCharges` or `ChargeIncrementModel`.
+* #1325 Fixes some parameter bookkeepping in `Interchange.combine`, particularly when combining similar objects previously created too many `_DUPLICATE` tags.
+* #1334 Improves error reporting when Amber calculates non-numeric energies.
+* #1337 Fixes a bug in which errors were sometimes raised when valence parameters were missing but not needed.
+
+### Miscellaneous improvements
+
+* #1327 and #1328 Make small improvements to internal logic in `Interchange.combine`.
+
+## 0.4.7 - 2025-09-11
+
+### Bug fixes
+
+* #1321 OpenFF NAGL is treated as an optional dependency.
+
+## 0.4.6 - 2025-09-02
+
+### Bug fixes
+
+* #1312 Fix handling of `DoubleExponentialVirtualSites`
+* #1315 Fixes a bug in which `Interchange.combine` did not properly process constraint distances.
+
+### Maintenance
+
+* #1297 Do not duplicate type annotations in docstrings
+* #1304 Automatically format `pyproject.toml`
+* #1306 Declare minimum Python version in project metadata
+
+## 0.4.5 - 2025-08-20
+
+### New features
+
+* #1206 Support `<NAGLCharges>` tags in SMIRNOFF force fields.
+
+### Bug fixes
+
+* #1275 Fix JSON deserialization with preset charges
+
+### Documentation improvements
+
+* #1294 Fix `box_shape` docstring.
+
+## 0.4.4 - 2025-07-29
+
+### Behavior changes
+
+* #1273 In `solvate_topology`, ions counts are determined using the SLTCAP method.
+
+### Bug fixes
+
+* #1273 `solvate_topology` now returns a charge-neutral topology.
+* #1272 In `pack_box` and other Packmol-wrapping functions, molecules with zero count are skipped.
+
+### Miscellaneous improvements
+
+* #1263 Removes `importlib_metadata` backport when loading plugins.
+
+### Documentation improvements
+
+* #1259 Remove obsolete warnings of experimental/unstable status
+
+## 0.4.3 - 2025-07-11
+
+### New features
+
+* #1174 Support Python 3.13.
+* #1216 Type labels can (optionally) be included in LAMMPS files.
+* #1219 Adds `SMIRNOFFElectrostaticsCollection.get_charge_array`, which currently only works with systems lacking virtual sites.
+* #1220 Adds `Interchange.set_positions_from_gro`.
+* #1250 Allow `Interchange.combine` to proceed when cutoffs differ by up to 1e-6 nanometers.
+
+### Behavior changes
+
+* #1194 Drop support for Python 3.10.
 * #1137 Internally use `openmm.LangevinMiddleIntegrator`, including in the OpenMM driver.
 * #1186 `GROMACSSystem.molecules` is changed from a dictionary to a list of tuples.
 * #1192 `Interchange.to_pdb` now uses `ensure_unique_atom_names="residues"` when writing PDB files, matching longstanding behavior of the toolkit. For more flexibility, use the `Interchange.topology` and options provided by `openff.toolkit.Topology.to_file`.
+* #1205 Hybrid pair styles, which were never necessary, are no longer used in LAMMPS files.
+* #1215 The `topology` argument to `Interchange.from_openmm` is now strictly required. Previously, it could be `None` but would error.
+* #1225 Treat asterisks as comments in GROMACS files.
 
 ### Bug fixes
 
 * #1186 Fixes an issue in which GROMACS topology files were mangled when molecules were not grouped within a topology.
+* #1200 Atoms in improper torsions in LAMMPS files are now ordered correctly (with the central atom first).
+* #1200 `ImproperTorsionKey.get_central_atom_index` now returns fot correct atom index (this class stores the central atom first).
+
+### Miscellaneous improvements
+
+* #1243 Use `pyedr` instead of `panedr` for quicker processing of GROMACS energy files.
+* #1229 Improve detailed energy reporting.
+* #1175 Make the system in the protein-ligand example charge-neutral.
+* #1183 Remove warning about use of `Interchange.combine`.
+* #1241 Document how to control GROMACS molecule names.
+* #1224 Improve errors when parsing GROMACS files.
 
 ## 0.4.2 - 2025-02-26
 
@@ -56,6 +182,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### New features
 
+* #1081 `Interchange.from_openmm` now processes virtual sites, but only `openmm.ThreeParticleAverageSite`s.
 * #1053 Logs, at the level of `logging.INFO`, how charges are assigned by SMIRNOFF force fields to each atom and virtual site.
 * #1080 Adds support for HMR in OpenMM when virtual sites are present.
 * #1119 Adds support for writing GROMACS `.itp` files.

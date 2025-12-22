@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from shutil import which
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from openff.utilities.utilities import temporary_cd
 
 from openff.interchange import Interchange
@@ -25,18 +25,16 @@ def get_amber_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by Amber.
 
-    .. warning :: This API is not stable and subject to change.
-
     Parameters
     ----------
-    interchange : openff.interchange.components.interchange.Interchange
+    interchange
         An OpenFF Interchange object to compute the single-point energy of
-    detailed : bool, default=False
+    detailed
         If True, return a detailed report containing the energies of each
 
     Returns
     -------
-    report : EnergyReport
+    report
         An `EnergyReport` object containing the single-point energies.
 
     """
@@ -77,16 +75,16 @@ def _run_sander(
 
     Parameters
     ----------
-    prmtop_file : str or pathlib.Path
+    prmtop_file
         The path to an Amber topology (`.prmtop`) file.
-    inpcrd_file : str or pathlib.Path
+    inpcrd_file
         The path to an Amber coordinate (`.inpcrd`) file.
-    input_file : str or pathlib.Path
+    input_file
         The path to an Amber/sander input (`.in`) file.
 
     Returns
     -------
-    energies: dict[str, Quantity]
+    energies
         A dictionary of energies, keyed by the GROMACS energy term name.
 
     """
@@ -143,7 +141,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
     ranges = [[1, 24], [26, 49], [51, 77]]
 
     e_out = dict()
-    potential = 0 * unit.kilocalories_per_mole
+    potential = Quantity(0, "kilocalories_per_mole")
     for line in all_lines[startline + 1 :]:
         if "=" in line:
             for i in range(3):
@@ -151,7 +149,12 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
                 term = line[r[0] : r[1]]
                 if "=" in term:
                     energy_type, energy_value = term.strip().split("=")
-                    energy_value = float(energy_value) * unit.kilocalories_per_mole
+                    try:
+                        energy_value = Quantity(float(energy_value), "kilocalories_per_mole")
+                    except ValueError as error:
+                        raise AmberError(
+                            f"Found bad energy value '{energy_value}' associated with energy type '{energy_type}'",
+                        ) from error
                     potential += energy_value
                     energy_type = energy_type.rstrip()
                     e_out[energy_type] = energy_value
@@ -164,7 +167,7 @@ def _parse_amber_energy(mdinfo: str) -> dict[str, Quantity]:
 
 def _get_amber_energy_vdw(amber_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_vdw = 0.0 * unit.kilojoule_per_mole
+    amber_vdw = Quantity(0, "kilojoule_per_mole")
     for key in ["VDWAALS", "1-4 VDW", "1-4 NB"]:
         if key in amber_energies:
             amber_vdw += amber_energies[key]
@@ -174,7 +177,7 @@ def _get_amber_energy_vdw(amber_energies: dict) -> Quantity:
 
 def _get_amber_energy_coul(amber_energies: dict) -> Quantity:
     """Get the total nonbonded energy from a set of Amber energies."""
-    amber_coul = 0.0 * unit.kilojoule_per_mole
+    amber_coul = Quantity(0, "kilojoule_per_mole")
     for key in ["EEL", "1-4 EEL"]:
         if key in amber_energies:
             amber_coul += amber_energies[key]

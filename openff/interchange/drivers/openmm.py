@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy
 from openff.toolkit import Quantity
-from openff.units.openmm import ensure_quantity
+from openff.units import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange import Interchange
@@ -29,30 +29,35 @@ def get_openmm_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by OpenMM.
 
-    .. warning :: This API is not stable and subject to change.
-
     Parameters
     ----------
-    interchange : openff.interchange.Interchange
+    interchange
         An OpenFF Interchange object to compute the single-point energy of
-    round_positions : int, optional
+    round_positions
         The number of decimal places, in nanometers, to round positions. This can be useful when
         comparing to i.e. GROMACS energies, in which positions may be rounded.
-    combine_nonbonded_forces : bool, default=False
+    combine_nonbonded_forces
         Whether or not to combine all non-bonded interactions (vdW, short- and long-range
         ectrostaelectrostatics, and 1-4 interactions) into a single openmm.NonbondedForce.
-    platform : str, default="Reference"
+    platform
         The name of the platform (`openmm.Platform`) used by OpenMM in this calculation.
-    detailed : bool, default=False
-        Attempt to report energies with more granularity. Not guaranteed to be compatible with all values
-        of other arguments. Useful for debugging.
+    detailed
+        Attempt to report energies with more granularity. Requires `combine_nonbonded_forces=False`.
+        Not guaranteed to be compatible with non-default values of other arguments. Useful for
+        debugging.
 
     Returns
     -------
-    report : EnergyReport
+    report
         An `EnergyReport` object containing the single-point energies.
 
     """
+    if detailed and combine_nonbonded_forces:
+        raise ValueError(
+            "A detailed energy report (`detailed=True`) requires non-bonded interactions be "
+            "split out into different forces (`combine_nonbonded_forces=False`).",
+        )
+
     if "VirtualSites" in interchange.collections:
         if len(interchange["VirtualSites"].key_map) > 0:
             if not combine_nonbonded_forces:

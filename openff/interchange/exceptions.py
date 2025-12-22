@@ -38,6 +38,18 @@ class InvalidBoxError(InterchangeException, ValueError):
     """
 
 
+class InvalidPositionsError(InterchangeException, ValueError):
+    """
+    Generic exception for errors with positions.
+    """
+
+
+class NoPositionsError(InterchangeException, NotImplementedError):
+    """
+    Exception for trying to access or set positions which are not stored.
+    """
+
+
 class InvalidTopologyError(InterchangeException, ValueError):
     """
     Generic exception for errors reading chemical topology data.
@@ -96,6 +108,18 @@ class UnsupportedExportError(InterchangeException):
     """
     Exception for attempting to write to an unsupported file format.
     """
+
+
+class NonperiodicNoCutoffNotSupportedError(UnsupportedExportError):
+    """
+    Exception for when an engine does not support "no-cutoff" non-bonded methods in non-periodic system.
+    """
+
+    def __init__(self, message):
+        super().__init__(
+            message
+            + "\nFor more see: https://docs.openforcefield.org/projects/interchange/en/stable/using/edges.html#no-cutoff-support",
+        )
 
 
 class UnsupportedCombinationError(InterchangeException):
@@ -370,3 +394,7 @@ class MinimizationError(InterchangeException):
 
 class ExperimentalFeatureException(InterchangeException):
     """Exception raised when an experimental feature is used without opt-in."""
+
+
+class GROMACSParseError(InterchangeException, ValueError):
+    """Exception raised when a GROMACS file cannot be parsed correctly."""

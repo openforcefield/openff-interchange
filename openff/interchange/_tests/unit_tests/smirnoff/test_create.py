@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
@@ -39,13 +39,13 @@ class TestCreate:
         topology = Topology.from_molecules(ethanol)
         modified_sage = ForceField(sage.to_string())
 
-        modified_sage["vdW"].cutoff = 0.777 * unit.angstrom
-        modified_sage["Electrostatics"].cutoff = 0.777 * unit.angstrom
+        modified_sage["vdW"].cutoff = Quantity(0.777, "angstrom")
+        modified_sage["Electrostatics"].cutoff = Quantity(0.777, "angstrom")
 
         out = Interchange.from_smirnoff(force_field=modified_sage, topology=topology)
 
-        assert out["vdW"].cutoff == 0.777 * unit.angstrom
-        assert out["Electrostatics"].cutoff == 0.777 * unit.angstrom
+        assert out["vdW"].cutoff == Quantity(0.777, "angstrom")
+        assert out["Electrostatics"].cutoff == Quantity(0.777, "angstrom")
 
     def test_sage_tip3p_charges(self, water, sage):
         """Ensure tip3p charges packaged with sage are applied over AM1-BCC charges.
@@ -153,7 +153,7 @@ def test_library_charges_from_molecule():
     with pytest.raises(ValueError, match="missing partial"):
         library_charge_from_molecule(mol)
 
-    mol.partial_charges = numpy.linspace(-0.3, 0.3, 4) * unit.elementary_charge
+    mol.partial_charges = Quantity(numpy.linspace(-0.3, 0.3, 4), "elementary_charge")
 
     library_charges = library_charge_from_molecule(mol)
 
@@ -189,8 +189,8 @@ class TestPresetCharges:
         ethanol_charges = numpy.linspace(-1, 1, 9) * 0.4
         water_charges = numpy.linspace(-1, 1, 3)
 
-        ethanol.partial_charges = Quantity(ethanol_charges, unit.elementary_charge)
-        water.partial_charges = Quantity(water_charges, unit.elementary_charge)
+        ethanol.partial_charges = Quantity(ethanol_charges, "elementary_charge")
+        water.partial_charges = Quantity(water_charges, "elementary_charge")
 
         out = Interchange.from_smirnoff(
             sage,
@@ -220,7 +220,7 @@ class TestPresetCharges:
         molecule_with_charges = hydrogen_cyanide_reversed
         molecule_with_charges.partial_charges = Quantity(
             [-0.3, 0.0, 0.3],
-            unit.elementary_charge,
+            "elementary_charge",
         )
 
         out = Interchange.from_smirnoff(
@@ -248,7 +248,7 @@ class TestPresetCharges:
 
         with pytest.raises(
             PresetChargesError,
-            match="All.*must have partial charges",
+            match=r"All.*must have partial charges",
         ):
             sage.create_interchange(
                 topology,
@@ -262,7 +262,7 @@ class TestPresetCharges:
 
         with pytest.raises(
             PresetChargesError,
-            match="All molecules.*isomorphic.*unique",
+            match=r"All molecules.*isomorphic.*unique",
         ):
             sage.create_interchange(
                 topology,
@@ -385,7 +385,7 @@ class TestPartialBondOrdersFromMolecules:
         found_bond_length = out["Bonds"].potentials[bond_potential].parameters["length"]
 
         assert found_bond_k.m_as(kcal_mol_a2) == pytest.approx(113.1)
-        assert found_bond_length.m_as(unit.angstrom) == pytest.approx(1.345)
+        assert found_bond_length.m_as("angstrom") == pytest.approx(1.345)
 
         # TODO: There should be a better way of plucking this torsion's TopologyKey
         for topology_key in out["ProperTorsions"].key_map.keys():

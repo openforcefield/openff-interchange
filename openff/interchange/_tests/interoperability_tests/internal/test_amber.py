@@ -1,7 +1,6 @@
-import numpy as np
-import parmed
+import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, unit
+from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities import (
     get_data_file_path,
     has_executable,
@@ -22,14 +21,16 @@ if has_package("openmm"):
 class TestAmber:
     @pytest.mark.skip(reason="Need replacement route to reference positions")
     def test_inpcrd(self, sage):
+        parmed = pytest.importorskip("parmed")
+
         mol = Molecule.from_smiles(10 * "C")
         mol.name = "HPER"
         mol.generate_conformers(n_conformers=1)
 
         out = Interchange.from_smirnoff(force_field=sage, topology=mol.to_topology())
-        out.box = [4, 4, 4]
+        out.box = Quantity([4, 4, 4], "nanometer")
         out.positions = mol.conformers[0]
-        out.positions = unit.nanometer * np.round(out.positions.m_as(unit.nanometer), 5)
+        out.positions = Quantity(numpy.round(out.positions.m_as("nanometer"), 5), "nanometer")
 
         out.to_inpcrd("internal.inpcrd")
         # This method no longer exists
@@ -38,7 +39,7 @@ class TestAmber:
         coords1 = parmed.load_file("internal.inpcrd").coordinates
         coords2 = parmed.load_file("parmed.inpcrd").coordinates
 
-        np.testing.assert_equal(coords1, coords2)
+        numpy.testing.assert_equal(coords1, coords2)
 
     @skip_if_missing("openmm")
     @pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
@@ -129,6 +130,7 @@ class TestAmberResidues:
         ethanol,
         patch_residue_name,
     ):
+        parmed = pytest.importorskip("parmed")
         if patch_residue_name:
             for atom in ethanol.atoms:
                 atom.metadata["residue_name"] = "YUP"

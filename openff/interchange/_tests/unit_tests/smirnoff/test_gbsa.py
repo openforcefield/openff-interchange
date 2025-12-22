@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Molecule, Quantity, unit
+from openff.toolkit import Molecule, Quantity
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
 
 from openff.interchange.constants import kcal_mol_a2
@@ -16,8 +16,8 @@ class TestGBSACollection:
             solvent_dielectric="78.5",
             solute_dielectric="1.0",
             sa_model="ACE",
-            surface_area_penalty=5.4 * kcal_mol_a2,
-            solvent_radius=1.4 * unit.angstrom,
+            surface_area_penalty=Quantity(5.4, "kcal/mol/angstrom^2"),
+            solvent_radius=Quantity(1.4, "angstrom"),
         )
 
         for parameter in [
@@ -51,12 +51,12 @@ class TestGBSACollection:
         assert collection.solute_dielectric == 1.0
         assert collection.sa_model == "ACE"
         assert collection.surface_area_penalty == 5.4 * kcal_mol_a2
-        assert collection.solvent_radius == 1.4 * unit.angstrom
+        assert collection.solvent_radius == Quantity(1.4, "angstrom")
 
         assert len(collection.key_map) == 9
         assert len(collection.potentials) == 4
 
         oxygen_parameters = collection.potentials[collection.key_map[TopologyKey(atom_indices=(2,))]].parameters
 
-        assert oxygen_parameters["radius"] == Quantity(0.15, unit.nanometer)
-        assert oxygen_parameters["scale"] == Quantity(0.85, unit.dimensionless)
+        assert oxygen_parameters["radius"] == Quantity(0.15, "nanometer")
+        assert oxygen_parameters["scale"] == Quantity(0.85, "dimensionless")

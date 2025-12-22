@@ -1,18 +1,20 @@
 import copy
 import random
+from collections import defaultdict
 
 import numpy
 import openmm
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import needs_gmx
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import get_openmm_energies
 from openff.interchange.exceptions import UnsupportedImportError
 from openff.interchange.interop.openmm._import._import import _convert_nonbonded_force
+from openff.interchange.warnings import MissingPositionsWarning
 
 if has_package("openmm"):
     import openmm.app
@@ -27,7 +29,7 @@ class TestFromOpenMM:
         interchange = Interchange.from_smirnoff(
             sage_unconstrained,
             [ethanol],
-            box=Quantity([4, 4, 4], unit.nanometer),
+            box=Quantity([4, 4, 4], "nanometer"),
         )
 
         system = interchange.to_openmm(combine_nonbonded_forces=True)
@@ -72,6 +74,8 @@ class TestFromOpenMM:
         simple_system,
     ):
         topology = Molecule.from_smiles("C").to_topology()
+        topology._molecule_virtual_site_map = defaultdict(list)
+        topology._particle_map = {index: index for index in range(topology.n_atoms)}
 
         if as_argument:
             box = Interchange.from_openmm(
@@ -96,14 +100,14 @@ class TestFromOpenMM:
     ):
         """Ensure that, if box vectors specified in the topology and system differ, those in the topology are used."""
         topology = Molecule.from_smiles("C").to_topology()
-        topology.box_vectors = Quantity([4, 5, 6], unit.nanometer)
+        topology.box_vectors = Quantity([4, 5, 6], "nanometer")
 
         box = Interchange.from_openmm(
             system=simple_system,
             topology=topology.to_openmm(),
         ).box
 
-        assert numpy.diag(box.m_as(unit.nanometer)) == pytest.approx([4, 5, 6])
+        assert numpy.diag(box.m_as("nanometer")) == pytest.approx([4, 5, 6])
 
     def test_openmm_roundtrip_metadata(self, sage):
         # Make an example OpenMM Topology with metadata.
@@ -199,10 +203,8 @@ class TestFromOpenMM:
             topology=topology.to_openmm(),
         )
 
-        assert interchange["Electrostatics"].cutoff.m_as(
-            unit.nanometer,
-        ) == pytest.approx(1.2345)
-        assert interchange["vdW"].cutoff.m_as(unit.nanometer) == pytest.approx(1.2345)
+        assert pytest.approx(1.2345) == interchange["Electrostatics"].cutoff.m_as("nanometer")
+        assert pytest.approx(1.2345) == interchange["vdW"].cutoff.m_as("nanometer")
 
     @needs_gmx
     def test_fill_in_rigid_water_parameters(self, water_dimer):
@@ -265,11 +267,20 @@ class TestFromOpenMM:
 
         assert interchange2.topology.n_bonds == interchange.topology.n_bonds
 
+    def test_use_openmm_topology(self, sage, basic_top):
+        Interchange.from_openmm(
+            system=sage.create_openmm_system(basic_top),
+            topology=basic_top,
+        )
+
 
 @skip_if_missing("openmm")
 class TestProcessTopology:
     def test_with_openff_topology(self, sage, basic_top):
         system = sage.create_openmm_system(basic_top)
+
+        basic_top._molecule_virtual_site_map = defaultdict(list)
+        basic_top._particle_map = {index: index for index in range(basic_top.n_atoms)}
 
         with_openff = Interchange.from_openmm(
             system=system,
@@ -298,6 +309,48 @@ class TestProcessTopology:
             },
         )
 
+    @pytest.mark.parametrize("use_original_topology", [True, False])
+    def test_openmm_roundtrip_missing_positions(self, use_original_topology):
+        topology = MoleculeWithConformer.from_smiles("CCCCCCO").to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        interchange = ForceField("openff-2.2.1.offxml").create_interchange(topology)
+
+        if use_original_topology:
+            roundtripped = Interchange.from_openmm(
+                system=interchange.to_openmm_system(),
+                topology=topology,
+            )
+        else:
+            # need to pass positions if using Interchange.topology since
+            # Interchange.topology.get_positions() doesn't work. Split into two test cases
+
+            # when passed no positions (default value), valid use case but warning is thrown
+            with pytest.warns(MissingPositionsWarning):
+                roundtripped = Interchange.from_openmm(
+                    system=interchange.to_openmm_system(),
+                    topology=interchange.topology,
+                    positions=None,
+                )
+
+            assert roundtripped.positions is None
+
+            # when positions **are** passed, they should be used
+            roundtripped = Interchange.from_openmm(
+                system=interchange.to_openmm_system(),
+                topology=interchange.topology,
+                positions=interchange.positions,
+            )
+
+            assert roundtripped.positions is not None
+
+        assert numpy.allclose(interchange.positions.m_as("nanometer"), topology.get_positions().m_as("nanometer"))
+        assert numpy.allclose(roundtripped.positions.m_as("nanometer"), topology.get_positions().m_as("nanometer"))
+
+        get_openmm_energies(interchange, combine_nonbonded_forces=False).compare(
+            get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
+        )
+
 
 @skip_if_missing("openmm")
 class TestConvertNonbondedForce:
@@ -312,7 +365,7 @@ class TestConvertNonbondedForce:
             force.setNonbondedMethod(method)
 
             with pytest.raises(UnsupportedImportError):
-                _convert_nonbonded_force(force)
+                _convert_nonbonded_force(force, dict())
 
     def test_parse_switching_distance(self):
         force = openmm.NonbondedForce()
@@ -325,10 +378,10 @@ class TestConvertNonbondedForce:
         force.setUseSwitchingFunction(True)
         force.setSwitchingDistance(cutoff - switch_width)
 
-        vdw, _ = _convert_nonbonded_force(force)
+        vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
-        assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
-        assert vdw.switch_width.m_as(unit.nanometer) == pytest.approx(switch_width)
+        assert vdw.cutoff.m_as("nanometer") == pytest.approx(cutoff)
+        assert vdw.switch_width.m_as("nanometer") == pytest.approx(switch_width)
 
     def test_parse_switching_distance_unused(self):
         force = openmm.NonbondedForce()
@@ -338,17 +391,16 @@ class TestConvertNonbondedForce:
 
         force.setCutoffDistance(cutoff)
 
-        vdw, _ = _convert_nonbonded_force(force)
+        vdw, _ = _convert_nonbonded_force(force=force, particle_map=dict())
 
-        assert vdw.cutoff.m_as(unit.nanometer) == pytest.approx(cutoff)
-        assert vdw.switch_width.m_as(unit.nanometer) == 0.0
+        assert vdw.cutoff.m_as("nanometer") == pytest.approx(cutoff)
+        assert vdw.switch_width.m_as("nanometer") == 0.0
 
 
 @skip_if_missing("openmm")
 class TestConvertConstraints:
     def test_num_constraints(self, sage, basic_top):
         """Test that the number of constraints is preserved when converting to and from OpenMM"""
-
         interchange = sage.create_interchange(basic_top)
 
         converted = Interchange.from_openmm(

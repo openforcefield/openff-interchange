@@ -14,6 +14,7 @@ import numpy
 from numpy.typing import ArrayLike, NDArray
 from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology
 from openff.utilities.utilities import requires_package, temporary_cd
+from packaging.version import Version
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
 
@@ -72,9 +73,7 @@ def _find_packmol() -> str | None:
 
     Returns
     -------
-    str, optional
-        The path to the packmol binary if it could be found, otherwise
-        `None`.
+    The path to the packmol binary if it could be found, otherwise `None`.
 
     """
     return shutil.which("packmol")
@@ -108,20 +107,20 @@ def _validate_inputs(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.Molecule
+    molecules
         The molecules in the system.
-    number_of_copies : list of int
+    number_of_copies
         A list of the number of copies of each molecule type, of length
         equal to the length of `molecules`.
-    solute: Topology, optional
+    solute
         The OpenFF Topology to be solvated.
-    box_vectors : openff.units.Quantity,
-        The box vectors to fill in units compatible with angstroms. If `None`,
+    box_vectors
+        The box vectors to fill in units compatible with nanometer. If `None`,
         `target_density` must be provided.
-    target_density : openff.units.Quantity, optional
+    target_density
         Target mass density for final system with units compatible with g / mL.
          If `None`, `box_size` must be provided.
-    box_shape: NDArray
+    box_shape
         The shape of the simulation box, used in conjunction with the
         `target_density` parameter. Should have shape (3, 3) with all positive
         elements.
@@ -207,7 +206,7 @@ def _compute_brick_from_box_vectors(box_vectors: Quantity) -> Quantity:
 
     Parameters
     ----------
-    box_vectors: NDArray
+    box_vectors
         Array with shape (3, 3) representing the box vectors of a triclinic cell
 
     """
@@ -325,21 +324,21 @@ def _box_from_density(
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.Molecule
+    molecules
         The molecules in the system.
-    n_copies : list of int
+    n_copies
         The number of copies of each molecule.
-    target_density : openff.units.Quantity
+    target_density
         The target mass density for final system. It should have units
         compatible with g / mL.
-    box_shape: NDArray
+    box_shape
         The shape of the simulation box, used in conjunction with the
         `target_density` parameter. Should have shape (3, 3) with all positive
         elements.
 
     Returns
     -------
-    box_vectors: openff.units.Quantity
+    box_vectors
         The unit cell box vectors. Array with shape (3, 3)
 
     """
@@ -347,10 +346,14 @@ def _box_from_density(
     total_mass = sum(sum([atom.mass for atom in molecule.atoms]) * n for molecule, n in zip(molecules, n_copies))
     volume = total_mass / target_density
 
-    return _scale_box(box_shape, volume)
+    return _scale_box(
+        box=box_shape,
+        volume=volume,
+        box_scaleup_factor=1.0,
+    )
 
 
-def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quantity:
+def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor: float = 1.1) -> Quantity:
     """
     Scale the parallelepiped spanned by ``box`` to the given volume.
 
@@ -365,7 +368,6 @@ def _scale_box(box: NDArray, volume: Quantity, box_scaleup_factor=1.1) -> Quanti
         3x3 matrix whose rows are the box vectors.
     volume
         Desired scalar volume of the box in units of volume.
-
     box_scaleup_factor
         The factor, applied linearly, by which the estimated box size should be increased.
 
@@ -445,30 +447,52 @@ def _create_molecule_pdbs(molecules: list[Molecule]) -> list[str]:
     return pdb_file_names
 
 
+def _get_packmol_version() -> Version:
+    """Return the version of packmol installed."""
+    with temporary_cd(tempfile.mkdtemp()):
+        try:
+            result = subprocess.run(
+                _find_packmol(),  # type: ignore[arg-type]
+                input="",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            found_version = Version(result.stdout.split("Version ")[1].split(" ")[0])
+
+        except Exception as error:
+            raise PACKMOLRuntimeError(f"Unexpected error ({type(error)}) while running Packmol.") from error
+
+    return found_version
+
+
 def _build_input_file(
     molecule_file_names: list[str],
     molecule_counts: list[int],
     structure_to_solvate: str | None,
     box_size: Quantity,
     tolerance: Quantity,
+    rectangular: bool = False,
 ) -> tuple[str, str]:
     """
     Construct the packmol input file.
 
     Parameters
     ----------
-    molecule_file_names: list of str
-        The paths to the molecule pdb files.
-    molecule_counts: list of int
-        The number of each molecule to add.
-    structure_to_solvate: str, optional
+    molecule_file_names
+        The paths to the molecule pdb files. No file will be produced for molecules where corresponding count is zero.
+    molecule_counts
+        The number of each molecule to add. No file will be produced for molecules where corresponding count is zero.
+    structure_to_solvate
         The path to the structure to solvate.
-    box_size: openff.units.Quantity
+    box_size
         The lengths of each side of the box we want to fill. This is the box
-        size of the rectangular brick representation of the simulation box; the
-        packmol box will be shrunk by the tolerance.
-    tolerance: openff.units.Quantity
+        size of the rectangular brick representation of the simulation box
+    tolerance
         The packmol convergence tolerance.
+    rectangular
+        Whether the box is rectangular (True) or triclinic (False).
 
     Returns
     -------
@@ -478,7 +502,12 @@ def _build_input_file(
         The path to the output file.
 
     """
-    box_size = (box_size - tolerance).m_as("angstrom")
+    if rectangular:
+        PACKMOL_USE_PBC = _get_packmol_version() >= Version("20.15.0")
+    else:
+        PACKMOL_USE_PBC = False
+
+    box_size = box_size.m_as("angstrom") if PACKMOL_USE_PBC else (box_size - tolerance).m_as("angstrom")
     tolerance = tolerance.m_as("angstrom")
 
     # Add the global header options.
@@ -489,6 +518,9 @@ def _build_input_file(
         f"output {output_file_path}",
         "",
     ]
+
+    if PACKMOL_USE_PBC:
+        input_lines.append(f"pbc 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}")
 
     # Add the section of the molecule to solvate if provided.
     if structure_to_solvate is not None:
@@ -504,11 +536,14 @@ def _build_input_file(
 
     # Add a section for each type of molecule to add.
     for file_name, count in zip(molecule_file_names, molecule_counts):
+        if count == 0:
+            continue
+
         input_lines.extend(
             [
                 f"structure {file_name}",
                 f"  number {count}",
-                f"  inside box 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
+                "" if PACKMOL_USE_PBC else f"  inside box 0. 0. 0. {box_size[0]} {box_size[1]} {box_size[2]}",
                 "end structure",
                 "",
             ],
@@ -561,43 +596,44 @@ def pack_box(
     molecules: list[Molecule],
     number_of_copies: list[int],
     solute: Topology | None = None,
-    tolerance: Quantity = Quantity(2.0, "angstrom"),
+    tolerance: Quantity = Quantity(0.2, "nanometer"),
     box_vectors: Quantity | None = None,
     target_density: Quantity | None = None,
     box_shape: ArrayLike = RHOMBIC_DODECAHEDRON,
     center_solute: bool | Literal["BOX_VECS", "ORIGIN", "BRICK"] = False,
     working_directory: str | None = None,
-    retain_working_files: bool = False,
+    retain_working_files: bool = True,
 ) -> Topology:
     """
     Run packmol to generate a box containing a mixture of molecules.
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.Molecule
+    molecules
         The molecules in the system.
-    number_of_copies : list of int
+    number_of_copies
         A list of the number of copies of each molecule type, of length
-        equal to the length of ``molecules``.
-    solute: Topology, optional
+        equal to the length of ``molecules``. If any element is zero, the
+        corresponding molecule is not added.
+    solute
         An OpenFF :py:class:`Topology <openff.toolkit.Topology>` to
         include in the box. If ``box_vectors`` and ``target_density`` are not
         specified, box vectors can be taken from ``solute.box_vectors``.
-    tolerance : openff.units.Quantity
+    tolerance
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,
         values as small as 0.5 Å will converge faster and can still produce
         stable simulations after energy minimisation.
-    box_vectors : openff.units.Quantity, optional
+    box_vectors
         The box vectors to fill in units of distance. If ``None``,
         ``target_density`` must be provided. Array with shape (3,3). Box vectors
         must be provided in `OpenMM reduced form <http://docs.openmm.org/latest/
         userguide/theory/05_other_features.html#periodic-boundary-conditions>`_.
-    target_density : openff.units.Quantity, optional
+    target_density
         Target mass density for final system with units compatible with g / mL.
         If ``None``, ``box_vectors`` must be provided.
-    box_shape: Arraylike, optional
+    box_shape
         The shape of the simulation box, used in conjunction with
         the ``target_density`` parameter. Should be a dimensionless array with
         shape (3,3) for a triclinic box or (3,) for a rectangular box. Shape
@@ -611,10 +647,10 @@ def pack_box(
         the solute will centered at the origin. If ``"brick"``, the solute will
         be centered in the box's rectangular brick representation. If
         ``False`` (the default), the solute will not be moved.
-    working_directory: str, optional
+    working_directory
         The directory in which to generate the temporary working files. If
         ``None``, a temporary one will be created.
-    retain_working_files: bool
+    retain_working_files
         If ``True`` all of the working files, such as individual molecule
         coordinate files, will be retained.
 
@@ -627,17 +663,25 @@ def pack_box(
     ------
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
+    PACKMOLValueError
+        When an input(s) are invalid or inconsistent.
 
     Notes
     -----
-    Returned topologies may have smaller or larger box vectors than what would be defined by the
-    target density if the box vectors are determined by `target_density`. When calling Packmol, each
-    linear dimension of the box is scaled up by 10%.  However, Packmol by default adds a small
-    buffer (defined by the `tolerance` argument which otherwise defines the minimum distance,
-    default 2 Angstrom) at the end of the packed box, which causes small voids when tiling copies of
-    each periodic image. This void is removed in hopes of faster equilibration times but the box
-    density is slightly increased as a result. These changes may cancel each other out or result in
-    larger or smaller densities than the target density, depending on argument values.
+    Packmol places molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subjected to energy minimization and equilibration
+    routines before being used in production simulations.
+
+    Orthorhombic periodic boundary conditions are accounted for during packing
+    if using Packmol version 20.15.0 or newer.
+
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
+    than 20.15.0, are accounted for by packing the
+    `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
+    after shrinking each dimension by the ``tolerance``. This introduces a small
+    void at the edges of the box to avoid clashes. This void will quickly be
+    filled in during equilibration.
 
     """
     # Make sure packmol can be found.
@@ -660,6 +704,8 @@ def pack_box(
         target_density,
     )
 
+    is_rectangular = bool(numpy.all(box_shape == numpy.diag(numpy.diagonal(box_shape))))
+
     # Estimate the box_vectors from mass density if one is not provided.
     if target_density is not None:
         box_vectors = _box_from_density(
@@ -680,8 +726,7 @@ def pack_box(
             + "05_other_features.html#periodic-boundary-conditions",
         )
 
-    # Compute the dimensions of the equivalent brick - this is what packmol will
-    # fill
+    # Compute the dimensions of the equivalent brick - this is what packmol will fill
     brick_size = _compute_brick_from_box_vectors(box_vectors)
 
     # Center the solute
@@ -718,6 +763,7 @@ def pack_box(
             solute_pdb_filename,
             brick_size,
             tolerance,
+            rectangular=is_rectangular,
         )
 
         with open(input_file_path) as file_handle:
@@ -819,13 +865,16 @@ def _load_positions(output_file_path) -> NDArray:
 def solvate_topology(
     topology: Topology,
     nacl_conc: Quantity = Quantity(0.1, "mole / liter"),
-    padding: Quantity = Quantity(1.2, "nanometer"),
+    padding: Quantity | None = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
     target_density: Quantity = Quantity(0.9, "gram / milliliter"),
-    tolerance: Quantity = Quantity(2.0, "angstrom"),
+    tolerance: Quantity = Quantity(0.2, "nanometer"),
+    working_directory: str | None = None,
 ) -> Topology:
     """
     Add water and ions to neutralise and solvate a topology.
+
+    The [SLTCAP](10.1021/acs.jctc.7b01254) method is used to determine the number of each ion to add.
 
     Parameters
     ----------
@@ -836,18 +885,20 @@ def solvate_topology(
         molarity. This is used to calculate a mass fraction for the bulk
         solvent and does not represent the actual concentration in the final
         box.
-    padding : Scalar with dimensions of length
-        The desired distance between the solute and the edge of the box. Ignored
-        if the topology already has box vectors. The usual recommendation is
-        that this equals or exceeds the VdW cut-off distance, so that the
-        solute is isolated by its periodic images by twice the cut-off.
-    box_shape : Array with shape (3, 3)
+    padding
+        The desired distance between the solute and the edge of the box.  The
+        usual recommendation is that this equals or exceeds the VdW cut-off
+        distance, so that the solute is isolated by its periodic images by twice
+        the cut-off.  Must be set to `None` if the input topology has box
+        vectors.  Must be specified if the input topology does not have box
+        vectors.
+    box_shape
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
         padding given above. Some typical shapes are provided in this module.
-    target_density : Scalar with dimensions of mass density
+    target_density
         The target mass density for the packed box.
-    tolerance: Scalar with dimensions of distance
+    tolerance
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,
@@ -863,18 +914,55 @@ def solvate_topology(
     ------
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
+    PACKMOLValueError
+        When an input(s) are invalid or inconsistent.
 
     Notes
     -----
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Packmol places solvent molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subjected to energy minimization and equilibration
+    routines before being used in production simulations.
+
+    Orthorhombic periodic boundary conditions are accounted for during packing
+    if using Packmol version 20.15.0 or newer.
+
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
+    than 20.15.0, are accounted for by packing the
+    `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
+    after shrinking each dimension by the ``tolerance``. This introduces a small
+    void at the edges of the box to avoid clashes. This void will quickly be
+    filled in during equilibration.
+
+    Returned topologies may have ion concentrations higher than the value of the
+    the `nacl_conc` argument.
     """
     _check_box_shape_shape(box_shape)
 
-    # Compute box vectors from the solute length and requested padding
-    solute_length = _max_dist_between_points(topology.get_positions())
-    image_distance = solute_length + padding * 2
-    box_vectors = box_shape * image_distance
+    if topology.box_vectors is None:
+        if padding is None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has no box vectors and a solvent padding "
+                "distance was not specified. The solvent padding distance must be non-`None` if "
+                "box vectors are not defined on the input topology.",
+            )
+
+        # if input topology does not have box vectors, compute them from the
+        # solute length and requested padding
+        solute_length = _max_dist_between_points(topology.get_positions())
+        image_distance = solute_length + padding * 2
+        box_vectors = box_shape * image_distance
+
+    else:
+        if padding is not None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has defined box vectors and a solvent padding "
+                "distance was also specified. The solvent padding distance must be set to `None` if "
+                "box vectors are already defined on the input topology.",
+                "Either use `padding=None` or set `.box_vectors=None` on the input topology.",
+            )
+
+        box_vectors = topology.box_vectors
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
@@ -884,6 +972,10 @@ def solvate_topology(
 
     _check_add_positive_mass(solvent_mass)
 
+    # Compute total charge of all solute molecules and its magnitude
+    solute_charge = sum([molecule.total_charge.m for molecule in topology.molecules])
+    solute_charge_magnitude = numpy.abs(solute_charge)
+
     # Get reference data and prepare solvent molecules
     water = Molecule.from_smiles("O")
     na = Molecule.from_smiles("[Na+]")
@@ -892,29 +984,62 @@ def solvate_topology(
         [atom.mass for atom in cl.atoms],
     )
     water_mass = sum([atom.mass for atom in water.atoms])
-    molarity_pure_water = Quantity(55.5, "mole / liter")
+    molarity_pure_water = Quantity(55.4, "mole / liter")
 
-    # Compute the number of salt "molecules" to add from the mass and concentration
-    nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
-    nacl_mass_to_add = solvent_mass * nacl_mass_fraction
-    nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+    # Compute the number of salt ions to add for bulk salt
+    # If ionic strength is zero, then the solute_ion_ratio needed for SLTCAP is undefined
+    if nacl_conc == Quantity(0, "mole / liter"):
+        nacl_to_add = 0
+        water_mass_to_add = solvent_mass
 
-    # Compute the number of water molecules to add to make up the remaining mass
-    water_mass_to_add = solvent_mass - nacl_mass
+    else:
+        # Compute the number of salt "molecules" to add from the mass and concentration
+        # for a neutral solute
+        neutral_nacl_mass_fraction = (nacl_conc * nacl_mass) / (molarity_pure_water * water_mass)
+        neutral_nacl_mass_to_add = solvent_mass * neutral_nacl_mass_fraction
+        neutral_nacl_to_add = (neutral_nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+
+        if neutral_nacl_to_add == 0:
+            nacl_to_add = 0
+            water_mass_to_add = solvent_mass
+
+        else:
+            # Compute the number of salt "molecules" to add using the SLTCAP method
+            solute_ion_ratio = solute_charge_magnitude / (2 * neutral_nacl_to_add)
+            sltcap_effective_ionic_strength = nacl_conc * (
+                numpy.sqrt(1 + solute_ion_ratio * solute_ion_ratio) - solute_ion_ratio
+            )
+
+            nacl_mass_fraction = (sltcap_effective_ionic_strength * nacl_mass) / (molarity_pure_water * water_mass)
+            nacl_mass_to_add = solvent_mass * nacl_mass_fraction
+            nacl_to_add = (nacl_mass_to_add / nacl_mass).m_as("dimensionless").round()
+
+            # Compute the number of water molecules to add to make up the remaining mass
+            water_mass_to_add = solvent_mass - nacl_mass_to_add
+
     water_to_add = (water_mass_to_add / water_mass).m_as("dimensionless").round()
 
     # Neutralise the system by adding and removing salt
-    solute_charge = sum([molecule.total_charge for molecule in topology.molecules])
-    na_to_add = numpy.ceil(nacl_to_add - solute_charge.m / 2.0)
-    cl_to_add = numpy.floor(nacl_to_add + solute_charge.m / 2.0)
+    na_to_add = numpy.round(
+        nacl_to_add + (solute_charge_magnitude - solute_charge) / 2.0,
+    )
+    cl_to_add = numpy.round(
+        nacl_to_add + (solute_charge_magnitude + solute_charge) / 2.0,
+    )
 
-    # Pack the box
+    if abs(solute_charge + na_to_add - cl_to_add) > 1e-6:
+        raise PACKMOLValueError(
+            f"Failed to neutralise solute with charge {solute_charge.m}; meant to add {nacl_to_add} NaCl.\n"
+            f"Tried adding {na_to_add} Na+ and {cl_to_add} Cl- ions. This should not happen, please raise an issue!",
+        )
+
     return pack_box(
         [water, na, cl],
         [int(water_to_add), int(na_to_add), int(cl_to_add)],
         solute=topology,
         tolerance=tolerance,
         box_vectors=box_vectors,
+        working_directory=working_directory,
     )
 
 
@@ -922,9 +1047,10 @@ def solvate_topology_nonwater(
     topology: Topology,
     solvent: Molecule,
     target_density: Quantity,
-    padding: Quantity = Quantity(1.2, "nanometer"),
+    padding: Quantity | None = Quantity(1.2, "nanometer"),
     box_shape: NDArray = RHOMBIC_DODECAHEDRON,
-    tolerance: Quantity = Quantity(2.0, "angstrom"),
+    tolerance: Quantity = Quantity(0.2, "nanometer"),
+    working_directory: str | None = None,
 ) -> Topology:
     """
     Solvate a topology with an arbitrary solvent.
@@ -935,18 +1061,20 @@ def solvate_topology_nonwater(
         The OpenFF Topology to solvate.
     solvent
         The OpenFF Molecule to use as the solvent.
-    padding : Scalar with dimensions of length
-        The desired distance between the solute and the edge of the box. Ignored
-        if the topology already has box vectors. The usual recommendation is
-        that this equals or exceeds the VdW cut-off distance, so that the
-        solute is isolated by its periodic images by twice the cut-off.
-    box_shape : Array with shape (3, 3)
+    padding
+        The desired distance between the solute and the edge of the box.  The
+        usual recommendation is that this equals or exceeds the VdW cut-off
+        distance, so that the solute is isolated by its periodic images by twice
+        the cut-off.  Must be set to `None` if the input topology has box
+        vectors.  Must be specified if the input topology does not have box
+        vectors.
+    box_shape
         An array defining the box vectors of a box with the desired shape and
         unit periodic image distance. This shape will be scaled to satisfy the
         padding given above. Some typical shapes are provided in this module.
-    target_density : Scalar with dimensions of mass density
+    target_density
         The target mass density for the packed box.
-    tolerance: Scalar with dimensions of distance
+    tolerance
         The minimum spacing between molecules during packing in units of
         distance. The default is large so that added waters do not disrupt the
         structure of proteins; when constructing a mixture of small molecules,
@@ -962,18 +1090,52 @@ def solvate_topology_nonwater(
     ------
     PACKMOLRuntimeError
         When packmol fails to execute / converge.
+    PACKMOLValueError
+        When an input(s) are invalid or inconsistent.
 
     Notes
     -----
-    Returned topologies may have larger box vectors than what would be defined
-    by the target density.
+    Packmol places solvent molecules at random positions in the box, satisfying
+    geometric constraints but no thermodynamic considerations. The resulting
+    configurations need to be subjected to energy minimization and equilibration
+    routines before being used in production simulations.
+
+    Orthorhombic periodic boundary conditions are accounted for during packing
+    if using Packmol version 20.15.0 or newer.
+
+    Non-orthorhombic triclinic boxes, and all boxes in Packmol versions older
+    than 20.15.0, are accounted for by packing the
+    `"brick" representation <https://manual.gromacs.org/current/reference-manual/algorithms/periodic-boundary-conditions.html#fig-pbc>`__
+    after shrinking each dimension by the ``tolerance``. This introduces a small
+    void at the edges of the box to avoid clashes. This void will quickly be
+    filled in during equilibration.
     """
     _check_box_shape_shape(box_shape)
 
-    # Compute box vectors from the solute length and requested padding
-    solute_length = _max_dist_between_points(topology.get_positions())
-    image_distance = solute_length + padding * 2
-    box_vectors = box_shape * image_distance
+    if topology.box_vectors is None:
+        if padding is None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has no box vectors and a solvent padding "
+                "distance was not specified. The solvent padding distance must be non-`None` if "
+                "box vectors are not defined on the input topology.",
+            )
+
+        # if input topology does not have box vectors, compute them from the
+        # solute length and requested padding
+        solute_length = _max_dist_between_points(topology.get_positions())
+        image_distance = solute_length + padding * 2
+        box_vectors = box_shape * image_distance
+
+    else:
+        if padding is not None:
+            raise PACKMOLValueError(
+                "Incompatible inputs: input topology has defined box vectors and a solvent padding "
+                "distance was also specified. The solvent padding distance must be set to `None` if "
+                "box vectors are already defined on the input topology.",
+                "Either use `padding=None` or set `.box_vectors=None` on the input topology.",
+            )
+
+        box_vectors = topology.box_vectors
 
     # Compute target masses of solvent
     box_volume = numpy.linalg.det(box_vectors.m) * box_vectors.u**3
@@ -996,4 +1158,5 @@ def solvate_topology_nonwater(
         tolerance=tolerance,
         box_vectors=box_vectors,
         center_solute=True,
+        working_directory=working_directory,
     )

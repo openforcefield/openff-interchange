@@ -45,28 +45,26 @@ def to_openmm_system(
 
     Parameters
     ----------
-    interchange : openff.interchange.Interchange
+    interchange
         An OpenFF Interchange object
-    combine_nonbonded_forces : bool, default=False
+    combine_nonbonded_forces
         If True, an attempt will be made to combine all non-bonded interactions into a single openmm.NonbondedForce.
         If False, non-bonded interactions will be split across multiple forces.
-    add_constrained_forces : bool, default=False,
+    add_constrained_forces
         If True, add valence forces that might be overridden by constraints, i.e. call `addBond` or `addAngle`
         on a bond or angle that is fully constrained.
-    ewald_tolerance : float, default=1e-4
+    ewald_tolerance
         The value passed to `NonbondedForce.setEwaldErrorTolerance`
-    hydrogen_mass : PositiveFloat, default=1.007947
+    hydrogen_mass
         The mass to use for hydrogen atoms if not present in the topology. If non-trivially different
         than the default value, mass will be transferred from neighboring heavy atoms.
 
     Returns
     -------
-    system : openmm.System
+    system
         The corresponding OpenMM System object
 
     """
-    from openff.toolkit import unit as off_unit
-
     from openff.interchange.interop.openmm._gbsa import _process_gbsa
     from openff.interchange.interop.openmm._nonbonded import _process_nonbonded_forces
     from openff.interchange.interop.openmm._valence import (
@@ -91,7 +89,7 @@ def to_openmm_system(
     system = openmm.System()
 
     if interchange.box is not None:
-        box = interchange.box.m_as(off_unit.nanometer)
+        box = interchange.box.m_as("nanometer")
         system.setDefaultPeriodicBoxVectors(*box)
 
     particle_map = _process_nonbonded_forces(
@@ -161,11 +159,11 @@ def _to_pdb(
     topology: "openmm.app.Topology",
     positions,
 ):
-    from openff.units.openmm import ensure_quantity
+    from openff.units import ensure_quantity
 
     # Deal with the possibility of `StringIO`
     manager: nullcontext[TextIO] | TextIO  # MyPy needs some help here
-    if isinstance(file_path, (str, Path)):
+    if isinstance(file_path, str | Path):
         manager = open(file_path, "w")
     else:
         manager = nullcontext(file_path)

@@ -26,14 +26,13 @@ jobs:
         environment:
           - py311examples
           - py312examples
+          - py313examples
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v6
 
     - name: Set up virtual environment
       uses: prefix-dev/setup-pixi@v0.8.4

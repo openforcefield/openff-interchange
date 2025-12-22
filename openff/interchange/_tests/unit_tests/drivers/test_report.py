@@ -1,6 +1,6 @@
 import pytest
-from openff.toolkit import unit
-from openff.units.openmm import ensure_quantity
+from openff.toolkit import Quantity
+from openff.units import ensure_quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.constants import kj_mol
@@ -33,7 +33,7 @@ class TestEnergyReport:
                     "Bond": ensure_quantity(10 * kj_mol, "openmm"),
                 },
             )["Bond"],
-            unit.Quantity,
+            Quantity,
         )
 
     def test_getitem(self, report):
@@ -48,7 +48,7 @@ class TestEnergyReport:
         assert report.total_energy == report["Total"]
 
     def test_bad_constructor(self):
-        with pytest.raises(InvalidEnergyError, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood"):
             EnergyReport(
                 energies={
                     "foo": 1 * kj_mol,
@@ -73,11 +73,11 @@ class TestEnergyReport:
             },
         )
 
-        assert isinstance(report["Bond"], unit.Quantity)
+        assert isinstance(report["Bond"], Quantity)
         assert report["Bond"].m_as(kj_mol) == pytest.approx(55.55)
 
     def test_bad_update(self, report):
-        with pytest.raises(InvalidEnergyError, match="foo not understood."):
+        with pytest.raises(InvalidEnergyError, match="foo not understood"):
             report.update({"foo": 1 * kj_mol})
 
     def test_sub(self):
@@ -85,7 +85,7 @@ class TestEnergyReport:
         b = EnergyReport(energies={"Torsion": 15 * kj_mol})
         c = EnergyReport(energies={"Torsion": 15 * kj_mol, "Nonbonded": 10 * kj_mol})
 
-        assert (b - a)["Torsion"] == 5 * unit.kilojoule / unit.mol
+        assert (b - a)["Torsion"] == Quantity(5, "kilojoule / mol")
 
         with pytest.warns(UserWarning, match="Did not find key Nonbonded"):
             c - a
@@ -167,7 +167,7 @@ class TestEnergyReport:
 
         with pytest.raises(
             EnergyError,
-            match="Bond.*Torsion.*vdW",
+            match=r"Bond.*Torsion.*vdW",
         ):
             report.compare(other)
 

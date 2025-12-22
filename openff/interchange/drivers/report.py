@@ -7,7 +7,6 @@ from openff.toolkit import Quantity
 from pydantic import BeforeValidator, Field
 
 from openff.interchange._annotations import _Quantity
-from openff.interchange.constants import kj_mol
 from openff.interchange.exceptions import (
     EnergyError,
     IncompatibleTolerancesError,
@@ -15,17 +14,17 @@ from openff.interchange.exceptions import (
 )
 from openff.interchange.pydantic import _BaseModel
 
-_KNOWN_ENERGY_TERMS: set[str] = {
+_KNOWN_ENERGY_TERMS = [
     "Bond",
     "Angle",
     "Torsion",
     "RBTorsion",
     "Nonbonded",
     "vdW",
-    "Electrostatics",
     "vdW 1-4",
+    "Electrostatics",
     "Electrostatics 1-4",
-}
+]
 
 
 def energies_validator(value: dict[str, Quantity | None]) -> dict[str, Quantity | None]:
@@ -52,7 +51,8 @@ def energies_validator(value: dict[str, Quantity | None]) -> dict[str, Quantity 
         else:
             raise InvalidEnergyError(f"Energy type {key} not understood.")
 
-    return value
+    # return sorted in a consistent order
+    return {key: value[key] for key in _KNOWN_ENERGY_TERMS if key in value}
 
 
 _EnergiesDict = Annotated[
@@ -106,19 +106,19 @@ class EnergyReport(_BaseModel):
 
         Parameters
         ----------
-        other: EnergyReport
+        other
             The other `EnergyReport` to compare energies against
 
-        tolerances: dict of str: Quantity
+        tolerances
             Per-key allowed differences in energies
 
         """
         default_tolerances = {
-            "Bond": 1e-3 * kj_mol,
-            "Angle": 1e-3 * kj_mol,
-            "Torsion": 1e-3 * kj_mol,
-            "vdW": 1e-3 * kj_mol,
-            "Electrostatics": 1e-3 * kj_mol,
+            "Bond": Quantity(1e-3, "kilojoule / mole"),
+            "Angle": Quantity(1e-3, "kilojoule / mole"),
+            "Torsion": Quantity(1e-3, "kilojoule / mole"),
+            "vdW": Quantity(1e-3, "kilojoule / mole"),
+            "Electrostatics": Quantity(1e-3, "kilojoule / mole"),
         }
 
         if tolerances:
@@ -127,7 +127,7 @@ class EnergyReport(_BaseModel):
         tolerances = default_tolerances
 
         # Ensure everything is in kJ/mol for safety of later comparison
-        energy_differences = {key: diff.to(kj_mol) for key, diff in self.diff(other).items()}
+        energy_differences = {key: diff.to("kilojoule / mole") for key, diff in self.diff(other).items()}
 
         if ("Nonbonded" in tolerances) != ("Nonbonded" in energy_differences):
             raise IncompatibleTolerancesError(
@@ -153,12 +153,12 @@ class EnergyReport(_BaseModel):
 
         Parameters
         ----------
-        other: EnergyReport
+        other
             The other `EnergyReport` to compare energies against
 
         Returns
         -------
-        energy_differences : dict of str: Quantity
+        energy_differences
             Per-key energy differences
 
         """
@@ -168,9 +168,11 @@ class EnergyReport(_BaseModel):
 
         for key in self.energies:
             if key in ("Bond", "Angle", "Torsion"):
-                energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
+                try:
+                    energy_differences[key] = self[key] - other[key]  # type: ignore[operator]
 
-                continue
+                except KeyError:
+                    continue
 
             if key in ("Nonbonded", "vdW", "Electrostatics"):
                 if nonbondeds_processed:
@@ -219,7 +221,7 @@ class EnergyReport(_BaseModel):
         )
 
     def _get_nonbonded_energy(self) -> Quantity:
-        nonbonded_energy = 0.0 * kj_mol
+        nonbonded_energy = Quantity(0.0, "kilojoule / mole")
         for key in ("Nonbonded", "vdW", "Electrostatics"):
             if key in self.energies is not None:
                 nonbonded_energy += self.energies[key]

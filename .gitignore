@@ -93,6 +93,9 @@ ENV/
 .spyderproject
 .spyproject
 
+# VS Code settings
+.vscode/
+
 # PyCharm
 .idea
 

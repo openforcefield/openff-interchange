@@ -3,11 +3,11 @@ Units tests for openff.interchange.components._packmol
 """
 
 import pathlib
+import re
 
 import numpy
 import pytest
-from openff.toolkit.topology import Molecule
-from openff.units import Quantity, unit
+from openff.toolkit import Molecule, Quantity
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
@@ -45,33 +45,42 @@ class TestPackmolWrapper:
     @pytest.mark.parametrize(
         "volume",
         [
-            1.0 * unit.angstrom**3,
-            1.0 * unit.nanometer**3,
-            0.0 * unit.angstrom**3,
-            234 * unit.angstrom**3,
+            Quantity(1.0, "angstrom**3"),
+            Quantity(1.0, "nanometer**3"),
+            Quantity(0.0, "angstrom**3"),
+            Quantity(234, "angstrom**3"),
         ],
     )
-    def test_scale_box(self, box, volume):
+    @pytest.mark.parametrize(
+        "factor",
+        [
+            0.9,
+            1.0,
+            1.1,
+            2.0,
+        ],
+    )
+    def test_scale_box(self, box, volume, factor):
         """Test that _scale_box() produces a box with the desired volume."""
-        scaled_box = _scale_box(box, volume)
+        scaled_box = _scale_box(box, volume, factor)
         a, b, c = scaled_box
 
         # | (a x b) . c | is the volume of the box
         # _scale_box uses numpy.linalg.det instead
         # linear dimensions are scaled by 1.1, so volumes are scaled by 1.1 ** 3
-        assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume * 1.1**3)
+        assert numpy.isclose(numpy.abs(numpy.dot(numpy.cross(a, b), c)), volume * factor**3)
 
-        assert scaled_box.u == unit.angstrom
+        assert str(scaled_box.u) == "angstrom"
 
     @pytest.mark.parametrize(
         "box",
         [
-            UNIT_CUBE * unit.angstrom,
-            RHOMBIC_DODECAHEDRON * unit.angstrom,
-            RHOMBIC_DODECAHEDRON_XYHEX * unit.angstrom,
-            UNIT_CUBE * unit.nanometer,
-            50 * UNIT_CUBE * unit.angstrom,
-            165.0 * RHOMBIC_DODECAHEDRON * unit.angstrom,
+            Quantity(UNIT_CUBE, "angstrom"),
+            Quantity(RHOMBIC_DODECAHEDRON, "angstrom"),
+            Quantity(RHOMBIC_DODECAHEDRON_XYHEX, "angstrom"),
+            Quantity(UNIT_CUBE, "nanometer"),
+            Quantity(50 * UNIT_CUBE, "angstrom"),
+            Quantity(165.0 * RHOMBIC_DODECAHEDRON, "angstrom"),
         ],
     )
     def test_compute_brick_from_box_vectors(self, box):
@@ -104,7 +113,7 @@ class TestPackmolWrapper:
                     [1.0, 0.0, 0.0],
                 ],
             ),
-            unit.nanometer,
+            "nanometer",
         )
         with pytest.raises(AssertionError):
             _compute_brick_from_box_vectors(box)
@@ -113,7 +122,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [10],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -122,7 +131,7 @@ class TestPackmolWrapper:
         assert topology.n_bonds == 20
 
         numpy.testing.assert_allclose(
-            topology.box_vectors.m_as(unit.nanometer).diagonal(),
+            topology.box_vectors.m_as("nanometer").diagonal(),
             [2.0, 2.0, 2.0],
         )
 
@@ -131,7 +140,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [10, 20],
-                box_vectors=20 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
             )
 
     def test_packmol_bad_box_vectors(self, molecules):
@@ -139,28 +148,28 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [2],
-                box_vectors=20 * numpy.identity(4) * unit.angstrom,
+                box_vectors=Quantity(20 * numpy.identity(4), "angstrom"),
             )
 
     def test_packmol_bad_box_shape(self, molecules):
         with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
             solvate_topology(
                 molecules[0].to_topology(),
-                box_shape=20 * numpy.identity(4) * unit.angstrom,
+                box_shape=Quantity(20 * numpy.identity(4), "angstrom"),
             )
 
         with pytest.raises(PACKMOLValueError, match=r"with shape \(3, 3\)"):
             solvate_topology_nonwater(
                 molecules[0].to_topology(),
                 solvent=Molecule.from_smiles("CCCCCCO"),
-                box_shape=20 * numpy.identity(4) * unit.angstrom,
-                target_density=1.0 * unit.grams / unit.milliliter,
+                box_shape=Quantity(20 * numpy.identity(4), "angstrom"),
+                target_density=Quantity(1.0, "grams / milliliter"),
             )
 
     def test_packmol_underspecified(self, molecules):
         """Too few arguments are provided."""
 
-        with pytest.raises(PACKMOLValueError, match="One of.*must be"):
+        with pytest.raises(PACKMOLValueError, match=r"One of.*must be"):
             pack_box(
                 molecules,
                 number_of_copies=[1],
@@ -173,8 +182,8 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 number_of_copies=[1],
-                target_density=1.0 * unit.grams / unit.milliliter,
-                box_vectors=20 * numpy.identity(3) * unit.angstrom,
+                target_density=Quantity(1.0, "grams / milliliter"),
+                box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
             )
 
     def test_packmol_bad_solute(self, molecules):
@@ -182,7 +191,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [2],
-                box_vectors=20 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
                 solute="my_solute.pdb",
             )
 
@@ -191,14 +200,14 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [10],
-                box_vectors=0.1 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(0.1 * numpy.identity(3), "angstrom"),
             )
 
     def test_packmol_water(self, molecules):
         topology = pack_box(
             molecules,
             [10],
-            target_density=1.0 * unit.grams / unit.milliliter,
+            target_density=Quantity(1.0, "grams / milliliter"),
         )
 
         assert topology is not None
@@ -217,7 +226,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [1, 1, 1],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -226,14 +235,14 @@ class TestPackmolWrapper:
         assert topology.n_bonds == 0
 
         # Na+
-        assert topology.atom(0).formal_charge == +1 * unit.elementary_charge
+        assert topology.atom(0).formal_charge == Quantity(+1, "elementary_charge")
         assert topology.atom(0).atomic_number == 11
 
         # Cl-
-        assert topology.atom(1).formal_charge == -1 * unit.elementary_charge
+        assert topology.atom(1).formal_charge == Quantity(-1, "elementary_charge")
         assert topology.atom(1).atomic_number == 17
         # K+
-        assert topology.atom(2).formal_charge == +1 * unit.elementary_charge
+        assert topology.atom(2).formal_charge == Quantity(+1, "elementary_charge")
         assert topology.atom(2).atomic_number == 19
 
     def test_packmol_paracetamol(self):
@@ -243,7 +252,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [1],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -284,7 +293,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             counts,
-            box_vectors=1000 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(1000 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -295,7 +304,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [1, 2],
-            box_vectors=20 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(20 * numpy.identity(3), "angstrom"),
         )
 
         assert topology is not None
@@ -304,7 +313,7 @@ class TestPackmolWrapper:
         assert topology.n_atoms == 3
 
         numpy.testing.assert_allclose(
-            topology.box_vectors.m_as(unit.nanometer).diagonal(),
+            topology.box_vectors.m_as("nanometer").diagonal(),
             [2.0, 2.0, 2.0],
         )
 
@@ -319,7 +328,7 @@ class TestPackmolWrapper:
             pack_box(
                 molecules,
                 [10],
-                box_vectors=50 * numpy.identity(3) * unit.angstrom,
+                box_vectors=Quantity(50 * numpy.identity(3), "angstrom"),
                 solute=benzene.to_topology(),
             )
 
@@ -328,7 +337,7 @@ class TestPackmolWrapper:
         topology = pack_box(
             molecules,
             [10],
-            box_vectors=50 * numpy.identity(3) * unit.angstrom,
+            box_vectors=Quantity(50 * numpy.identity(3), "angstrom"),
             solute=benzene.to_topology(),
         )
 
@@ -402,8 +411,8 @@ class TestPackmolWrapper:
                 molecules=[Molecule.from_smiles("CCO")],
                 number_of_copies=[11112],
                 box_shape=UNIT_CUBE,
-                tolerance=1.0 * unit.angstrom,
-                target_density=0.1 * unit.grams / unit.milliliters,
+                tolerance=Quantity(1.0, "angstrom"),
+                target_density=Quantity(0.1, "grams/milliliters"),
             )
 
     @pytest.mark.slow
@@ -414,8 +423,8 @@ class TestPackmolWrapper:
             molecules=[Molecule.from_smiles("CCO")],
             number_of_copies=[11112],
             box_shape=UNIT_CUBE,
-            tolerance=1.0 * unit.angstrom,
-            target_density=0.1 * unit.grams / unit.milliliters,
+            tolerance=Quantity(1.0, "angstrom"),
+            target_density=Quantity(0.1, "grams/milliliters"),
         )
 
     @pytest.mark.slow
@@ -425,8 +434,8 @@ class TestPackmolWrapper:
             molecules=[Molecule.from_smiles("CCO")],
             number_of_copies=[11112],
             box_shape=UNIT_CUBE,
-            tolerance=1.0 * unit.angstrom,
-            target_density=0.1 * unit.grams / unit.milliliters,
+            tolerance=Quantity(1.0, "angstrom"),
+            target_density=Quantity(0.1, "grams/milliliters"),
         )
 
     @pytest.mark.parametrize("use_local_path", [False, True])
@@ -439,7 +448,7 @@ class TestPackmolWrapper:
                 molecules=[Molecule.from_smiles("CCO")],
                 number_of_copies=[100],
                 box_shape=UNIT_CUBE,
-                target_density=1000 * unit.grams / unit.milliliters,
+                target_density=Quantity(1000, "grams / milliliters"),
                 working_directory="." if use_local_path else None,
             )
 
@@ -447,3 +456,122 @@ class TestPackmolWrapper:
             assert "STOP 173" in open("packmol_error.log").read()
         else:
             assert not pathlib.Path("packmol_error.log").is_file()
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("ion_conc", [0.0, 0.1, 0.0001])
+    @pytest.mark.parametrize("solute_smiles", ["CC(=O)[O-]", "[NH4+]"])
+    def test_solvate_topology_neutralize_charged_solutes(self, ion_conc, solute_smiles):
+        solute = Molecule.from_smiles(solute_smiles)
+        solute.generate_conformers(n_conformers=1)
+
+        assert solute.total_charge.m != -0.0
+
+        topology = solvate_topology(
+            solute.to_topology(),
+            nacl_conc=Quantity(ion_conc, "molar"),
+            padding=Quantity(2, "nanometer"),
+        )
+
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+    @pytest.mark.slow
+    def test_solvate_topology_neutral_solute_no_ions(self, ethanol_with_conformer):
+        topology = solvate_topology(
+            ethanol_with_conformer.to_topology(),
+            nacl_conc=Quantity(0.0, "molar"),
+            padding=Quantity(2, "nanometer"),
+        )
+
+        # there should be no ions in the topology
+        assert all([molecule.n_atoms > 1 for molecule in topology.molecules])
+
+        # but it should be charge neutral
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("n_monomers", [1, 2, 3, 4, 5])
+    def test_solvate_topology_highly_charged_low_nacl_conc(self, n_monomers):
+        """Ensure counter-ions are added, even with a highly charged solute and low NaCl concentration."""
+        solute = MoleculeWithConformer.from_smiles(n_monomers * "CC([O-])CC(O)", allow_undefined_stereo=True)
+
+        topology = solvate_topology(
+            solute.to_topology(),
+            target_density=Quantity(0.8, "gram / milliliter"),
+            nacl_conc=Quantity(1e-3, "molar"),
+            padding=Quantity(2, "nanometer"),
+        )
+
+        assert sum([molecule.total_charge.m for molecule in topology.molecules]) == 0.0
+
+        # There should be some Na+ ions in the topology (but not necessarily Cl-)
+        assert any(molecule.to_smiles() == "[Na+]" for molecule in topology.molecules)
+
+    def test_trim_zero_molecules(self, caffeine, water, ligand, ethanol):
+        """
+        Test that pack_box trims molecules from inputs when the count is zero.
+        See Issue #1267: https://github.com/openforcefield/openff-interchange/issues/1267
+        """
+        topology = pack_box(
+            molecules=[caffeine, ligand, water, ethanol],
+            number_of_copies=[1, 0, 10, 0],
+            box_vectors=Quantity(3 * numpy.eye(3), "nanometer"),
+        )
+
+        assert topology.n_molecules == 11
+
+    @pytest.mark.parametrize("solvation_function", [solvate_topology, solvate_topology_nonwater])
+    def test_padding_overspecified(self, solvation_function):
+        solute_topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
+
+        match solvation_function.__name__:
+            case "solvate_topology":
+                args = (
+                    solute_topology,
+                    Quantity(1e-3, "molar"),
+                )
+            case "solvate_topology_nonwater":
+                args = (
+                    solute_topology,
+                    Molecule.from_smiles("CCCCCCO"),
+                    Quantity(0.5, "gram/milliliter"),
+                )
+
+        # no box, default padding (1.2 nm), should pack without error
+        packed_topology1 = solvation_function(*args, box_shape=UNIT_CUBE)
+
+        # not sure how reproducible box vectors are with padding argument, so be loose
+        # this molecule gets me box vectors ~2.8 nm locally, which is roughly twice padding
+        # with an extra bit for the approximate molecule size
+        assert numpy.allclose(
+            packed_topology1.box_vectors.m_as("nanometer"),
+            2.8 * numpy.eye(3),
+            atol=0.2,
+        )
+
+        # no box, no padding should raise an error
+        with pytest.raises(
+            PACKMOLValueError,
+            match=re.escape(
+                "Incompatible inputs: input topology has no box vectors and a solvent padding "
+                "distance was not specified",
+            ),
+        ):
+            solvation_function(*args, padding=None, box_shape=UNIT_CUBE)
+
+        solute_topology.box_vectors = Quantity(2.123 * UNIT_CUBE, "nm")
+
+        # with box, default padding should raise an error
+        with pytest.raises(
+            PACKMOLValueError,
+            match=r"Incompatible inputs.*input topology has defined box vectors and a solvent "
+            "padding distance was also specified",
+        ):
+            solvation_function(*args)
+
+        # with box, no padding should pack
+        packed_topology2 = solvation_function(*args, padding=None)
+
+        numpy.testing.assert_allclose(
+            packed_topology2.box_vectors.m_as("nanometer").diagonal(),
+            [2.123, 2.123, 2.123],
+        )

@@ -1,5 +1,39 @@
 # Sharp edges
 
+(no-cutoff-support)=
+## Some MM engines do not support "no-cutoff" non-bonded methods <!-- markdownlint-disable-line -->
+
+SMIRNOFF force fields support a non-bonded treatment in which, for non-periodic systems, the vdW interactions are not truncated. OpenFF force fields commonly use this option (`nonperiodic_method="no-cutoff"`).
+
+OpenMM supports this with its `NoCutoff` method in `openmm.NonbondedForce` and similar forces. There is, however, no clear analog in GROMACS (with versions after 2020) or Amber. A common approach is to use the "pseudo-vacuum" approximation in which a very large box is used, i.e. 10 nm cubic box lengths for a system of a single small molecule.
+
+This approach is an approximation and therefore must be opted into by defining a periodic box, either on the input topology:
+
+```python
+from openff.toolkit import Quantity, ForceField, Topology
+
+# do normal topology preparation ...
+my_topology = Topology.from_pdb("my_system.pdb")
+
+# ... and then set box vectors before `Interchange` creation
+my_topology.box_vectors = Quantity([10, 10, 10], "nanometer")
+
+my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topology)
+```
+
+or the created `Interchange` object:
+
+```python
+# do normal `Interchange` preparation ...
+my_topology = Topology.from_pdb("my_system.pdb")
+my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topology)
+
+# ... and then set the box after creating an `Interchange` object:
+my_interchange.box = Quantity([10, 10, 10], "nanometer")
+```
+
+You may also wish to make the vdW cut-off distance longer. This is typically accessible at `my_interchange['vdW'].cutoff`.
+
 ## Quirks of charge assignment
 
 ### Charge assignment hierarchy
@@ -76,6 +110,23 @@ For example, consider an OpenMM system prepared, from the OpenMM API, with `Forc
 For more, see [issue #1005](https://github.com/openforcefield/openff-interchange/issues/1005#issue-2405679510).
 
 Keywords: OpenMM, GROMACS, constraints, bond constraints, rigid water
+
+### Only `ThreeParticleAverageSite` virtual sites are supported
+
+Other virtual site types will raise an error.
+
+### Virtual site exclusions re-created with "parents" virtual site exclusion policy
+
+Non-bonded exclusions involving virtual sites (between virtual sites and heavy atoms or between
+virtual sites and virtual sites) are not processed. Instead, they are later re-generated assuming the "parents" exclusion policy as defined in the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges). This should re-create typical exclusions in 4- and 5-site water models but may not be appropriate with highly custom virtual site interactions in larger molecules.
+
+### Virtual sites from multiple sources cannot be mixed
+
+Combining interchanges with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
+
+### Virtual sites must be listed after heavy atoms each molecule
+
+It's assumed that, in each molecule in an OpenMM topology, all heavy atoms are listed before any virtual sites. This includes the case of all virtual sites being listed after all heavy atoms, i.e. not collated into molecules/residues. There are no community standards around particle ordering, but virtual sites are typically listed after heavy atoms in each molecule or residue.
 
 ### Center-of-mass motion remover ignored
 

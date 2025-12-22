@@ -1,9 +1,10 @@
 import pathlib
 
 import numpy
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 
 from openff.interchange._experimental import experimental
+from openff.interchange.exceptions import GROMACSParseError
 from openff.interchange.interop.gromacs._import.combine import make_monolithic
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSAngle,
@@ -30,6 +31,7 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
 
     https://github.com/shirtsgroup/InterMol/blob/v0.1.2/intermol/gromacs/gromacs_parser.py
     """
+    current_directive = "UNDEFINED"
     for line in make_monolithic(top_file):
         stripped = line.split(";")[0].strip()
 
@@ -39,9 +41,12 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
         if stripped.startswith(";"):
             continue
 
+        if stripped.startswith("*"):
+            continue
+
         if stripped.startswith("["):
             if not len(stripped.split()) == 3 and stripped.endswith("]"):
-                raise ValueError("Invalid GROMACS topology file")
+                raise GROMACSParseError("Invalid GROMACS topology file")
 
             current_directive = stripped[1:-1].strip()
 
@@ -117,8 +122,16 @@ def from_files(top_file, gro_file, cls=GROMACSSystem) -> GROMACSSystem:
 
             system.molecules.append((molecule_name, number_of_copies))
 
+        elif current_directive == "UNDEFINED":
+            raise GROMACSParseError(
+                "Failed to begin parsing GROMACS topology file. Error processing line:"
+                f"\n\n{line}\n"
+                "If you think this topology file is "
+                "valid, please open an issue on GitHub.",
+            )
+
         else:
-            raise ValueError(f"Invalid directive {current_directive}")
+            raise GROMACSParseError(f"Invalid directive {current_directive}")
 
     for molecule_type in system.molecule_types.values():
         this_molecule_atom_type_names = tuple(atom.atom_type for atom in molecule_type.atoms)
@@ -179,15 +192,15 @@ def _process_atomtype(
     bonding_type = split[1] if split[1] else ""
 
     atomic_number = int(split[2]) if split[2] is not None else None
-    mass = Quantity(float(split[3]), unit.dalton)
+    mass = Quantity(float(split[3]), "dalton")
 
-    charge = Quantity(float(split[4]), unit.elementary_charge)
+    charge = Quantity(float(split[4]), "elementary_charge")
 
     particle_type = split[5]
 
     if particle_type == "A":
-        sigma = Quantity(float(split[6]), unit.nanometer)
-        epsilon = Quantity(float(split[7]), unit.kilojoule_per_mole)
+        sigma = Quantity(float(split[6]), "nanometer")
+        epsilon = Quantity(float(split[7]), "kilojoule_per_mole")
     else:
         raise ValueError(f"Particle type must be A, parsed {particle_type}.")
 
@@ -223,8 +236,8 @@ def _process_atom(
     residue_name = split[3]
     atom_name = split[4]
     charge_group_number = int(split[5])
-    charge = Quantity(float(split[6]), unit.elementary_charge)
-    mass = Quantity(float(split[7]), unit.amu)
+    charge = Quantity(float(split[6]), "elementary_charge")
+    mass = Quantity(float(split[7]), "amu")
 
     return GROMACSAtom(
         index=atom_number,
@@ -262,8 +275,8 @@ def _process_settles(line: str) -> GROMACSSettles:
 
     first_atom = int(split[0])
 
-    oxygen_hydrogen_distance = Quantity(float(split[2]), unit.nanometer)
-    hydrogen_hydrogen_distance = Quantity(float(split[3]), unit.nanometer)
+    oxygen_hydrogen_distance = Quantity(float(split[2]), "nanometer")
+    hydrogen_hydrogen_distance = Quantity(float(split[3]), "nanometer")
 
     return GROMACSSettles(
         first_atom=first_atom,
@@ -281,11 +294,8 @@ def _process_bond(line: str) -> GROMACSBond:
     bond_function = int(split[2])
 
     if bond_function == 1:
-        bond_length = Quantity(float(split[3]), unit.nanometer)
-        bond_k = Quantity(
-            float(split[4]),
-            unit.kilojoule_per_mole / unit.nanometer**2,
-        )
+        bond_length = Quantity(float(split[3]), "nanometer")
+        bond_k = Quantity(float(split[4]), "kilojoule_per_mole / nanometer**2")
 
         return GROMACSBond(
             atom1=atom1,
@@ -311,8 +321,8 @@ def _process_angle(
     angle_function = int(split[3])
 
     if angle_function == 1:
-        angle = Quantity(float(split[4]), unit.degrees)
-        k = Quantity(float(split[5]), unit.kilojoule_per_mole)
+        angle = Quantity(float(split[4]), "degrees")
+        k = Quantity(float(split[5]), "kilojoule_per_mole")
     else:
         raise ValueError(f"Angle function must be 1, parsed {angle_function}.")
 
@@ -343,8 +353,8 @@ def _process_dihedral(
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            phi=Quantity(float(split[5]), unit.degrees),
-            k=Quantity(float(split[6]), unit.kilojoule_per_mole),
+            phi=Quantity(float(split[5]), "degrees"),
+            k=Quantity(float(split[6]), "kilojoule_per_mole"),
             multiplicity=int(float(split[7])),
         )
 
@@ -354,12 +364,12 @@ def _process_dihedral(
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            c0=Quantity(float(split[5]), unit.kilojoule_per_mole),
-            c1=Quantity(float(split[6]), unit.kilojoule_per_mole),
-            c2=Quantity(float(split[7]), unit.kilojoule_per_mole),
-            c3=Quantity(float(split[8]), unit.kilojoule_per_mole),
-            c4=Quantity(float(split[9]), unit.kilojoule_per_mole),
-            c5=Quantity(float(split[10]), unit.kilojoule_per_mole),
+            c0=Quantity(float(split[5]), "kilojoule_per_mole"),
+            c1=Quantity(float(split[6]), "kilojoule_per_mole"),
+            c2=Quantity(float(split[7]), "kilojoule_per_mole"),
+            c3=Quantity(float(split[8]), "kilojoule_per_mole"),
+            c4=Quantity(float(split[9]), "kilojoule_per_mole"),
+            c5=Quantity(float(split[10]), "kilojoule_per_mole"),
         )
 
     elif dihedral_function == 4:
@@ -368,8 +378,8 @@ def _process_dihedral(
             atom2=atom2,
             atom3=atom3,
             atom4=atom4,
-            phi=Quantity(float(split[5]), unit.degrees),
-            k=Quantity(float(split[6]), unit.kilojoule_per_mole),
+            phi=Quantity(float(split[5]), "degrees"),
+            k=Quantity(float(split[6]), "kilojoule_per_mole"),
             multiplicity=int(float(split[7])),
         )
 
@@ -405,7 +415,7 @@ def _process_system(line: str) -> str:
     return system_name
 
 
-def _read_coordinates(file_path: pathlib.Path) -> unit.Quantity:
+def _read_coordinates(file_path: pathlib.Path) -> Quantity:
     def _infer_coord_precision(file_path: pathlib.Path) -> int:
         """
         Infer decimal precision of coordinates by parsing periods in atoms lines.
@@ -447,12 +457,12 @@ def _read_coordinates(file_path: pathlib.Path) -> unit.Quantity:
             z = float(line[coordinate_columns[2] : coordinate_columns[3]])
             unitless_coordinates[coordinate_index] = numpy.array([x, y, z])
 
-        coordinates = unitless_coordinates * unit.nanometer
+        coordinates = Quantity(unitless_coordinates, "nanometer")
 
     return coordinates
 
 
-def _read_box(file_path: pathlib.Path) -> unit.Quantity:
+def _read_box(file_path: pathlib.Path) -> Quantity:
     with open(file_path) as gro_file:
         # Throw away comment / name line
         gro_file.readline()
@@ -463,6 +473,6 @@ def _read_box(file_path: pathlib.Path) -> unit.Quantity:
     parsed_box = [float(val) for val in box_line.split()]
 
     if len(parsed_box) == 3:
-        box = parsed_box * numpy.eye(3) * unit.nanometer
+        box = Quantity(parsed_box * numpy.eye(3), "nanometer")
 
     return box

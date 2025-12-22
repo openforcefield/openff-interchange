@@ -19,23 +19,19 @@ def get_lammps_energies(
     """
     Given an OpenFF Interchange object, return single-point energies as computed by LAMMPS.
 
-    .. warning :: This API is not stable and subject to change.
-
-    .. todo :: Split out _running_ LAMMPS into a separate internal function
-
     Parameters
     ----------
-    interchange : openff.interchange.Interchange
+    interchange
         An OpenFF Interchange object to compute the single-point energy of
-    round_positions : int, optional
+    round_positions
         The number of decimal places, in nanometers, to round positions. This can be useful when
         comparing to i.e. GROMACS energies, in which positions may be rounded.
-    detailed : bool, optional
+    detailed
         If True, return a detailed energy report containing all energy components.
 
     Returns
     -------
-    report : EnergyReport
+    report
         An `EnergyReport` object containing the single-point energies.
 
     """

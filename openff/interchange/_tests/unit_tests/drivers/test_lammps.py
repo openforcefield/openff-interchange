@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 
 from openff.interchange._tests import MoleculeWithConformer, needs_lmp
 from openff.interchange.constants import kj_mol
@@ -46,6 +46,6 @@ class TestLAMMPSDriver:
     @needs_lmp
     def test_can_write_without_torsions(self, sage):
         topology = MoleculeWithConformer.from_smiles("N").to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], unit.nanometer)
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         assert get_lammps_energies(sage.create_interchange(topology))["Bond"].m == 0.0

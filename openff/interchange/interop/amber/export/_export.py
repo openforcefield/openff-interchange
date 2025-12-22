@@ -6,8 +6,8 @@ from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
 
-import numpy as np
-from openff.toolkit import Topology, unit
+import numpy
+from openff.toolkit import Topology
 
 from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _get_num_h_bonds
@@ -48,12 +48,12 @@ def _get_per_atom_exclusion_lists(
 
     Parameters
     ----------
-    topology: Topology
+    topology
         OpenFF Topology
 
     Returns
     -------
-    per_atom_exclusions: dict[int, list[int]]
+    per_atom_exclusions
         keys: atom indices (OpenFF atoms, zero-indexed)
         values: defaultdict[int, list[int]]
             list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom,
@@ -101,7 +101,7 @@ def _get_exclusion_lists(
 
     Parameters
     ----------
-    per_atom_exclusions: dict[int, list[int]]
+    per_atom_exclusions
         keys: atom indices (OpenFF atoms, zero-indexed)
         values: list of atom indices (OpenFF atoms, zero-indexed) that are excluded from this atom
 
@@ -109,9 +109,9 @@ def _get_exclusion_lists(
 
     Returns
     -------
-    number_excluded_atoms: list[int]
+    number_excluded_atoms
         Number of excluded atoms for each atom (OpenFF atoms, zero-indexed)
-    excluded_atoms_list: list[int]
+    excluded_atoms_list
         Flattened list of per-atom exclusions (Amber atoms, one-indexed).
         See EXCLUDED_ATOMS_LIST in https://ambermd.org/prmtop.pdf
 
@@ -485,9 +485,14 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         prmtop.write("%FLAG CHARGE\n%FORMAT(5E16.8)\n")
-        charges = [
-            charge.m_as(unit.e) * AMBER_COULOMBS_CONSTANT for charge in interchange["Electrostatics"].charges.values()
-        ]
+        charges = (
+            interchange["Electrostatics"]  # type: ignore[attr-defined]
+            .get_charge_array()
+            .m_as(
+                "elementary_charge",
+            )
+            * AMBER_COULOMBS_CONSTANT
+        ).tolist()
         text_blob = "".join([f"{val:16.8E}" for val in charges])
         _write_text_blob(prmtop, text_blob)
 
@@ -543,8 +548,8 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
                 sigma = (sigma_i + sigma_j) * 0.5
                 epsilon = (epsilon_i * epsilon_j) ** 0.5
 
-                acoef = (4 * epsilon * sigma**12).m_as(kcal_mol * unit.angstrom**12)
-                bcoef = (4 * epsilon * sigma**6).m_as(kcal_mol * unit.angstrom**6)
+                acoef = (4 * epsilon * sigma**12).m_as("kcal / mol * angstrom**12")
+                bcoef = (4 * epsilon * sigma**6).m_as("kcal / mol * angstrom**6")
 
                 acoefs[coeff_index - 1] = acoef
                 bcoefs[coeff_index - 1] = bcoef
@@ -597,7 +602,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         prmtop.write("%FLAG BOND_EQUIL_VALUE\n%FORMAT(5E16.8)\n")
         bond_length = [
-            interchange["Bonds"].potentials[key].parameters["length"].m_as(unit.angstrom)
+            interchange["Bonds"].potentials[key].parameters["length"].m_as("angstrom")
             for key in potential_key_to_bond_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in bond_length])
@@ -613,7 +618,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         prmtop.write("%FLAG ANGLE_EQUIL_VALUE\n%FORMAT(5E16.8)\n")
         angle_theta = [
-            interchange["Angles"].potentials[key].parameters["angle"].m_as(unit.radian)
+            interchange["Angles"].potentials[key].parameters["angle"].m_as("radian")
             for key in potential_key_to_angle_type_mapping
         ]
         text_blob = "".join([f"{val:16.8E}" for val in angle_theta])
@@ -627,8 +632,8 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             params = interchange[key_.associated_handler].potentials[key_].parameters  # type: ignore
             idivf = int(params["idivf"]) if "idivf" in params else 1
             dihedral_k.append((params["k"] / idivf).m_as(kcal_mol))
-            dihedral_periodicity.append(params["periodicity"].m_as(unit.dimensionless))
-            dihedral_phase.append(params["phase"].m_as(unit.radian))
+            dihedral_periodicity.append(params["periodicity"].m_as("dimensionless"))
+            dihedral_phase.append(params["phase"].m_as("radian"))
 
         prmtop.write("%FLAG DIHEDRAL_FORCE_CONSTANT\n%FORMAT(5E16.8)\n")
         text_blob = "".join([f"{val:16.8E}" for val in dihedral_k])
@@ -720,7 +725,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         _write_text_blob(prmtop, text_blob)
 
         if IFBOX == 1:
-            if (interchange.box.m != np.diag(np.diagonal(interchange.box.m))).any():  # type: ignore[union-attr]
+            if (interchange.box.m != numpy.diag(numpy.diagonal(interchange.box.m))).any():  # type: ignore[union-attr]
                 raise NotImplementedError(
                     "Interchange does not yet support exporting non-rectangular boxes to Amber",
                 )
@@ -737,7 +742,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
             prmtop.write("%FLAG BOX_DIMENSIONS\n%FORMAT(5E16.8)\n")
             box = [90.0]
             for i in range(3):
-                box.append(interchange.box[i, i].m_as(unit.angstrom))  # type: ignore
+                box.append(interchange.box[i, i].m_as("angstrom"))  # type: ignore
             text_blob = "".join([f"{val:16.8E}" for val in box])
             _write_text_blob(prmtop, text_blob)
 
@@ -774,15 +779,15 @@ def to_inpcrd(interchange: "Interchange", file_path: Path | str):
     with open(path, "w") as inpcrd:
         inpcrd.write(f"\n{n_atoms:5d}{time:15.7e}\n")
 
-        coords = interchange.positions.m_as(unit.angstrom)  # type: ignore[union-attr]
+        coords = interchange.positions.m_as("angstrom")  # type: ignore[union-attr]
         blob = "".join([f"{val:12.7f}".rjust(12) for val in coords.flatten()])
 
         for line in textwrap.wrap(blob, width=72, drop_whitespace=False):
             inpcrd.write(line + "\n")
 
         if interchange.box is not None:
-            box = interchange.box.to(unit.angstrom).magnitude
-            if (box == np.diag(np.diagonal(box))).all():
+            box = interchange.box.to("angstrom").magnitude
+            if (box == numpy.diag(numpy.diagonal(box))).all():
                 for i in range(3):
                     inpcrd.write(f"{box[i, i]:12.7f}")
                 for _ in range(3):

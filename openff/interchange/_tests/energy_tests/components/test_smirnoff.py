@@ -1,6 +1,6 @@
-import numpy as np
+import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, unit
+from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -15,7 +15,6 @@ from openff.interchange.drivers.openmm import (
 
 if has_package("openmm"):
     import openmm
-    import openmm.app
     import openmm.unit
 
 
@@ -38,7 +37,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         top = mol.to_topology()
 
         out = Interchange.from_smirnoff(forcefield, top)
-        out.box = [4, 4, 4] * unit.nanometer
+        out.box = Quantity([4, 4, 4], "nanometer")
         out.positions = mol.conformers[0]
 
         interchange_bond_energy = get_openmm_energies(
@@ -81,4 +80,4 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
                     ref_k.append(force.getBondParameters(i)[3]._value)
                     ref_length.append(force.getBondParameters(i)[2]._value)
 
-        np.testing.assert_allclose(ref_k, new_k, rtol=3e-5)
+        numpy.testing.assert_allclose(ref_k, new_k, rtol=3e-5)
