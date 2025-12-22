@@ -163,6 +163,13 @@ nglview = "*"
 [tool.pixi.feature.examples.tasks]
 test = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
 
+[tool.pixi.feature.typing.dependencies]
+mypy = "*"
+pandas-stubs = "*"
+
+[tool.pixi.feature.dev.dependencies]
+pre-commit = "*"
+
 [tool.pixi.feature.regression_tests.dependencies]
 deepdiff = "<=8"
 rich = ">=14.0.0,<15"
@@ -176,4 +183,5 @@ python = "3.11.*"
 # add in py312, py313 later
 
 [tool.pixi.environments]
-py311 = { features = [ "py311", "test", "regression_tests", "engines" ] }
+py311 = { features = [ "py311", "test", "typing", "regression_tests", "engines" ] }
+dev = { features = [ "py311", "test", "typing", "dev", "engines" ] }
