@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<System openmmVersion="8.1.1" type="System" version="1">
+<System openmmVersion="8.4" type="System" version="1">
 	<PeriodicBoxVectors>
 		<A x="2" y="0" z="0"/>
 		<B x="0" y="2" z="0"/>
@@ -203,5 +203,6 @@
 				<Bond d=".1785584712269" k="102089.536109274" p1="3" p2="4"/>
 			</Bonds>
 		</Force>
+		<Force forceGroup="0" frequency="1" name="CMMotionRemover" type="CMMotionRemover" version="1"/>
 	</Forces>
 </System>

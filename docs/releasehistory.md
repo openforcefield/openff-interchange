@@ -22,8 +22,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
     * The previous behavior can be restored by passing scaling the `target_density` argument down by a factor of 1.1.
 
 * #1376 Makes `Interchange.topology` not store positions. Use `Interchange.positions` instead.
-
 * #1387 Migrates version handling to `setuptools-scm`.
+* #1093 Migrates development and automation to use Pixi.
 
 ### Bug fixes
 

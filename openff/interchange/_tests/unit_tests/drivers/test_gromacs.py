@@ -18,6 +18,7 @@ def test_group_impropers(cb8_host, no_charges):
     assert abs(openmm_torsions - gromacs_torsions).m_as("kilojoule_per_mole") < 1e-3
 
 
+@needs_gmx
 def test_14_in_detailed_report(sage):
     """Ensure that 1-4 interactions are included in the detailed report and non-zero."""
     octanol = MoleculeWithConformer.from_smiles("CCCCCCCC")
@@ -30,6 +31,7 @@ def test_14_in_detailed_report(sage):
     assert report["Electrostatics 1-4"].m != 0.0
 
 
+@needs_gmx
 def test_key_order(methane_dimer):
     """Ensure that the keys in the report are in a consistent order."""
     report = get_gromacs_energies(methane_dimer, detailed=True)

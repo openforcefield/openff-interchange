@@ -1,5 +1,7 @@
 """Models for storing applied force field parameters."""
 
+from __future__ import annotations
+
 import ast
 import json
 from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
