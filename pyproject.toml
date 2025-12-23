@@ -133,13 +133,17 @@ postinstall = "pip install -e . plugins/"
 
 [tool.pixi.dependencies]
 pip = "*"
-numpy = "*"
+numpy = ">=2.2"
 setuptools_scm = "*"
 pydantic = "=2"
-openff-toolkit = "0.18.*"
-ambertools = "24.*"
+openff-toolkit-base = "0.18.*"
+openff-interchange = ">=0.4.5"
 rdkit = ">=2024"
 openmm = "8.4.*"
+
+[tool.pixi.feature.ambertools.dependencies]
+ambertools = "24.*"
+numpy = "2.2.*"
 
 [tool.pixi.feature.openeye.dependencies]
 openeye-toolkits = "*"
@@ -180,11 +184,12 @@ rich = ">=14.0.0,<15"
 click = ">=8.1.8,<9"
 
 [tool.pixi.feature.engines]
-# TODO: Add LAMMPS back
-dependencies = { gromacs = "*" }
+# this conflicts with AmberTools because of NumPy 2.3,
+# so cannot use this feature group alongside ambertools or mosdef features
+dependencies = { gromacs = "*", lammps = ">=2024.08.29", numpy = ">=2.3" }
 
 [tool.pixi.feature.mosdef]
-dependencies = { mbuild-base = "*", foyer = "*" }
+dependencies = { mbuild-base = "*", foyer = "*", numpy = "<2.3" }
 
 [tool.pixi.feature.betas]
 dependencies = { openeye-toolkits = "*", openmm = "*" }
@@ -198,14 +203,14 @@ python = "3.12.*"
 python = "3.13.*"
 
 [tool.pixi.environments]
-py311 = { features = [ "py311", "test", "typing", "regression_tests", "engines", "mosdef" ] }
-py311openeye = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines", "mosdef" ] }
+py311 = { features = [ "py311", "test", "typing", "regression_tests", "ambertools", "mosdef" ] }
+py311openeye = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ] }
 py311examples = { features = [ "py311", "openeye", "test", "regression_tests", "engines", "examples" ] }
-py312 = { features = [ "py312", "test", "typing", "regression_tests", "engines", "mosdef" ] }
-py312openeye = { features = [ "py312", "openeye", "test", "typing", "regression_tests", "engines", "mosdef" ] }
+py312 = { features = [ "py312", "test", "typing", "regression_tests", "ambertools", "mosdef" ] }
+py312openeye = { features = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ] }
 py312examples = { features = [ "py312", "openeye", "test", "regression_tests", "engines", "examples" ] }
-py313 = { features = [ "py313", "test", "typing", "regression_tests", "engines" ] }
+py313 = { features = [ "py313", "test", "typing", "regression_tests", "mosdef" ] }
 py313openeye = { features = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ] }
 py313examples = { features = [ "py313", "openeye", "test", "regression_tests", "engines", "examples" ] }
 dev = { features = [ "py312", "openeye", "test", "typing", "dev", "engines" ] }
-betas = { features = [ "py311", "test", "typing", "regression_tests", "engines", "mosdef", "betas" ] }
+betas = { features = [ "py311", "test", "typing", "regression_tests", "engines", "betas" ] }
