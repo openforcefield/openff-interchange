@@ -1,5 +1,7 @@
 """Models for storing applied force field parameters."""
 
+from __future__ import annotations
+
 import ast
 import json
 from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
@@ -346,7 +348,7 @@ class Collection(_BaseModel):
         self,
         p=None,
         use_jax: bool = True,
-    ) -> ArrayLike | "Array":
+    ) -> ArrayLike | Array:
         """Return an array of system parameters, given an array of force field parameters."""
         if p is None:
             p = self.get_force_field_parameters(use_jax=use_jax)
@@ -363,7 +365,7 @@ class Collection(_BaseModel):
         )
 
     @requires_package("jax")
-    def get_param_matrix(self) -> ArrayLike | "Array":
+    def get_param_matrix(self) -> ArrayLike | Array:
         """Get a matrix representing the mapping between force field and system parameters."""
         from functools import partial
 
