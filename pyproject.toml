@@ -130,6 +130,10 @@ platforms = [ "linux-64", "osx-arm64" ]
 
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
+run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
+run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n logical", depends-on = "postinstall" }
+run_examples = { cmd = "python -m pytest examples/ -x -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
+run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
 
 [tool.pixi.dependencies]
 pip = "*"
@@ -156,21 +160,11 @@ pytest-randomly = "*"
 intermol = "*"
 nglview = "*"
 
-[tool.pixi.feature.test.tasks]
-test = "python -m pytest --durations=20 -n logical openff/interchange/"
-
 [tool.pixi.feature.examples.dependencies]
 mdtraj = "*"
-pytest = "*"
-pytest-xdist = "*"
-pytest-cov = "*"
 nbval = "*"
 nglview = "*"
 jax = "*"
-
-[tool.pixi.feature.examples.tasks]
-test = "python -m pytest -x -c pyproject.toml --nbval-lax --dist loadscope -n logical --durations=20 examples/"
-run_examples = "python -m pytest -x -c pyproject.toml -p no:randomly --nbval-lax --dist loadscope -n logical --durations=20 examples/ --ignore=examples/experimental/ --ignore=examples/lammps/"
 
 [tool.pixi.feature.typing.dependencies]
 mypy = "*"
@@ -193,8 +187,8 @@ dependencies = { gromacs = "*", lammps = ">=2024.08.29", numpy = ">=2.3" }
 dependencies = { mbuild-base = "*", foyer = "*", numpy = "<2.3" }
 
 [tool.pixi.feature.betas]
-dependencies = { openeye-toolkits = "*", openmm = "*" }
 channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
+dependencies = { openeye-toolkits = "*", openmm = "*" }
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
@@ -204,14 +198,15 @@ python = "3.12.*"
 python = "3.13.*"
 
 [tool.pixi.environments]
-py311 = { features = [ "py311", "test", "typing", "regression_tests", "ambertools", "mosdef" ] }
-py311openeye = { features = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ] }
-py311examples = { features = [ "py311", "openeye", "test", "regression_tests", "engines", "examples" ] }
-py312 = { features = [ "py312", "test", "typing", "regression_tests", "ambertools", "mosdef" ] }
-py312openeye = { features = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ] }
-py312examples = { features = [ "py312", "openeye", "test", "regression_tests", "engines", "examples" ] }
-py313 = { features = [ "py313", "test", "typing", "regression_tests", "mosdef" ] }
-py313openeye = { features = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ] }
-py313examples = { features = [ "py313", "openeye", "test", "regression_tests", "engines", "examples" ] }
-dev = { features = [ "py312", "openeye", "test", "typing", "dev", "engines" ] }
-betas = { features = [ "py311", "test", "typing", "regression_tests", "engines", "betas" ] }
+py311amber = [ "py311", "test", "typing", "ambertools", "mosdef" ]
+py311openeye = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ]
+py311examples = [ "py311", "openeye", "test", "engines", "examples" ]
+py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
+py312openeye = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ]
+py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
+# no AmberTools + Python 3.13, so just have one with no AmberTools or OpenEye
+py313none = [ "py313", "test", "typing", "mosdef" ]
+py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
+py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
+dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
+betas = [ "py311", "test", "typing", "engines", "betas" ]
