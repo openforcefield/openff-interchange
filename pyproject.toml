@@ -154,6 +154,7 @@ pytest-cov = "*"
 pytest-xdist = "*"
 pytest-randomly = "*"
 intermol = "*"
+nglview = "*"
 
 [tool.pixi.feature.test.tasks]
 test = "python -m pytest --durations=20 -n logical openff/interchange/"

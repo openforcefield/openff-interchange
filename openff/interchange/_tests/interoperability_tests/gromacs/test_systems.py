@@ -1,8 +1,11 @@
 from openff.toolkit import Quantity
 
+from openff.interchange._tests import needs_gmx
+
 from openff.interchange._tests._gromacs import gmx_monolithic_vs_itp, gmx_roundtrip
 
 
+@needs_gmx
 def test_ligand_vacuum(caffeine, sage_unconstrained, monkeypatch):
     monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
@@ -13,6 +16,7 @@ def test_ligand_vacuum(caffeine, sage_unconstrained, monkeypatch):
     gmx_monolithic_vs_itp(sage_unconstrained.create_interchange(topology))
 
 
+@needs_gmx
 def test_water_dimer(water_dimer, tip3p, monkeypatch):
     monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
@@ -20,6 +24,7 @@ def test_water_dimer(water_dimer, tip3p, monkeypatch):
     gmx_monolithic_vs_itp(tip3p.create_interchange(water_dimer))
 
 
+@needs_gmx
 def test_alanine_dipeptide(alanine_dipeptide, ff14sb, monkeypatch):
     monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
