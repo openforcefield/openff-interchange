@@ -69,7 +69,7 @@ For more examples specific to Interchange, navigate to the `examples/` directory
 
 ## Developing
 
-See the [Development guide](devtools/README.md).
+See the [Development guide](docs/developing.md).
 
 ## Copyright
 
