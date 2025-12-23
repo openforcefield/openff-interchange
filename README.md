@@ -67,6 +67,10 @@ For more information, please consult the [full documentation](https://openff-int
 
 For more examples specific to Interchange, navigate to the `examples/` directory.
 
+## Developing
+
+See the [Development guide](devtools/README.md).
+
 ## Copyright
 
 Copyright (c) 2020, Open Force Field Initiative
