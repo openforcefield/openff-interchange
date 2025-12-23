@@ -159,6 +159,7 @@ pytest-xdist = "*"
 pytest-randomly = "*"
 intermol = "*"
 nglview = "*"
+jax = "*"
 
 [tool.pixi.feature.examples.dependencies]
 mdtraj = "*"
