@@ -141,7 +141,7 @@ numpy = ">=2.2"
 setuptools_scm = "*"
 pydantic = "=2"
 openff-toolkit-base = "0.18.*"
-openff-interchange = ">=0.4.5"
+openff-interchange-base = ">=0.4.5"
 rdkit = ">=2024"
 openmm = "8.4.*"
 
@@ -191,6 +191,11 @@ dependencies = { mbuild-base = "*", foyer = "*", numpy = "<2.3", gromacs = "*" }
 channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
 dependencies = { openeye-toolkits = "*", openmm = "*" }
 
+# a separate feature group for things that don't fit nicely into the other categories
+[tool.pixi.feature.etc]
+# a Packmol install separate from AmberTools is needed to test PBCs
+dependencies = { packmol = "*", smirnoff-plugins = "2025.*" }
+
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
 [tool.pixi.feature.py312.dependencies]
@@ -209,5 +214,6 @@ py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
 py313none = [ "py313", "test", "typing", "mosdef" ]
 py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
 py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
+py311etc = [ "py311", "openeye", "test", "etc" ]
 dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
 betas = [ "py311", "test", "typing", "engines", "betas" ]
