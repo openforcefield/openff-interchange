@@ -165,8 +165,9 @@ openff-nagl-base = "*"
 openff-nagl-models = "*"
 
 [tool.pixi.feature.examples.dependencies]
-mdtraj = "*"
 nbval = "*"
+mdtraj = "*"
+packmol = "*"
 nglview = "*"
 jax = "*"
 
@@ -201,7 +202,7 @@ dependencies = { openeye-toolkits = "*", openmm = "*" }
 # a separate feature group for things that don't fit nicely into the other categories
 [tool.pixi.feature.etc.dependencies]
 # a Packmol install separate from AmberTools is needed to test PBCs
-packmol = "*"
+packmol = ">=20.15.0"
 smirnoff-plugins = "2025.*"
 
 [tool.pixi.feature.py311.dependencies]
