@@ -160,6 +160,9 @@ pytest-randomly = "*"
 intermol = "*"
 nglview = "*"
 jax = "*"
+pyedr = "*"
+openff-nagl-base = "*"
+openff-nagl-models = "*"
 
 [tool.pixi.feature.examples.dependencies]
 mdtraj = "*"
@@ -179,22 +182,27 @@ deepdiff = "<=8"
 rich = ">=14.0.0,<15"
 click = ">=8.1.8,<9"
 
-[tool.pixi.feature.engines]
+[tool.pixi.feature.engines.dependencies]
 # this conflicts with AmberTools because of NumPy 2.3,
 # so cannot use this feature group alongside ambertools or mosdef features
-dependencies = { gromacs = "*", lammps = ">=2024.08.29", numpy = ">=2.3" }
+gromacs = "*"
+lammps = ">=2024.08.29"
+numpy = ">=2.3"
 
-[tool.pixi.feature.mosdef]
-dependencies = { mbuild-base = "*", foyer = "*", numpy = "<2.3", gromacs = "*" }
+[tool.pixi.feature.mosdef.dependencies]
+mbuild-base = "*"
+foyer = "*"
+numpy = "<2.3"
 
 [tool.pixi.feature.betas]
 channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
 dependencies = { openeye-toolkits = "*", openmm = "*" }
 
 # a separate feature group for things that don't fit nicely into the other categories
-[tool.pixi.feature.etc]
+[tool.pixi.feature.etc.dependencies]
 # a Packmol install separate from AmberTools is needed to test PBCs
-dependencies = { packmol = "*", smirnoff-plugins = "2025.*" }
+packmol = "*"
+smirnoff-plugins = "2025.*"
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
@@ -210,8 +218,6 @@ py311examples = [ "py311", "openeye", "test", "engines", "examples" ]
 py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
 py312openeye = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ]
 py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
-# no AmberTools + Python 3.13, so just have one with no AmberTools or OpenEye
-py313none = [ "py313", "test", "typing", "mosdef" ]
 py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
 py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
 py311etc = [ "py311", "openeye", "test", "typing", "etc" ]
