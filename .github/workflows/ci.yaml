@@ -51,7 +51,7 @@ jobs:
         environments: ${{ matrix.environment }}
 
     - name: Install and license OpenEye Toolkits
-      if: ${{ contains(matrix.environment, 'openeye') || contains(matrix.environment, 'beta') || contains(matrix.environment, 'etc') }}
+      if: ${{ !contains(matrix.environment, 'amber') }}
       run: |
         echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
         pixi run -e ${{ matrix.environment }} python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
