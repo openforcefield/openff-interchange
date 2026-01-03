@@ -62,6 +62,9 @@ class TestDriversAll:
     def test_summary_data(self, basic_interchange):
         summary = get_summary_data(basic_interchange)
 
+        if len(summary) < 2:
+            pytest.skip("Not enough engines available to compare results")
+
         assert isinstance(summary, pandas.DataFrame)
 
         assert "OpenMM" in summary.index

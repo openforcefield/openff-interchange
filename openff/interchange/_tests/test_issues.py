@@ -194,6 +194,7 @@ def test_issue_1361_amber(caffeine, sage, tmp_path):
         interchange.to_amber(prefix="bar")
 
 
+@pytest.mark.skipif(not has_executable("sander"), reason="sander not installed")
 def test_issue_1395_amber(caffeine, sage, water, tmp_path):
     """Test that water charges are correctly ordered in ligand + water systems to Amber."""
 
