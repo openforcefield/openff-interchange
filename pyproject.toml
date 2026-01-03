@@ -194,6 +194,9 @@ numpy = ">=2.3"
 mbuild-base = "*"
 foyer = "*"
 numpy = "<2.3"
+# arguably ought to stay in engines group, but Foyer and GROMACS are tightly coupled and
+# bringing in AmberTools causes huge messes
+gromacs = "*"
 
 [tool.pixi.feature.betas]
 channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
