@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## 0.4.11 - 2026-01-06
+
+### Bug fixes
+
+* #1404 Fixes an issue with type annotations when using Python 3.13 and NumPy 2.4
+
 ## 0.4.10 - 2025-12-18
 
 ### Bug fixes
