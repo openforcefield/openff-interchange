@@ -6,30 +6,29 @@
 | **Latest release** | ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/openforcefield/openff-interchange?include_prereleases) | |
 | **User support** | [![Documentation Status](https://readthedocs.org/projects/openff-interchange/badge/?version=latest)](https://openff-interchange.readthedocs.io/en/latest/?badge=latest) | [![Discussions](https://img.shields.io/badge/Discussions-GitHub-blue?logo=github)](https://github.com/openforcefield/discussions/discussions) |
 
-A project (and object) for storing, manipulating, and converting molecular mechanics data.
+A project (and object) for storing, manipulating, and converting parametrized chemical systems.
 
 ## Documentation
 
-Documentation for Interchange, including examples, a brief user guide, release history, and API docs, is available [on the OpenFF website](https://docs.openforcefield.org/projects/interchange/en/stable). Example notebooks are rendered online among examples from other projects in the [OpenFF ecosysytem docs](https://docs.openforcefield.org/en/latest/examples.html)
+Documentation for Interchange, including examples, a brief user guide, release history, and API docs, is available [on the OpenFF website](https://docs.openforcefield.org/projects/interchange/en/stable). Example notebooks are rendered online among examples from other projects in the [OpenFF ecosysytem docs](https://docs.openforcefield.org/en/latest/examples.html).
 
 ## How to cite
 
-Please cite Interchange using the [Zenodo record](https://doi.org/10.5281/zenodo.10068101) of the [latest release](https://zenodo.org/doi/10.5281/zenodo.8147764) or the version that was used. The BibTeX reference of the latest release can be found [at this link](https://zenodo.org/record/8147764/export/hx).
+Please cite Interchange using the [Zenodo record](https://doi.org/10.5281/zenodo.10068101) of the [latest release](https://zenodo.org/doi/10.5281/zenodo.8147764) or the version that was used. The BibTeX reference of the latest release can be found at [this link](https://zenodo.org/record/8147764/export/hx).
 
 ## Installation
 
-Recent versions of the OpenFF Toolkit (0.11.0+, released August 2022) install Interchange by default through its `conda` package.
+Recent versions of the OpenFF Toolkit (0.11.0+, released August 2022) install Interchange by default through its Conda package.
 
-Interchange can also be installed manually via `conda` (or `mamba`):
+Interchange can also be installed manually via `mamba` (or `conda`, etc.):
 
 ```shell
-conda install openff-interchange -c conda-forge
+mamba install openff-interchange -c conda-forge
 ```
 
 ## Getting started
 
-The `Interchange` object serves primarily as a container object for parametrized data. It can currently take in [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) or [Foyer](https://foyer.mosdef.org/en/stable/) force fields
-and [chemical topologies](https://docs.openforcefield.org/projects/toolkit/en/stable/topology.html) prepared via the [OpenFF Toolkit](https://open-forcefield-toolkit.readthedocs.io/). The resulting object stores parametrized data and provides APIs for export to common formats.
+The `Interchange` object serves primarily as a container object for parametrized chemical systems. Its key use case involves [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) force fields and [chemical topologies](https://docs.openforcefield.org/projects/toolkit/en/stable/topology.html) prepared via the [OpenFF Toolkit](https://open-forcefield-toolkit.readthedocs.io/). The resulting object stores parametrized chemical systems and provides APIs for export to common formats.
 
 ```python3
 from openff.toolkit import ForceField, Molecule, Quantity
@@ -56,16 +55,16 @@ out = sage.create_interchange(force_field=sage, topology=topology)
 system = out.to_openmm()
 
 # or write to GROMACS files
-out.to_gro("out.gro")
-out.to_top("out.top")
+out.to_gromacs(prefix="out")
+
+# or write to Amber files
+out.to_amber(prefix="out")
 
 # or store as JSON
 json_blob = out.json()
 ```
 
-For more information, please consult the [full documentation](https://openff-interchange.readthedocs.io/).
-
-For more examples specific to Interchange, navigate to the `examples/` directory.
+For more functionality, usage guidelines, and examples, please consult the [full documentation](https://docs.openforcefield.org/projects/interchange/en/stable/)
 
 ## Developing
 
