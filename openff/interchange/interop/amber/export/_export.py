@@ -486,7 +486,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
 
         prmtop.write("%FLAG CHARGE\n%FORMAT(5E16.8)\n")
         charges = (
-            interchange["Electrostatics"]  # type: ignore[attr-defined]
+            interchange["Electrostatics"]
             .get_charge_array()
             .m_as(
                 "elementary_charge",

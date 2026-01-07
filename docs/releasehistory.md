@@ -29,6 +29,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1396 Fixes charge ordering in Amber files
 
+### Miscellaneous improvements
+
+* #1407 `get_charge_array` is now defined on `ElectrostaticsCollection` and therefore accessible to subclasses `FoyerElectrostaticsHandler` and `BasicElectrostaticsCollection`. Previously, it was only defined on `SMIRNOFFElectrostaticsCollection`.
+
 ## 0.4.9 - 2025-11-06
 
 ### Behavior changes
