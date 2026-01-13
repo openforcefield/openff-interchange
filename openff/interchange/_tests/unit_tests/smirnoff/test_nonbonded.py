@@ -105,7 +105,7 @@ class TestNonbonded:
         )
 
     @pytest.mark.slow
-    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage, hexane_diol):
+    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, sage_no_nagl, hexane_diol):
         """
         Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available.
 
@@ -123,7 +123,8 @@ class TestNonbonded:
         partial_charges = [c.m for c in hexane_diol.partial_charges]
 
         assigned_charges = [
-            v.m for v in Interchange.from_smirnoff(sage, [hexane_diol])["Electrostatics"]._get_charges().values()
+            v.m
+            for v in Interchange.from_smirnoff(sage_no_nagl, [hexane_diol])["Electrostatics"]._get_charges().values()
         ]
 
         try:
@@ -179,12 +180,12 @@ class TestNAGLChargesErrorHandling:
                 charge_from_molecules=[hexane_diol],
             )
 
-    def test_nagl_charges_invalid_model_file(self, sage, hexane_diol):
+    def test_nagl_charges_invalid_model_file(self, sage_no_nagl, hexane_diol):
         """Test error handling for invalid model file paths. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by this model it had been able to find it."""
 
-        sage.get_parameter_handler(
+        sage_no_nagl.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "nonexistent_model.pt",
@@ -192,24 +193,24 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(FileNotFoundError):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+            sage_no_nagl.create_interchange(topology=hexane_diol.to_topology())
 
-        sage["NAGLCharges"].model_file = ""
+        sage_no_nagl["NAGLCharges"].model_file = ""
         with pytest.raises(FileNotFoundError):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+            sage_no_nagl.create_interchange(topology=hexane_diol.to_topology())
 
-        sage["NAGLCharges"].model_file = None
+        sage_no_nagl["NAGLCharges"].model_file = None
         with pytest.raises(FileNotFoundError):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+            sage_no_nagl.create_interchange(topology=hexane_diol.to_topology())
 
-    def test_nagl_charges_bad_hash(self, sage, hexane_diol, monkeypatch):
+    def test_nagl_charges_bad_hash(self, sage_no_nagl, hexane_diol, monkeypatch):
         """Test error handling for a bad hash. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by this model if the hash comparison hadn't failed."""
 
         from openff.nagl_models._dynamic_fetch import HashComparisonFailedException
 
-        sage.get_parameter_handler(
+        sage_no_nagl.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -218,16 +219,16 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(HashComparisonFailedException):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+            sage_no_nagl.create_interchange(topology=hexane_diol.to_topology())
 
-    def test_nagl_charges_bad_doi(self, sage, hexane_diol, monkeypatch):
+    def test_nagl_charges_bad_doi(self, sage_no_nagl, hexane_diol, monkeypatch):
         """Test error handling for a bad DOI. This should fail immediately instead of falling
         back to ToolkitAM1BCC, since it doesn't know whether the molecule would have successfully
         had charges assigned by this model, since it's unfetchable."""
 
         from openff.nagl_models._dynamic_fetch import UnableToParseDOIException
 
-        sage.get_parameter_handler(
+        sage_no_nagl.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "nonexistent_model.pt",
@@ -236,7 +237,7 @@ class TestNAGLChargesErrorHandling:
             },
         )
         with pytest.raises(UnableToParseDOIException):
-            sage.create_interchange(topology=hexane_diol.to_topology())
+            sage_no_nagl.create_interchange(topology=hexane_diol.to_topology())
 
     # For more information on why this test is skipped, see
     # https://github.com/openforcefield/openff-interchange/pull/1206/commits/f99a10e17ad56235ba1f36ae35f6383a22ed840a#r2248864028
@@ -709,13 +710,13 @@ class TestvdWUpDownConversion:
 
 
 class TestElectrostatics:
-    def test_caching_detects_atom_ordering(self, sage):
+    def test_caching_detects_atom_ordering(self, sage_no_nagl):
         def get_charges_from_interchange(
             molecule: Molecule,
         ) -> dict[int, Quantity]:
             return {
                 key.atom_indices[0]: val
-                for key, val in sage.create_interchange(molecule.to_topology())["Electrostatics"]
+                for key, val in sage_no_nagl.create_interchange(molecule.to_topology())["Electrostatics"]
                 ._get_charges()
                 .items()
             }
@@ -736,7 +737,7 @@ class TestElectrostatics:
         compare_charges(original, get_charges_from_interchange(original))
         compare_charges(reordered, get_charges_from_interchange(reordered))
 
-    def test_get_charge_array(self, sage):
+    def test_get_charge_array(self, sage_no_nagl):
         ammonia = Molecule.from_smiles("N")
         ammonia.partial_charges = Quantity(numpy.array([-3, 1, 1, 1]) / 3, "elementary_charge")
 
@@ -750,7 +751,7 @@ class TestElectrostatics:
             ],
         )
 
-        charges = sage.create_interchange(topology, charge_from_molecules=[ammonia])[
+        charges = sage_no_nagl.create_interchange(topology, charge_from_molecules=[ammonia])[
             "Electrostatics"
         ].get_charge_array()
 
@@ -848,27 +849,27 @@ class TestSMIRNOFFChargeIncrements:
 
         return handler
 
-    def test_no_charge_increments_applied(self, sage, hexane_diol):
+    def test_no_charge_increments_applied(self, sage_no_nagl, hexane_diol):
         gastiger_charges = [c.m for c in hexane_diol.partial_charges]
-        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_no_nagl.deregister_parameter_handler("ToolkitAM1BCC")
 
         no_increments = ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="gasteiger",
         )
-        sage.register_parameter_handler(no_increments)
+        sage_no_nagl.register_parameter_handler(no_increments)
 
-        assert len(sage["ChargeIncrementModel"].parameters) == 0
+        assert len(sage_no_nagl["ChargeIncrementModel"].parameters) == 0
 
-        out = Interchange.from_smirnoff(sage, [hexane_diol])
+        out = Interchange.from_smirnoff(sage_no_nagl, [hexane_diol])
         assert numpy.allclose(
             numpy.asarray([v.m for v in out["Electrostatics"]._get_charges().values()]),
             gastiger_charges,
         )
 
-    def test_overlapping_increments(self, sage, methane):
+    def test_overlapping_increments(self, sage_no_nagl, methane):
         """Test that separate charge increments can be properly applied to the same atom."""
-        sage.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_no_nagl.deregister_parameter_handler("ToolkitAM1BCC")
         charge_handler = ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="formal_charge",
@@ -880,26 +881,29 @@ class TestSMIRNOFFChargeIncrements:
                 "charge_increment2": Quantity(-0.111, "elementary_charge"),
             },
         )
-        sage.register_parameter_handler(charge_handler)
+        sage_no_nagl.register_parameter_handler(charge_handler)
         assert 0.0 == pytest.approx(
-            sum(v.m for v in Interchange.from_smirnoff(sage, [methane])["Electrostatics"]._get_charges().values()),
+            sum(
+                v.m
+                for v in Interchange.from_smirnoff(sage_no_nagl, [methane])["Electrostatics"]._get_charges().values()
+            ),
         )
 
     def test_charge_increment_forwawrd_reverse_molecule(
         self,
-        sage,
+        sage_no_nagl,
         hydrogen_cyanide,
         hydrogen_cyanide_reversed,
         hydrogen_cyanide_charge_increments,
     ):
-        sage.deregister_parameter_handler("ToolkitAM1BCC")
-        sage.register_parameter_handler(hydrogen_cyanide_charge_increments)
+        sage_no_nagl.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_no_nagl.register_parameter_handler(hydrogen_cyanide_charge_increments)
 
         topology = Topology.from_molecules(
             [hydrogen_cyanide, hydrogen_cyanide_reversed],
         )
 
-        out = Interchange.from_smirnoff(sage, topology)
+        out = sage_no_nagl.create_interchange(topology)
 
         expected_charges = [-0.111, 0.611, -0.5, -0.5, 0.611, -0.111]
 

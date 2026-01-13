@@ -14,18 +14,23 @@ from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file
 
 @pytest.fixture
 def sage() -> ForceField:
-    return ForceField("openff-2.0.0.offxml")
+    return ForceField("openff-2.3.0.offxml")
 
 
 @pytest.fixture
 def sage_unconstrained() -> ForceField:
-    return ForceField("openff_unconstrained-2.0.0.offxml")
+    return ForceField("openff_unconstrained-2.3.0.offxml")
 
 
 @pytest.fixture
-def sage_no_switch(sage) -> ForceField:
-    sage["vdW"].switch_width = Quantity(0.0, "angstrom")
-    return sage
+def sage_no_nagl() -> ForceField:
+    return ForceField("openff-2.0.0.offxml")
+
+
+@pytest.fixture
+def sage_no_switch(sage_no_nagl) -> ForceField:
+    sage_no_nagl["vdW"].switch_width = Quantity(0.0, "angstrom")
+    return sage_no_nagl
 
 
 @pytest.fixture
@@ -36,8 +41,8 @@ def sage_with_tip4p() -> ForceField:
 
 
 @pytest.fixture
-def sage_with_bond_charge(sage):
-    sage["Bonds"].add_parameter(
+def sage_with_bond_charge(sage_no_nagl):
+    sage_no_nagl["Bonds"].add_parameter(
         parameter=BondType(
             smirks="[#6:2]-[#17X1:1]",
             id="b0",
@@ -46,8 +51,8 @@ def sage_with_bond_charge(sage):
         ),
     )
 
-    sage.get_parameter_handler("VirtualSites")
-    sage["VirtualSites"].add_parameter(
+    sage_no_nagl.get_parameter_handler("VirtualSites")
+    sage_no_nagl["VirtualSites"].add_parameter(
         parameter=VirtualSiteType(
             smirks="[#6:2]-[#17X1:1]",
             type="BondCharge",
@@ -58,7 +63,7 @@ def sage_with_bond_charge(sage):
         ),
     )
 
-    return sage
+    return sage_no_nagl
 
 
 @pytest.fixture
@@ -189,15 +194,7 @@ def sage_with_off_center_hydrogen(sage):
 
 @pytest.fixture
 def sage_nagl(sage):
-    sage.get_parameter_handler(
-        "NAGLCharges",
-        {
-            "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-            "version": "0.3",
-        },
-    )
-    sage.deregister_parameter_handler("ToolkitAM1BCC")
-    return sage
+    return ForceField("openff-2.3.0.offxml")
 
 
 @pytest.fixture
@@ -662,13 +659,13 @@ def no_charges() -> ForceField:
 
 
 @pytest.fixture
-def sage_charge_increment_handler(sage):
-    sage.deregister_parameter_handler("ToolkitAM1BCC")
-    sage.register_parameter_handler(
+def sage_charge_increment_handler(sage_no_nagl):
+    sage_no_nagl.deregister_parameter_handler("ToolkitAM1BCC")
+    sage_no_nagl.register_parameter_handler(
         ChargeIncrementModelHandler(version=0.3, partial_charge_method="gasteiger"),
     )
 
-    return sage
+    return sage_no_nagl
 
 
 @pytest.fixture

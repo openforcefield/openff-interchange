@@ -10,7 +10,7 @@
 		<Particle mass="1.007947"/>
 		<Particle mass="1.007947"/>
 		<Particle mass="0">
-			<LocalCoordinatesSite p1="0" p2="1" p3="2" pos1=".014999999999999998" pos2="0" pos3="-0" wo1="1" wo2="0" wo3="0" wx1="-1" wx2=".5" wx3=".5" wy1="-1" wy2="1" wy3="0"/>
+			<LocalCoordinatesSite p1="0" p2="1" p3="2" pos1=".015" pos2="0" pos3="-0" wo1="1" wo2="0" wo3="0" wx1="-1" wx2=".5" wx3=".5" wy1="-1" wy2="1" wy3="0"/>
 		</Particle>
 	</Particles>
 	<Constraints>

@@ -40,8 +40,8 @@ class TestSettles:
         return tip3p.create_interchange(water.to_topology())
 
     @pytest.fixture
-    def sage_tip3p_interchange(self, sage, water):
-        return sage.create_interchange(water.to_topology())
+    def sage_tip3p_interchange(self, sage_no_nagl, water):
+        return sage_no_nagl.create_interchange(water.to_topology())
 
     def test_catch_other_water_ordering(self, tip3p):
         molecule = Molecule.from_mapped_smiles("[H:1][O:2][H:3]")

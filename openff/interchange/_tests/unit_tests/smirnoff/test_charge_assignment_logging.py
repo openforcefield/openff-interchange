@@ -109,7 +109,7 @@ Other details
 
 # TODO: Handle whether or not NAGL/graph charges are applied
 AM1BCC_KEY = "am1bccelf10" if OPENEYE_AVAILABLE else "am1bcc"
-NAGL_KEY = "openff-gnn-am1bcc-0.1.0-rc.2.pt"
+NAGL_KEY = "openff-gnn-am1bcc-1.0.0.pt"
 
 
 def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
@@ -167,10 +167,10 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
 
 
 @pytest.fixture
-def sage_with_nagl_chargeincrements(sage):
+def sage_with_nagl_chargeincrements(sage_no_nagl):
     from openff.toolkit.typing.engines.smirnoff.parameters import ChargeIncrementModelHandler, ChargeIncrementType
 
-    sage.register_parameter_handler(
+    sage_no_nagl.register_parameter_handler(
         parameter_handler=ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method=NAGL_KEY,
@@ -179,7 +179,7 @@ def sage_with_nagl_chargeincrements(sage):
 
     # Add dummy "BCCs" for testing, even though this model has BCCs built into
     # the partial charge assignment method
-    sage["ChargeIncrementModel"].add_parameter(
+    sage_no_nagl["ChargeIncrementModel"].add_parameter(
         parameter=ChargeIncrementType(
             smirks="[#6:1]-[#1:2]",
             charge_increment=[
@@ -189,7 +189,7 @@ def sage_with_nagl_chargeincrements(sage):
         ),
     )
 
-    return sage
+    return sage_no_nagl
 
 
 @pytest.fixture
@@ -266,9 +266,9 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 """
 
 
-def test_case0(caplog, sage, ligand):
+def test_case0(caplog, sage_no_nagl, ligand):
     with caplog.at_level(logging.INFO):
-        sage.create_interchange(ligand.to_topology())
+        sage_no_nagl.create_interchange(ligand.to_topology())
 
         info = map_methods_to_atom_indices(caplog)
 
@@ -276,9 +276,9 @@ def test_case0(caplog, sage, ligand):
         assert info[AM1BCC_KEY] == [*range(0, 9)]
 
 
-def test_case1(caplog, sage, ligand_and_water_and_ions):
+def test_case1(caplog, sage_no_nagl, ligand_and_water_and_ions):
     with caplog.at_level(logging.INFO):
-        sage.create_interchange(ligand_and_water_and_ions)
+        sage_no_nagl.create_interchange(ligand_and_water_and_ions)
 
         info = map_methods_to_atom_indices(caplog)
 
@@ -289,11 +289,11 @@ def test_case1(caplog, sage, ligand_and_water_and_ions):
         assert info["library"] == [*range(9, 22)]
 
 
-def test_case2(caplog, sage, ligand, solvent):
+def test_case2(caplog, sage_no_nagl, ligand, solvent):
     topology = Topology.from_molecules([ligand, solvent, solvent, solvent])
 
     with caplog.at_level(logging.INFO):
-        sage.create_interchange(topology)
+        sage_no_nagl.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
 
@@ -301,14 +301,14 @@ def test_case2(caplog, sage, ligand, solvent):
         assert info[AM1BCC_KEY] == [*range(0, topology.n_atoms)]
 
 
-def test_case3(caplog, sage, ligand_and_water_and_ions, solvent):
+def test_case3(caplog, sage_no_nagl, ligand_and_water_and_ions, solvent):
     for index in range(3):
         ligand_and_water_and_ions.add_molecule(solvent)
 
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
     with caplog.at_level(logging.INFO):
-        sage.create_interchange(
+        sage_no_nagl.create_interchange(
             ligand_and_water_and_ions,
         )
 
@@ -385,11 +385,11 @@ def test_case6(caplog, ligand, water):
         assert info["orientation"] == [*range(9, 18)]
 
 
-def test_case7(caplog, sage, ligand_and_water_and_ions):
+def test_case7(caplog, sage_no_nagl, ligand_and_water_and_ions):
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
     with caplog.at_level(logging.INFO):
-        sage.create_interchange(
+        sage_no_nagl.create_interchange(
             ligand_and_water_and_ions,
             charge_from_molecules=[ligand_and_water_and_ions.molecule(0)],
         )
@@ -403,11 +403,11 @@ def test_case7(caplog, sage, ligand_and_water_and_ions):
         assert info["library"] == [*range(9, 22)]
 
 
-def test_case8(caplog, sage, water_and_ions):
+def test_case8(caplog, sage_no_nagl, water_and_ions):
     water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
     with caplog.at_level(logging.INFO):
-        sage.create_interchange(
+        sage_no_nagl.create_interchange(
             water_and_ions,
             charge_from_molecules=[water_and_ions.molecule(0)],
         )
