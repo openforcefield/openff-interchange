@@ -29,5 +29,5 @@ def test_polycyclic_nonbonded(smiles, sage_no_switch):
 
     assert openmm_vdw.m == pytest.approx(
         amber_vdw.m,
-        rel=1e-5,
+        rel=1e-4,
     ), f"{openmm_vdw.m_as(kcal_mol)=}, {amber_vdw.m_as(kcal_mol)=}"

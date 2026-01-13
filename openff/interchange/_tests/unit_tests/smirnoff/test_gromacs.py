@@ -40,8 +40,8 @@ class TestSettles:
         return tip3p.create_interchange(water.to_topology())
 
     @pytest.fixture
-    def sage_tip3p_interchange(self, sage_no_nagl, water):
-        return sage_no_nagl.create_interchange(water.to_topology())
+    def sage_tip3p_interchange(self, sage, water):
+        return sage.create_interchange(water.to_topology())
 
     def test_catch_other_water_ordering(self, tip3p):
         molecule = Molecule.from_mapped_smiles("[H:1][O:2][H:3]")
@@ -164,9 +164,7 @@ class TestSettles:
             # b88 in both 2.0 and 2.1
             assert molecule.settles[0].oxygen_hydrogen_distance.m_as(
                 "angstrom",
-            ) == pytest.approx(
-                0.97167633126,
-            )
+            ) == pytest.approx(0.971162542)
 
     def test_no_bonds_or_angles_if_settle(self, tip3p_interchange):
         molecule = GROMACSMolecule(name="foo")

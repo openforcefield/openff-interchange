@@ -52,13 +52,13 @@ class TestOpenMM:
             else:
                 pytest.fail(f"Unexpected force found, type: {type(force)}")
 
-    def test_14_scale_factors_missing_electrostatics(self, sage_no_nagl):
+    def test_14_scale_factors_missing_electrostatics(self, sage):
         # Ported from the toolkit after #1276
         topology = MoleculeWithConformer.from_smiles("CCCC").to_topology()
 
-        ff_no_electrostatics = deepcopy(sage_no_nagl)
+        ff_no_electrostatics = deepcopy(sage)
         ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
-        ff_no_electrostatics.deregister_parameter_handler("ToolkitAM1BCC")
+        ff_no_electrostatics.deregister_parameter_handler("NAGLCharges")
         ff_no_electrostatics.deregister_parameter_handler("LibraryCharges")
 
         out = Interchange.from_smirnoff(
