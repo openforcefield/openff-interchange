@@ -131,7 +131,7 @@ platforms = [ "linux-64", "osx-arm64" ]
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
 run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n logical", depends-on = "postinstall" }
+run_tests = { cmd = "python -m pytest openff/interchange/ -vx --durations=20 -n logical", depends-on = "postinstall" }
 run_examples = { cmd = "python -m pytest examples/ -x -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
 run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
 
@@ -214,6 +214,8 @@ python = "3.11.*"
 python = "3.12.*"
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
+[tool.pixi.feature.py314.dependencies]
+python = "3.14.*"
 
 [tool.pixi.environments]
 py311amber = [ "py311", "test", "typing", "ambertools", "mosdef" ]
@@ -226,5 +228,7 @@ py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engi
 py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
 py311etc = [ "py311", "openeye", "mosdef", "test", "typing", "etc" ]
 py312etc = [ "py312", "openeye", "mosdef", "test", "typing", "etc" ]
+py313etc = [ "py313", "openeye", "mosdef", "test", "typing", "etc" ]
+py314nagl= [ "py314", "test"]
 dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
 betas = [ "py311", "test", "typing", "engines", "betas" ]
