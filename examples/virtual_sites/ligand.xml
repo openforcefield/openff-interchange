@@ -52,15 +52,15 @@
 		</Particle>
 	</Particles>
 	<Constraints>
-		<Constraint d=".10818236739439999" p1="3" p2="21"/>
-		<Constraint d=".10818236739439999" p1="4" p2="22"/>
-		<Constraint d=".10818236739439999" p1="7" p2="23"/>
-		<Constraint d=".1090139506109" p1="12" p2="13"/>
-		<Constraint d=".1090139506109" p1="14" p2="24"/>
-		<Constraint d=".1090139506109" p1="14" p2="25"/>
-		<Constraint d=".1090139506109" p1="15" p2="26"/>
-		<Constraint d=".1090139506109" p1="15" p2="27"/>
-		<Constraint d=".1022553377106" p1="18" p2="28"/>
+		<Constraint d=".1086635786448" p1="3" p2="21"/>
+		<Constraint d=".1086635786448" p1="4" p2="22"/>
+		<Constraint d=".1086635786448" p1="7" p2="23"/>
+		<Constraint d=".1092445809108" p1="12" p2="13"/>
+		<Constraint d=".1092445809108" p1="14" p2="24"/>
+		<Constraint d=".1092445809108" p1="14" p2="25"/>
+		<Constraint d=".1092445809108" p1="15" p2="26"/>
+		<Constraint d=".1092445809108" p1="15" p2="27"/>
+		<Constraint d=".10141686237289999" p1="18" p2="28"/>
 	</Constraints>
 	<Forces>
 		<Force alpha="0" cutoff=".9" dispersionCorrection="1" ewaldTolerance=".0005" exceptionsUsePeriodic="0" forceGroup="0" includeDirectSpace="1" ljAlpha="0" ljnx="0" ljny="0" ljnz="0" method="0" name="Nonbonded force" nx="0" ny="0" nz="0" recipForceGroup="-1" rfDielectric="78.3" switchingDistance=".8" type="NonbondedForce" useSwitchingFunction="1" version="4">

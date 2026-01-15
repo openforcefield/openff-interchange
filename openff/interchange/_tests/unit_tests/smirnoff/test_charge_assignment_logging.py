@@ -109,7 +109,7 @@ Other details
 * Preset charges and virtual sites is underspecified and cannot be tested
 """
 
-# TODO: Handle whether or not NAGL/graph charges are applied
+# TODO: Revisit test cases given that NAGL charges are default (2.3.0+, 3.0.0, etc.)
 AM1BCC_KEY = "am1bccelf10" if OPENEYE_AVAILABLE else "am1bcc"
 NAGL_KEY = "openff-gnn-am1bcc-1.0.0.pt"
 
@@ -437,7 +437,7 @@ def test_case8(caplog, sage_no_nagl, water_and_ions):
 
 def test_case9(caplog, sage_with_bond_charge):
     with caplog.at_level(logging.INFO):
-        _ensure_pre_nagl_sage(_ensure_pre_nagl_sage(sage_with_bond_charge)).create_interchange(
+        _ensure_pre_nagl_sage(sage_with_bond_charge).create_interchange(
             Molecule.from_mapped_smiles(
                 "[H:3][C:1]([H:4])([H:5])[Cl:2]",
             ).to_topology(),
