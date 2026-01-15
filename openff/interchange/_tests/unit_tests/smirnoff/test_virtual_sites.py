@@ -31,7 +31,7 @@ def _get_interpolated_bond_k(bond_handler) -> float:
 class TestSMIRNOFFVirtualSiteCharges:
     @pytest.mark.parametrize("chlorine_charge", [-0.1, 0.22, 1.3])
     def test_neutral_total_charge(self, sage_with_bond_charge, chlorine_charge):
-        sage_with_bond_charge.deregister_parameter_handler("ToolkitAM1BCC")
+        sage_with_bond_charge.deregister_parameter_handler("NAGLCharges")
         sage_with_bond_charge.get_parameter_handler("ChargeIncrementModel")
         sage_with_bond_charge["ChargeIncrementModel"].partial_charge_method = "zeros"
 

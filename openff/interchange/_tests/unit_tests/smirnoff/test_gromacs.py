@@ -164,9 +164,7 @@ class TestSettles:
             # b88 in both 2.0 and 2.1
             assert molecule.settles[0].oxygen_hydrogen_distance.m_as(
                 "angstrom",
-            ) == pytest.approx(
-                0.97167633126,
-            )
+            ) == pytest.approx(0.971162542)
 
     def test_no_bonds_or_angles_if_settle(self, tip3p_interchange):
         molecule = GROMACSMolecule(name="foo")

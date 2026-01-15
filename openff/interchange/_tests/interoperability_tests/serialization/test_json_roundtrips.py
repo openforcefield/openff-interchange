@@ -49,13 +49,13 @@ class TestJSONRoundtrips:
             ),
         )
 
-    def test_nagl_charges(self, sage_230, carbonyl_planar):
+    def test_nagl_charges(self, sage, carbonyl_planar):
         """Test JSON roundtrip when charges are assigned with a ChargeIncrementModelHandler."""
 
         pytest.importorskip("openmm")
         pytest.importorskip("openff.nagl")
 
-        out = sage_230.create_interchange(carbonyl_planar.to_topology())
+        out = sage.create_interchange(carbonyl_planar.to_topology())
 
         roundtripped = Interchange.model_validate_json(out.model_dump_json())
 

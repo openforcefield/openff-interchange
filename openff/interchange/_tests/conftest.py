@@ -13,13 +13,24 @@ from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file
 
 
 @pytest.fixture
+def _simple_force_field():
+    # TODO: Create a minimal force field for faster tests
+    pass
+
+
+@pytest.fixture
 def sage() -> ForceField:
-    return ForceField("openff-2.0.0.offxml")
+    return ForceField("openff-2.3.0.offxml")
 
 
 @pytest.fixture
 def sage_unconstrained() -> ForceField:
-    return ForceField("openff_unconstrained-2.0.0.offxml")
+    return ForceField("openff_unconstrained-2.3.0.offxml")
+
+
+@pytest.fixture
+def sage_no_nagl() -> ForceField:
+    return ForceField("openff-2.0.0.offxml")
 
 
 @pytest.fixture
@@ -29,10 +40,18 @@ def sage_no_switch(sage) -> ForceField:
 
 
 @pytest.fixture
-def sage_with_tip4p() -> ForceField:
-    # re-build off of existing fixtures if this gets implemented
-    # https://github.com/openforcefield/openff-toolkit/issues/1948
-    return ForceField("openff-2.0.0.offxml", "tip4p_fb.offxml")
+def tip3p() -> ForceField:
+    return ForceField("tip3p.offxml")
+
+
+@pytest.fixture
+def tip4p() -> ForceField:
+    return ForceField("tip4p_fb.offxml")
+
+
+@pytest.fixture
+def sage_with_tip4p(sage, tip4p) -> ForceField:
+    return sage.combine(tip4p)
 
 
 @pytest.fixture
@@ -188,35 +207,6 @@ def sage_with_off_center_hydrogen(sage):
 
 
 @pytest.fixture
-def sage_nagl(sage):
-    sage.get_parameter_handler(
-        "NAGLCharges",
-        {
-            "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
-            "version": "0.3",
-        },
-    )
-    sage.deregister_parameter_handler("ToolkitAM1BCC")
-    return sage
-
-
-@pytest.fixture
-def _simple_force_field():
-    # TODO: Create a minimal force field for faster tests
-    pass
-
-
-@pytest.fixture
-def tip3p() -> ForceField:
-    return ForceField("tip3p.offxml")
-
-
-@pytest.fixture
-def tip4p() -> ForceField:
-    return ForceField("tip4p_fb.offxml")
-
-
-@pytest.fixture
 def tip5p() -> ForceField:
     return ForceField(
         """<?xml version="1.0" encoding="utf-8"?>
@@ -300,16 +290,13 @@ def tip5p() -> ForceField:
 
 
 @pytest.fixture
-def gbsa_force_field() -> ForceField:
-    return ForceField(
-        "openff-2.0.0.offxml",
-        get_test_file_path("gbsa.offxml"),
-    )
+def gbsa_force_field(sage) -> ForceField:
+    return sage.combine(ForceField(get_test_file_path("gbsa.offxml")))
 
 
 @pytest.fixture
 def ff14sb() -> ForceField:
-    return ForceField("ff14sb_off_impropers_0.0.3.offxml")
+    return ForceField("ff14sb_off_impropers_0.0.4.offxml")
 
 
 @pytest.fixture
@@ -651,11 +638,13 @@ def cb8_host() -> Molecule:
 
 
 @pytest.fixture
-def no_charges() -> ForceField:
-    sage = ForceField("openff_unconstrained-2.0.0.offxml")
-    sage.deregister_parameter_handler("ToolkitAM1BCC")
+def no_charges(sage) -> ForceField:
+    sage.deregister_parameter_handler("NAGLCharges")
     sage.register_parameter_handler(
-        ChargeIncrementModelHandler(version=0.3, partial_charge_method="formal_charge"),
+        ChargeIncrementModelHandler(
+            version=0.3,
+            partial_charge_method="formal_charge",
+        ),
     )
 
     return sage
@@ -663,17 +652,15 @@ def no_charges() -> ForceField:
 
 @pytest.fixture
 def sage_charge_increment_handler(sage):
-    sage.deregister_parameter_handler("ToolkitAM1BCC")
+    sage.deregister_parameter_handler("NAGLCharges")
     sage.register_parameter_handler(
-        ChargeIncrementModelHandler(version=0.3, partial_charge_method="gasteiger"),
+        ChargeIncrementModelHandler(
+            version=0.3,
+            partial_charge_method="gasteiger",
+        ),
     )
 
     return sage
-
-
-@pytest.fixture
-def sage_230():
-    return ForceField("openff-2.3.0-rc1.offxml")
 
 
 @pytest.fixture

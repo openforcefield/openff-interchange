@@ -29,7 +29,7 @@ class TestOpenMM:
         """
 
         del sage._parameter_handlers["Constraints"]
-        del sage._parameter_handlers["ToolkitAM1BCC"]
+        del sage._parameter_handlers["NAGLCharges"]
         del sage._parameter_handlers["LibraryCharges"]
         del sage._parameter_handlers["Electrostatics"]
         del sage._parameter_handlers["vdW"]
@@ -58,7 +58,7 @@ class TestOpenMM:
 
         ff_no_electrostatics = deepcopy(sage)
         ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
-        ff_no_electrostatics.deregister_parameter_handler("ToolkitAM1BCC")
+        ff_no_electrostatics.deregister_parameter_handler("NAGLCharges")
         ff_no_electrostatics.deregister_parameter_handler("LibraryCharges")
 
         out = Interchange.from_smirnoff(
