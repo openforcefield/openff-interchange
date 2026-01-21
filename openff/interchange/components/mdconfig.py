@@ -240,7 +240,7 @@ class MDConfig(_BaseModel):
 
         def _get_coeffs_of_constrained_bonds_and_angles(
             interchange: "Interchange",
-        ) -> tuple[set[int], set[int]]:
+        ) -> tuple[set[int], set[int], set[int]]:
             """
             Get coefficients of bonds and angles that appear to be constrained.
 
@@ -252,7 +252,7 @@ class MDConfig(_BaseModel):
             """
             constraint_styles = {key.associated_handler for key in interchange["Constraints"].potentials}
 
-            if len(constraint_styles.difference({"Bonds", "Angles"})) > 0:
+            if len(constraint_styles.difference({"Bonds", "Angles", "Constraints"})) > 0:
                 raise NotImplementedError(
                     "Found unsupported constraints case in LAMMPS input writer.",
                 )
@@ -263,6 +263,10 @@ class MDConfig(_BaseModel):
 
             constrained_angle_smirks = {
                 key.id for key in interchange["Constraints"].potentials if key.associated_handler == "Angles"
+            }
+
+            constraint_ids = {
+                key.id for key in interchange["Constraints"].potentials if key.associated_handler == "Constraints"
             }
 
             return (
@@ -280,12 +284,20 @@ class MDConfig(_BaseModel):
                     ).items()
                     if val.id in constrained_angle_smirks
                 },
+                {
+                    key
+                    for key, val in dict(
+                        enumerate(interchange["Constraints"].potentials),
+                    ).items()
+                    if val.id in constraint_ids
+                },
             )
 
         # zero-indexed here
         (
             constrained_bond_coeffs,
             constrained_angle_coeffs,
+            constraint_coeffs,
         ) = _get_coeffs_of_constrained_bonds_and_angles(interchange)
 
         # Construct the input file in memory so nothing is written to disk if an
@@ -379,7 +391,7 @@ class MDConfig(_BaseModel):
                 "thermo_style custom ebond eangle edihed eimp epair evdwl ecoul elong etail pe\n\n",
             )
 
-            if len(constrained_bond_coeffs.union(constrained_angle_coeffs)) > 0:
+            if len(constrained_bond_coeffs.union(constrained_angle_coeffs).union(constraint_coeffs)) > 0:
                 # https://docs.lammps.org/fix_shake.html
                 # TODO: Apply fix to just a group (sub-group)?
                 lmp.write(
@@ -394,6 +406,11 @@ class MDConfig(_BaseModel):
                 if constrained_angle_coeffs:
                     lmp.write(
                         f"a {' '.join([str(val + 1) for val in constrained_angle_coeffs])}",
+                    )
+
+                if constraint_coeffs:
+                    lmp.write(
+                        f"a {' '.join([str(val + 1) for val in constraint_coeffs])}",
                     )
 
                 lmp.write("\n")
