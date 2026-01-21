@@ -1,4 +1,5 @@
 import abc
+from openff.interchange.models import TopologyKey, SingleAtomChargeTopologyKey
 from collections.abc import Iterable
 from typing import Any, Literal
 
@@ -8,8 +9,8 @@ from pydantic import Field, PrivateAttr, computed_field
 from openff.interchange._annotations import _DistanceQuantity, _ElementaryChargeQuantity
 from openff.interchange.components.potentials import Collection
 from openff.interchange.models import (
+    BaseVirtualSiteKey,
     LibraryChargeTopologyKey,
-    TopologyKey,
     VirtualSiteKey,
 )
 
@@ -146,3 +147,24 @@ class ElectrostaticsCollection(_NonbondedCollection):
             topology_key: self.potentials[potential_key].parameters["charge"]
             for topology_key, potential_key in self.key_map.items()
         }
+
+
+def _simpler_charges(
+    collection: ElectrostaticsCollection,
+) -> dict[TopologyKey | BaseVirtualSiteKey, Quantity]:
+    """Unify SingleAtomChargeTopologyKey to TopologyKey."""
+    return_dict = dict()
+
+    for key, val in collection.charges.items():
+        if isinstance(key, SingleAtomChargeTopologyKey):
+            new_key = TopologyKey(atom_indices=key.atom_indices)
+            return_dict[new_key] = val
+        elif isinstance(key, TopologyKey):
+            return_dict[key] = val
+        elif isinstance(key, BaseVirtualSiteKey):
+            return_dict[key] = val
+
+        else:
+            raise KeyError(f"Unexpected key of type {type(key)=}")
+
+    return return_dict

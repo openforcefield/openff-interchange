@@ -12,7 +12,7 @@ from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection, _simpler_charges
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     CannotSetSwitchingFunctionError,
@@ -368,7 +368,7 @@ def _create_single_nonbonded_force(
             )
 
     if data.electrostatics_collection is not None:
-        partial_charges = data.electrostatics_collection.charges
+        partial_charges = _simpler_charges(data.electrostatics_collection)
 
     # mapping between (openmm) index of each atom and the (openmm) index of each virtual particle
     #   of that parent atom (if any)
@@ -959,7 +959,7 @@ def _set_particle_parameters(
     #       handling for electrostatics_force = None
     electrostatics: ElectrostaticsCollection = data.electrostatics_collection
 
-    partial_charges = electrostatics.charges
+    partial_charges = _simpler_charges(electrostatics)
 
     vdw: vdWCollection = data.vdw_collection
 
