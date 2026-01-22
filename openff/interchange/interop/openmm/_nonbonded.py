@@ -396,7 +396,9 @@ def _create_single_nonbonded_force(
                         this_atom_index=atom_index,
                     )
 
-                    partial_charge = partial_charges[other_top_key].m_as("elementary_charge")
+                    partial_charge = partial_charges[other_top_key].m_as(  # type: ignore[index]
+                        "elementary_charge",
+                    )
 
             else:
                 partial_charge = 0.0
