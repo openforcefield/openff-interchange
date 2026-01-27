@@ -351,3 +351,16 @@ class TestCombine:
             ),
             ic4["Electrostatics"].get_charge_array(),
         )
+
+    def test_combine_from_openmm_add_nagl_to_openmm(self, sage, ethanol):
+        topology = ethanol.to_topology()
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+        system1 = sage.create_interchange(topology)
+
+        system2 = Interchange.from_openmm(
+            system=system1.to_openmm(),
+            topology=system1.topology.to_openmm(),
+        )
+
+        system2.combine(system1).to_openmm()

@@ -40,6 +40,7 @@ from openff.interchange.models import (
     BondKey,
     LibraryChargeTopologyKey,
     TopologyKey,
+    SingleAtomChargeTopologyKey,
 )
 
 MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
@@ -186,8 +187,10 @@ def _convert(
             _partial_charges[key.atom_indices[0]] = charge
         elif isinstance(key, BaseVirtualSiteKey):
             _partial_charges[key] = charge
+        elif type(key) is SingleAtomChargeTopologyKey:
+            _partial_charges[key.this_atom_index] = charge
         else:
-            raise RuntimeError()
+            raise RuntimeError(f"Unexpected type {type(key)=}")
 
     _ordered_molecules = [None] * interchange.topology.n_molecules
 
