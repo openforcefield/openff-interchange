@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
+
 ## 0.5.0 - 2025-01-08
 
 * #1332 Introduces the following behavior changes to the private Packmol wrappers:
