@@ -1,8 +1,14 @@
 import polars
+import packaging.version
+import subprocess
 
 from openff.interchange import __version__
 
-most_recent_release = __version__.split(".post")[0]
+most_recent_release = packaging.version.Version(
+    subprocess.check_output(
+        ["git", "describe", "--abbrev=0", "--tags"],
+    ).decode(),
+)
 
 
 try:
