@@ -386,7 +386,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -750,7 +750,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   default:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -901,7 +901,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.23.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -1028,7 +1028,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.23.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -1422,7 +1422,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1795,7 +1795,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py311amber:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -2155,7 +2155,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ambertools-24.8-cuda_None_nompi_py311h523f5e4_101.conda
@@ -2497,7 +2497,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py311etc:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -2851,7 +2851,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -3184,7 +3184,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py311examples:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -3570,7 +3570,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -3935,7 +3935,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py311openeye:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -4322,7 +4322,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -4688,7 +4688,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py312amber:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -5050,7 +5050,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -5394,7 +5394,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py312etc:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -5750,7 +5750,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -6085,7 +6085,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py312examples:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -6473,7 +6473,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -6840,7 +6840,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py312openeye:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -7229,7 +7229,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -7597,7 +7597,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py313examples:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -7983,7 +7983,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -8349,7 +8349,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   py313openeye:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -8736,7 +8736,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -9103,7 +9103,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-hed4e4f5_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
-      - pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+      - pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -17460,9 +17460,9 @@ packages:
   - pkg:pypi/openff-nagl-models?source=hash-mapping
   size: 53380163
   timestamp: 1757448697983
-- pypi: git+https://github.com/openforcefield/openff-packmol.git#3abd98ae0a2ea02a5b016f09262e0071a374d545
+- pypi: git+https://github.com/openforcefield/openff-packmol.git#73d9268cb2b235925fe1ea1bea7a459dd0205e41
   name: openff-packmol
-  version: 0.0.1.dev3+g3abd98ae0
+  version: 0.0.1.dev4+g73d9268cb
   requires_python: '>=3.11'
 - conda: https://conda.anaconda.org/conda-forge/noarch/openff-toolkit-base-0.18.0-pyhd8ed1ab_1.conda
   sha256: 765687789a47367f8e87b4bed0b07fb5824640ed4e3e6cfaa168ad8cd2945df4

@@ -49,6 +49,7 @@ jobs:
       with:
         pixi-version: v0.41.4
         environments: ${{ matrix.environment }}
+        frozen: true
 
     - name: Install and license OpenEye Toolkits
       if: ${{ !contains(matrix.environment, 'amber') }}
