@@ -286,7 +286,6 @@ from openff.interchange.smirnoff._create import (
     _PLUGIN_CLASS_MAPPING,
 )
 
-
 _SUPPORTED_PARAMETER_HANDLERS.add("Buckingham")
 _PLUGIN_CLASS_MAPPING[BuckinghamHandler] = SMIRNOFFBuckinghamCollection
 ```
