@@ -11,18 +11,21 @@ from openff.toolkit import Molecule, Quantity
 from openff.utilities import has_package, skip_if_missing
 
 from openff.interchange._tests import MoleculeWithConformer
-from openff.interchange.components._packmol import (
+from openff.packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
     UNIT_CUBE,
-    _compute_brick_from_box_vectors,
-    _find_packmol,
-    _scale_box,
     pack_box,
     solvate_topology,
     solvate_topology_nonwater,
+    PACKMOLRuntimeError,
+    PACKMOLValueError,
 )
-from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError
+from openff.packmol._packmol import (
+    _compute_brick_from_box_vectors,
+    _find_packmol,
+    _scale_box,
+)
 
 
 @pytest.fixture(scope="module")
