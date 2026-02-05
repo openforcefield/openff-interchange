@@ -145,6 +145,9 @@ openff-interchange-base = ">=0.4.5"
 rdkit = ">=2024"
 openmm = "8.4.*"
 
+[tool.pixi.pypi-dependencies]
+openff-packmol = { git = "https://github.com/openforcefield/openff-packmol.git" }
+
 [tool.pixi.feature.ambertools.dependencies]
 ambertools = "24.*"
 numpy = "2.2.*"
