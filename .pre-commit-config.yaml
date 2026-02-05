@@ -12,7 +12,7 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.14
+  rev: v0.15.0
   hooks:
     - id: ruff-check
       args: ["--fix"]
@@ -33,6 +33,6 @@ repos:
     - id: nbstripout
       files: ^examples
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.11.1
+  rev: v2.12.1
   hooks:
     - id: pyproject-fmt
