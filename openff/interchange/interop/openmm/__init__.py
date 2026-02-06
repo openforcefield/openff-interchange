@@ -4,13 +4,13 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, TextIO
 
+from openff.toolkit import Molecule
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._annotations import PositiveFloat
 from openff.interchange.exceptions import (
     NegativeMassError,
     PluginCompatibilityError,
-    UnsupportedExportError,
 )
 from openff.interchange.interop.openmm._import._import import from_openmm
 from openff.interchange.interop.openmm._positions import to_openmm_positions
@@ -182,8 +182,6 @@ def _apply_hmr(
     interchange: "Interchange",
     hydrogen_mass: PositiveFloat,
 ):
-    from openff.toolkit import Molecule
-
     if abs(hydrogen_mass - 1.008) < 1e-3:
         return
 

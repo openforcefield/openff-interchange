@@ -1,7 +1,6 @@
 from openff.toolkit import Quantity
 
 from openff.interchange._tests import needs_gmx
-
 from openff.interchange._tests._gromacs import gmx_monolithic_vs_itp, gmx_roundtrip
 
 

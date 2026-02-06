@@ -8,13 +8,14 @@ from openff.toolkit.topology import Atom
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.units.elements import MASSES, SYMBOLS
 
+from openff.interchange import Interchange
 from openff.interchange._annotations import PositiveFloat
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.interop._virtual_sites import (
     _virtual_site_parent_molecule_mapping,
+    get_positions_with_virtual_sites,
 )
 from openff.interchange.interop.common import _build_particle_map
 from openff.interchange.interop.gromacs.export._virtual_sites import (
@@ -39,8 +40,11 @@ from openff.interchange.models import (
     BaseVirtualSiteKey,
     BondKey,
     LibraryChargeTopologyKey,
-    TopologyKey,
     SingleAtomChargeTopologyKey,
+    TopologyKey,
+)
+from openff.interchange.smirnoff._virtual_sites import (
+    _create_virtual_site_object,
 )
 
 MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
@@ -283,9 +287,6 @@ def _convert(
 
     if "VirtualSites" in interchange.collections:
         # TODO: Some say to skip this if the user only wants a topology file?
-        from openff.interchange.interop._virtual_sites import (
-            get_positions_with_virtual_sites,
-        )
 
         system.positions = get_positions_with_virtual_sites(
             interchange,
@@ -552,10 +553,6 @@ def _convert_virtual_sites(
         return
 
     for virtual_site_key in molecule_virtual_site_map[interchange.topology.molecule_index(unique_molecule)]:
-        from openff.interchange.smirnoff._virtual_sites import (
-            _create_virtual_site_object,
-        )
-
         virtual_site_potential = interchange["VirtualSites"].potentials[
             interchange["VirtualSites"].key_map[virtual_site_key]
         ]

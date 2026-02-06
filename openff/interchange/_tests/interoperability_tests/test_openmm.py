@@ -2,7 +2,7 @@ import math
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology
+from openff.toolkit import ForceField, Molecule, OpenEyeToolkitWrapper, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
@@ -461,8 +461,6 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         de_force_field,
         default_integrator,
     ):
-        from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
-
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 

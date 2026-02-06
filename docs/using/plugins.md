@@ -7,7 +7,7 @@ Parameter handlers are responsible for the system- and engine-independent aspect
 Currently, systems using custom interactions can only be exported to OpenMM. There are two routes for this export: one using existing Interchange machinery and another that allows for completely custom behavior.
 
 [`ParameterHandler`]: openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler
-[`SMIRNOFFCollection`]: openff.interchange.plugins.SMIRNOFFCollection
+[`SMIRNOFFCollection`]: openff.interchange.smirnoff.SMIRNOFFCollection
 [SetupTools entry points]: inv:setuptools#userguide/entry_point
 [`openmm.Force`]: openmm.openmm.Force
 
@@ -75,14 +75,14 @@ A `SMIRNOFFCollection` is a subclass of [`Collection`] specific to SMIRNOFF forc
   * define other methods and fields as needed
 
 [Pydantic model]: https://docs.pydantic.dev/usage/models/
-[`is_plugin: bool = True`]:openff.interchange.plugins.SMIRNOFFCollection.is_plugin
+[`is_plugin: bool = True`]:openff.interchange.smirnoff.SMIRNOFFCollection.is_plugin
 [`type: str`]: openff.interchange.components.potentials.Collection.type
 [`expression: str`]:openff.interchange.components.potentials.Collection.expression
-[`allowed_parameter_handlers`]:openff.interchange.plugins.SMIRNOFFCollection.allowed_parameter_handlers
-[`supported_parameters`]:openff.interchange.plugins.SMIRNOFFCollection.supported_parameters
+[`allowed_parameter_handlers`]:openff.interchange.smirnoff.SMIRNOFFCollection.allowed_parameter_handlers
+[`supported_parameters`]:openff.interchange.smirnoff.SMIRNOFFCollection.supported_parameters
 [`Collection`]: openff.interchange.components.potentials.Collection
-[`store_matches`]: openff.interchange.plugins.SMIRNOFFCollection.store_matches
-[`create`]: openff.interchange.plugins.SMIRNOFFCollection.create
+[`store_matches`]: openff.interchange.smirnoff.SMIRNOFFCollection.store_matches
+[`create`]: openff.interchange.smirnoff.SMIRNOFFCollection.create
 
 ## Examples
 
@@ -286,7 +286,6 @@ from openff.interchange.smirnoff._create import (
     _PLUGIN_CLASS_MAPPING,
 )
 
-
 _SUPPORTED_PARAMETER_HANDLERS.add("Buckingham")
 _PLUGIN_CLASS_MAPPING[BuckinghamHandler] = SMIRNOFFBuckinghamCollection
 ```
@@ -317,7 +316,7 @@ class MySMIRNOFFCollection(SMIRNOFFCollection):
     ): ...
 ```
 
-[`modify_openmm_forces`]: openff.interchange.plugins.SMIRNOFFCollection.modify_openmm_forces
+[`modify_openmm_forces`]: openff.interchange.smirnoff.SMIRNOFFCollection.modify_openmm_forces
 
 This provides complete access to the contents of the [`Interchange`] object and the flexibility to modify the [`openmm.System`] as desired - modifying, adding, deleting, etc. existing particles, forces, exclusions, etc. This method is internally called on each plugin collection when calling [`Interchange.to_openmm()`] via a code block like:
 

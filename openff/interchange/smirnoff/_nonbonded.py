@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from typing import Literal, Self
 
 import numpy
-from openff.toolkit import Molecule, Quantity, Topology
+from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY, Molecule, NAGLToolkitWrapper, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     ChargeIncrementModelHandler,
     ElectrostaticsHandler,
@@ -16,7 +16,8 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ToolkitAM1BCCHandler,
     vdWHandler,
 )
-from openff.toolkit.utils.exceptions import MissingPackageError
+from openff.toolkit.utils.exceptions import MissingPackageError, SMIRNOFFSpecError
+from packaging.version import Version
 from pydantic import Field, PrivateAttr, computed_field
 from typing_extensions import TypeAliasType, TypeVar
 
@@ -84,8 +85,6 @@ def _add_charges(
 
 def _upconvert_vdw_handler(vdw_handler: vdWHandler):
     """Given a vdW with version 0.3 or 0.4, up-convert to 0.4 or short-circuit if already 0.4."""
-    from packaging.version import Version
-
     if vdw_handler.version >= Version("0.4"):
         return
 
@@ -111,8 +110,6 @@ def _upconvert_vdw_handler(vdw_handler: vdWHandler):
 
 def _downconvert_vdw_handler(vdw_handler: vdWHandler):
     """Given a vdWHandler with version 0.4, down-convert to 0.3."""
-    from packaging.version import Version
-
     if vdw_handler.version == Version("0.3"):
         return
 
@@ -464,8 +461,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         Create a SMIRNOFFElectrostaticsCollection from toolkit data.
 
         """
-        from packaging.version import Version
-
         if isinstance(parameter_handler, list):
             parameter_handlers = parameter_handler
         else:
@@ -515,8 +510,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         additional_args: tuple[tuple[str, str]],
     ) -> Quantity:
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
-        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-
         additional_args: dict[str, str] = {i: j for i, j in additional_args}  # type: ignore[no-redef]
         molecule = copy.deepcopy(molecule)
         GLOBAL_TOOLKIT_REGISTRY.call(
@@ -631,8 +624,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                     charge_increments.append(-charge_increment_sum)
 
                 else:
-                    from openff.toolkit.utils.exceptions import SMIRNOFFSpecError
-
                     raise SMIRNOFFSpecError(
                         f"Trying to apply chargeincrements {val.parameter_type} "
                         f"to tagged atoms {atom_indices}, but the number of chargeincrements "
@@ -694,7 +685,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         if handler_name == "NAGLChargesHandler":
             from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, UnableToParseDOIException
-            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, NAGLToolkitWrapper
 
             partial_charge_method = parameter_handler.model_file
             if NAGLToolkitWrapper not in {type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits}:
@@ -717,8 +707,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             exception_types_to_raise = tuple()
             additional_args = tuple()
         elif handler_name == "ToolkitAM1BCCHandler":
-            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-
             # The implementation of _toolkit_registry_manager should result in this `GLOBAL_TOOLKIT_REGISTRY`
             # including only what it is passed, even if it's not what one would expect at import time
             if "OpenEye" in GLOBAL_TOOLKIT_REGISTRY.__repr__():
@@ -878,8 +866,6 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             unique_molecule,
             return_atom_map=True,
         )
-
-        from openff.interchange.models import SingleAtomChargeTopologyKey
 
         matches = dict()
         potentials = dict()

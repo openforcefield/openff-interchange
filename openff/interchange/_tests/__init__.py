@@ -6,11 +6,13 @@ from importlib import resources
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit.utils import (
+from openff.toolkit import (
     AmberToolsToolkitWrapper,
+    ForceField,
+    Molecule,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
+    Topology,
 )
 from openff.utilities import get_data_file_path
 from openff.utilities.utilities import has_executable, has_package

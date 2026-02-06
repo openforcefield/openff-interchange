@@ -17,7 +17,7 @@ from openff.interchange.exceptions import (
 from openff.interchange.warnings import InterchangeCombinationWarning
 
 if TYPE_CHECKING:
-    from openff.interchange.components.interchange import Interchange
+    from openff.interchange import Interchange
 
 
 logger = logging.getLogger(__name__)

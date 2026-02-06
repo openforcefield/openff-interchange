@@ -179,7 +179,6 @@ class TestFourSiteWater:
 class TestTIP4PVsOpenMM:
     def test_compare_tip4pfb_openmm(self, water):
         import openmm.app
-        from openff.toolkit import ForceField
 
         if False:
             openmm_tip4pfb = openmm.app.ForceField("tip4pfb.xml")

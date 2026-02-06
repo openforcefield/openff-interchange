@@ -9,6 +9,7 @@ from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
+    InvalidTopologyError,
     MissingParameterHandlerError,
     PresetChargesError,
     SMIRNOFFHandlersNotImplementedError,
@@ -19,6 +20,7 @@ from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
+    _upconvert_vdw_handler,
 )
 from openff.interchange.smirnoff._valence import (
     SMIRNOFFAngleCollection,
@@ -26,6 +28,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFImproperTorsionCollection,
     SMIRNOFFProperTorsionCollection,
+    _upconvert_bondhandler,
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
@@ -80,8 +83,6 @@ def _check_supported_handlers(force_field: ForceField):
 
 def validate_topology(value):
     """Validate a topology-like argument, spliced from a previous validator."""
-    from openff.interchange.exceptions import InvalidTopologyError
-
     if value is None:
         return None
     if isinstance(value, Topology):
@@ -276,8 +277,6 @@ def _bonds(
         return
 
     if force_field["Bonds"].version == Version("0.3"):
-        from openff.interchange.smirnoff._valence import _upconvert_bondhandler
-
         _upconvert_bondhandler(force_field["Bonds"])
 
     interchange.collections.update(
@@ -364,8 +363,6 @@ def _impropers(interchange, force_field, _topology):
 
 
 def _vdw(interchange: Interchange, force_field: ForceField, topology: Topology):
-    from openff.interchange.smirnoff._nonbonded import _upconvert_vdw_handler
-
     if "vdW" not in force_field.registered_parameter_handlers:
         return
 
