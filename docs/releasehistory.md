@@ -13,6 +13,12 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+### Breaking changes
+
+* #1424 `SMIRNOFFCollection` is no longer re-exported in `openff.interchange.plugins`, where it is not used. Import it from `openff.interchange.smirnoff` where it is defined.
+
+### Bug fixes
+
 * #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
 
 ## 0.5.0 - 2025-01-08
