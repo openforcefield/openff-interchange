@@ -461,7 +461,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         de_force_field,
         default_integrator,
     ):
-        from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
+        from openff.toolkit import OpenEyeToolkitWrapper
 
         topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")

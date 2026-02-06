@@ -1,4 +1,6 @@
+import random
 import re
+import time
 
 import numpy
 import pytest
@@ -577,8 +579,6 @@ class TestNAGLChargesIntegration:
     def test_nagl_charges_large_molecule_performance(self, sage):
         """Test that NAGL charge assignment completes in reasonable time for large molecules."""
 
-        import time
-
         # Create a very large molecule
         large_molecule = Molecule.from_smiles("C" * 200)  # 200-carbon alkane chain
 
@@ -601,8 +601,6 @@ class TestNAGLChargesIntegration:
     @pytest.mark.slow
     def test_nagl_charges_multiple_large_molecules_performance(self, sage):
         """Test performance with multiple large molecules in topology."""
-        import time
-
         # Create multiple copies of medium-sized molecules
         base_molecules = [
             Molecule.from_smiles("C" * 20),  # 20-carbon chain
@@ -645,8 +643,6 @@ class TestNAGLChargesIntegration:
         sage,
         methane,
     ):
-        import random
-
         # SMIRNOFFSpecError: Current OFF toolkit is unable to handle scale12 values other than 0.0.
         # SMIRNOFFSpecError: Current OFF toolkit is unable to handle scale13 values other than 0.0.
         # SMIRNOFFSpecError: Current OFF toolkit is unable to handle scale15 values other than 1.0.

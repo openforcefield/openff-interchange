@@ -10,7 +10,6 @@ from openff.interchange._annotations import PositiveFloat
 from openff.interchange.exceptions import (
     NegativeMassError,
     PluginCompatibilityError,
-    UnsupportedExportError,
 )
 from openff.interchange.interop.openmm._import._import import from_openmm
 from openff.interchange.interop.openmm._positions import to_openmm_positions

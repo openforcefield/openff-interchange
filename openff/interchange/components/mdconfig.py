@@ -9,6 +9,7 @@ from openff.toolkit import Quantity
 from pydantic import Field
 
 from openff.interchange._annotations import _DistanceQuantity
+from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     NonperiodicNoCutoffNotSupportedError,
@@ -482,8 +483,6 @@ def _infer_constraints(interchange: "Interchange") -> str:
         if num_constraints == 0:
             return "none"
         else:
-            from openff.interchange.components.toolkit import _get_num_h_bonds
-
             num_h_bonds = _get_num_h_bonds(interchange.topology)
 
             num_bonds = len(interchange["Bonds"].key_map)

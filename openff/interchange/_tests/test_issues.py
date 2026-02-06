@@ -146,8 +146,6 @@ def test_issue_1052(sage, ethanol):
 
 @skip_if_missing("openmm")
 def test_issue_1209(sage, ethanol):
-    from openff.interchange.drivers.openmm import get_openmm_energies
-
     ethanol.assign_partial_charges("gasteiger")
     ethanol.generate_conformers(n_conformers=1)
 

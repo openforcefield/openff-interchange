@@ -33,21 +33,13 @@ fallback_version = "0.0.0"
 line-length = 119
 namespace-packages = [ "openff/interchange/" ]
 
-lint.per-file-ignores."openff/interchange/**/__init__.py" = [ "F401" ]
-lint.per-file-ignores."openff/interchange/*_pydantic.py" = [ "F401" ]
-lint.per-file-ignores."openff/interchange/_tests/*" = [ "RUF015" ]
+lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+
 lint.per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
-lint.per-file-ignores."openff/interchange/_tests/unit_tests/test_types.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/components/*.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/components/interchange.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/foyer/_guard.py" = [ "F401" ]
-lint.per-file-ignores."openff/interchange/foyer/_nonbonded.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_*.py" = [ "RUF015" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_gbsa.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_nonbonded.py" = [ "F821" ]
-lint.per-file-ignores."openff/interchange/smirnoff/_virtual_sites.py" = [ "F821" ]
 lint.per-file-ignores."plugins/*" = [ "INP001" ]
+
 lint.isort.known-first-party = [ "openff.interchange" ]
+
 # can't find a clean way to get Rust's globset to handle this via regex ...
 lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
 lint.pydocstyle.property-decorators = [ "validator" ]

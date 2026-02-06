@@ -5,8 +5,9 @@ import re
 from collections import defaultdict
 
 import pytest
-from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit import ForceField, Molecule, NAGLToolkitWrapper, RDKitToolkitWrapper, Topology
 from openff.toolkit.utils import OPENEYE_AVAILABLE
+from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 
 from openff.interchange._tests import get_protein
 
@@ -453,10 +454,6 @@ def test_case9(caplog, sage_with_bond_charge):
 
 
 def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
-    from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
-    from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
-    from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
-
     pytest.importorskip("openff.nagl")
     pytest.importorskip("rdkit")
 

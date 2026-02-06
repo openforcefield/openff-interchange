@@ -12,7 +12,7 @@ from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection, _simpler_charges
+from openff.interchange.common._nonbonded import ElectrostaticsCollection, _simpler_charges, vdWCollection
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     CannotSetSwitchingFunctionError,
