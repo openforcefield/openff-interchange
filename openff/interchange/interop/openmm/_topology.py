@@ -4,7 +4,8 @@ Helper functions for exporting the topology to OpenMM.
 
 from typing import TYPE_CHECKING
 
-from openff.utilities.utilities import has_package
+from openff.toolkit import Topology
+from openff.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.models import BaseVirtualSiteKey
@@ -34,7 +35,6 @@ def to_openmm_topology(
     # Heavily cribbed from the toolkit
     # https://github.com/openforcefield/openff-toolkit/blob/0.11.0rc2/openff/toolkit/topology/topology.py
 
-    from openff.toolkit import Topology
     from openff.toolkit.topology import Bond
     from openff.toolkit.topology._mm_molecule import _SimpleBond
 

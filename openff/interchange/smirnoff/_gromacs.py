@@ -8,8 +8,8 @@ from openff.toolkit.topology import Atom
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.units.elements import MASSES, SYMBOLS
 
+from openff.interchange import Interchange
 from openff.interchange._annotations import PositiveFloat
-from openff.interchange.components.interchange import Interchange
 from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import UnsupportedExportError

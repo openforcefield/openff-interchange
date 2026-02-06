@@ -212,7 +212,7 @@ pandas-stubs = "*"
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
 run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n logical", depends-on = "postinstall" }
+run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n auto", depends-on = "postinstall" }
 run_examples = { cmd = "python -m pytest examples/ -x -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
 run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
 

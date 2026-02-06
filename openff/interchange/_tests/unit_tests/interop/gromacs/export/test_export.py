@@ -648,9 +648,6 @@ class TestCommonBoxes(_NeedsGROMACS):
         original_box_vectors = openmm.app.PDBFile(
             pdb_file,
         ).topology.getPeriodicBoxVectors()
-
-        from openff.toolkit import Topology
-
         # TODO: Regenerate test files to be simpler and smaller, no need to use a protein
         force_field = ForceField(
             "openff-2.1.0.offxml",

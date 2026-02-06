@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, TextIO
 
+from openff.toolkit import Molecule
 from openff.utilities.utilities import has_package, requires_package
 
 from openff.interchange._annotations import PositiveFloat
@@ -181,8 +182,6 @@ def _apply_hmr(
     interchange: "Interchange",
     hydrogen_mass: PositiveFloat,
 ):
-    from openff.toolkit import Molecule
-
     if abs(hydrogen_mass - 1.008) < 1e-3:
         return
 
