@@ -1,5 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
+
 requires = [
   "setuptools",
   "setuptools-scm>=8",
@@ -17,13 +18,12 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
 ]
 dynamic = [ "version" ]
 
-[tool.setuptools]
-packages.find.include = [ "openff.interchange*" ]
-packages.find.exclude = [ "openff.interchange._tests.data*" ]
+[tool.setuptools.packages.find]
+include = [ 'openff.interchange*' ]
+exclude = [ 'openff.interchange._tests.data*' ]
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
@@ -31,29 +31,39 @@ fallback_version = "0.0.0"
 [tool.ruff]
 line-length = 119
 namespace-packages = [ "openff/interchange/" ]
+
 lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+
 lint.per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
 lint.per-file-ignores."plugins/*" = [ "INP001" ]
+
 lint.isort.known-first-party = [ "openff.interchange" ]
+
 # can't find a clean way to get Rust's globset to handle this via regex ...
 lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
 lint.pydocstyle.property-decorators = [ "validator" ]
 
-[tool.pytest]
-ini_options.markers = [
+[tool.pyproject-fmt]
+max_supported_python = "3.13"
+table_format = "long"
+
+[tool.pytest.ini_options]
+markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
-ini_options.addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/experimental --ignore=examples/amber"
+addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/experimental --ignore=examples/amber"
 
-[tool.coverage]
-run.omit = [
-  "*/*/_tests/*",
-]
-report.exclude_lines = [
-  "@overload",
-  "if TYPE_CHECKING:",
+[tool.coverage.report]
+exclude_lines = [
   "pragma: no cover",
+  "if TYPE_CHECKING:",
   "raise NotImplementedError",
+  "@overload",
+]
+
+[tool.coverage.run]
+omit = [
+  "*/*/_tests/*",
 ]
 
 [tool.mypy]
@@ -64,7 +74,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 warn_incomplete_stub = true
 show_error_codes = true
-exclude = "openff/interchange/_tests"
+exclude = 'openff/interchange/_tests'
 
 [[tool.mypy.overrides]]
 module = [
@@ -109,75 +119,106 @@ ignore-setters = true
 ignore-regex = [ "^Test.*", "test_.*", "^_.*" ]
 fail-under = 90
 
-[tool.pixi]
-dependencies.pip = "*"
-dependencies.numpy = ">=2.2"
-dependencies.setuptools_scm = "*"
-dependencies.pydantic = "=2"
-dependencies.openff-toolkit-base = "0.18.*"
-dependencies.openff-interchange-base = ">=0.4.5"
-dependencies.rdkit = ">=2024"
-dependencies.openmm = "8.4.*"
-environments.py311amber = [ "py311", "test", "typing", "ambertools", "mosdef" ]
-environments.py311openeye = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ]
-environments.py311examples = [ "py311", "openeye", "test", "engines", "examples" ]
-environments.py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
-environments.py312openeye = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ]
-environments.py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
-environments.py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
-environments.py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
-environments.py311etc = [ "py311", "openeye", "mosdef", "test", "typing", "etc" ]
-environments.py312etc = [ "py312", "openeye", "mosdef", "test", "typing", "etc" ]
-environments.dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
-environments.betas = [ "py311", "test", "typing", "engines", "betas" ]
-feature.ambertools.dependencies.ambertools = "24.*"
-feature.ambertools.dependencies.numpy = "2.2.*"
-feature.betas.channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
-feature.betas.dependencies = { openeye-toolkits = "*", openmm = "*" }
-feature.dev.dependencies.pre-commit = "*"
+[tool.pixi.dependencies]
+pip = "*"
+numpy = ">=2.2"
+setuptools_scm = "*"
+pydantic = "=2"
+openff-toolkit-base = "0.18.*"
+openff-interchange-base = ">=0.4.5"
+rdkit = ">=2024"
+openmm = "8.4.*"
+
+[tool.pixi.environments]
+py311amber = [ "py311", "test", "typing", "ambertools", "mosdef" ]
+py311openeye = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ]
+py311examples = [ "py311", "openeye", "test", "engines", "examples" ]
+py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
+py312openeye = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ]
+py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
+py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
+py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
+py311etc = [ "py311", "openeye", "mosdef", "test", "typing", "etc" ]
+py312etc = [ "py312", "openeye", "mosdef", "test", "typing", "etc" ]
+dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
+betas = [ "py311", "test", "typing", "engines", "betas" ]
+[tool.pixi.feature.ambertools.dependencies]
+ambertools = "24.*"
+numpy = "2.2.*"
+
+[tool.pixi.feature.betas]
+channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
+dependencies = { openeye-toolkits = "*", openmm = "*" }
+
+[tool.pixi.feature.dev.dependencies]
+pre-commit = "*"
+
+[tool.pixi.feature.engines.dependencies]
 # this conflicts with AmberTools because of NumPy 2.3,
 # so cannot use this feature group alongside ambertools or mosdef features
-feature.engines.dependencies.gromacs = "*"
-feature.engines.dependencies.lammps = ">=2024.08.29"
-feature.engines.dependencies.numpy = ">=2.3"
+gromacs = "*"
+lammps = ">=2024.08.29"
+numpy = ">=2.3"
+
 # a separate feature group for things that don't fit nicely into the other categories
+[tool.pixi.feature.etc.dependencies]
 # a Packmol install separate from AmberTools is needed to test PBCs
-feature.etc.dependencies.packmol = ">=20.15.0"
-feature.etc.dependencies.smirnoff-plugins = "2025.*"
-feature.examples.dependencies.nbval = "*"
-feature.examples.dependencies.mdtraj = "*"
-feature.examples.dependencies.packmol = "*"
-feature.examples.dependencies.nglview = "*"
-feature.examples.dependencies.jax = "*"
-feature.mosdef.dependencies.mbuild-base = "*"
-feature.mosdef.dependencies.foyer = "*"
-feature.mosdef.dependencies.numpy = "<2.3"
+packmol = ">=20.15.0"
+smirnoff-plugins = "2025.*"
+
+[tool.pixi.feature.examples.dependencies]
+nbval = "*"
+mdtraj = "*"
+packmol = "*"
+nglview = "*"
+jax = "*"
+
+[tool.pixi.feature.mosdef.dependencies]
+mbuild-base = "*"
+foyer = "*"
+numpy = "<2.3"
 # arguably ought to stay in engines group, but Foyer and GROMACS are tightly coupled and
 # bringing in AmberTools causes huge messes
-feature.mosdef.dependencies.gromacs = "*"
-feature.openeye.dependencies.openeye-toolkits = "*"
-feature.py311.dependencies.python = "3.11.*"
-feature.py312.dependencies.python = "3.12.*"
-feature.py313.dependencies.python = "3.13.*"
-feature.regression_tests.dependencies.deepdiff = "<=8"
-feature.regression_tests.dependencies.rich = ">=14.0.0,<15"
-feature.regression_tests.dependencies.click = ">=8.1.8,<9"
-feature.test.dependencies.pytest = "*"
-feature.test.dependencies.pytest-cov = "*"
-feature.test.dependencies.pytest-xdist = "*"
-feature.test.dependencies.pytest-randomly = "*"
-feature.test.dependencies.intermol = "*"
-feature.test.dependencies.nglview = "*"
-feature.test.dependencies.jax = "*"
-feature.test.dependencies.pyedr = "*"
-feature.test.dependencies.openff-nagl-base = "*"
-feature.test.dependencies.openff-nagl-models = "*"
-feature.typing.dependencies.mypy = "*"
-feature.typing.dependencies.pandas-stubs = "*"
-tasks.postinstall = "pip install -e . plugins/"
-tasks.run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-tasks.run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n auto", depends-on = "postinstall" }
-tasks.run_examples = { cmd = "python -m pytest examples/ -x -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
-tasks.run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
-workspace.channels = [ "conda-forge", "openeye" ]
-workspace.platforms = [ "linux-64", "osx-arm64" ]
+gromacs = "*"
+
+[tool.pixi.feature.openeye.dependencies]
+openeye-toolkits = "*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.regression_tests.dependencies]
+deepdiff = "<=8"
+rich = ">=14.0.0,<15"
+click = ">=8.1.8,<9"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-randomly = "*"
+intermol = "*"
+nglview = "*"
+jax = "*"
+pyedr = "*"
+openff-nagl-base = "*"
+openff-nagl-models = "*"
+
+[tool.pixi.feature.typing.dependencies]
+mypy = "*"
+pandas-stubs = "*"
+
+[tool.pixi.tasks]
+postinstall = "pip install -e . plugins/"
+run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
+run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n auto", depends-on = "postinstall" }
+run_examples = { cmd = "python -m pytest examples/ -x -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
+run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
+
+[tool.pixi.workspace]
+channels = [ "conda-forge", "openeye" ]
+platforms = [ "linux-64", "osx-arm64" ]
