@@ -11,7 +11,6 @@ name = "openff-interchange"
 description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
 readme = "README.md"
 license = { text = "MIT" }
-authors = [ { name = "Open Force Field Initiative", email = "info@openforcefield.org" } ]
 requires-python = ">=3.11"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
@@ -20,6 +19,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
 ]
 dynamic = [ "version" ]
+[[project.authors]]
+name = "Open Force Field Initiative"
+email = "info@openforcefield.org"
 
 [tool.setuptools.packages.find]
 include = [ 'openff.interchange*' ]
@@ -30,18 +32,16 @@ fallback_version = "0.0.0"
 
 [tool.ruff]
 line-length = 119
+
 namespace-packages = [ "openff/interchange/" ]
-
-lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
-
-lint.per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
-lint.per-file-ignores."plugins/*" = [ "INP001" ]
-
-lint.isort.known-first-party = [ "openff.interchange" ]
-
+[tool.ruff.lint]
+select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
+per-file-ignores."plugins/*" = [ "INP001" ]
+isort.known-first-party = [ "openff.interchange" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
-lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
-lint.pydocstyle.property-decorators = [ "validator" ]
+isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
+pydocstyle.property-decorators = [ "validator" ]
 
 [tool.pyproject-fmt]
 max_supported_python = "3.13"
