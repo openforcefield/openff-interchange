@@ -24,19 +24,17 @@ name = "Open Force Field Initiative"
 email = "info@openforcefield.org"
 
 [tool.setuptools.packages.find]
-include = [ 'openff.interchange*' ]
-exclude = [ 'openff.interchange._tests.data*' ]
+include = [ "openff.interchange*" ]
+exclude = [ "openff.interchange._tests.data*" ]
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
 
 [tool.ruff]
 line-length = 119
-
 namespace-packages = [ "openff/interchange/" ]
 [tool.ruff.lint]
 select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
-per-file-ignores."openff/interchange/_tests/data/*" = [ "INP001" ]
 per-file-ignores."plugins/*" = [ "INP001" ]
 isort.known-first-party = [ "openff.interchange" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
@@ -74,7 +72,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 warn_incomplete_stub = true
 show_error_codes = true
-exclude = 'openff/interchange/_tests'
+exclude = "openff/interchange/_tests"
 
 [[tool.mypy.overrides]]
 module = [
@@ -186,8 +184,10 @@ openeye-toolkits = "*"
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
+
 [tool.pixi.feature.py312.dependencies]
 python = "3.12.*"
+
 [tool.pixi.feature.py313.dependencies]
 python = "3.13.*"
 
@@ -215,7 +215,7 @@ pandas-stubs = "*"
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
 run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n auto", depends-on = "postinstall" }
+run_tests = { cmd = "python -m pytest openff/interchange/ -x --durations=20 -n logical", depends-on = "postinstall" }
 run_examples = { cmd = "python -m pytest examples/ -x -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
 run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
 
