@@ -1,11 +1,9 @@
 """Utilities for processing and interfacing with mBuild models."""
 
-from typing import TYPE_CHECKING
-
 from openff.toolkit import Molecule, Topology
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 
-if has_package("mbuild") or TYPE_CHECKING:
+if has_package("mbuild"):
     import mbuild
 
 

@@ -1,12 +1,15 @@
 """Interfaces with OpenMM."""
 
+from __future__ import annotations
+
 from contextlib import nullcontext
 from pathlib import Path
-from typing import TYPE_CHECKING, TextIO
+from typing import TextIO
 
 from openff.toolkit import Molecule
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 
+from openff.interchange import Interchange
 from openff.interchange._annotations import PositiveFloat
 from openff.interchange.exceptions import (
     NegativeMassError,
@@ -21,8 +24,6 @@ if has_package("openmm"):
     import openmm
     import openmm.app
 
-if TYPE_CHECKING:
-    from openff.interchange import Interchange
 
 __all__ = [
     "from_openmm",
@@ -34,12 +35,12 @@ __all__ = [
 
 @requires_package("openmm")
 def to_openmm_system(
-    interchange: "Interchange",
+    interchange: Interchange,
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
     ewald_tolerance: float = 1e-4,
     hydrogen_mass: PositiveFloat = 1.007947,
-) -> "openmm.System":
+) -> openmm.System:
     """
     Convert an Interchange to an OpenmM System.
 
@@ -156,7 +157,7 @@ to_openmm = to_openmm_system
 @requires_package("openmm")
 def _to_pdb(
     file_path: Path | str | TextIO,
-    topology: "openmm.app.Topology",
+    topology: openmm.app.Topology,
     positions,
 ):
     from openff.units import ensure_quantity
@@ -178,8 +179,8 @@ def _to_pdb(
 
 @requires_package("openmm")
 def _apply_hmr(
-    system: "openmm.System",
-    interchange: "Interchange",
+    system: openmm.System,
+    interchange: Interchange,
     hydrogen_mass: PositiveFloat,
 ):
     if abs(hydrogen_mass - 1.008) < 1e-3:

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import ast
 import json
-from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
+from typing import Annotated, Any
 
 import numpy
 from numpy.typing import ArrayLike
 from openff.toolkit import Quantity
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 from pydantic import (
     Field,
     PrivateAttr,
@@ -28,13 +28,10 @@ from openff.interchange.models import (
 )
 from openff.interchange.pydantic import _BaseModel
 
-if TYPE_CHECKING:
-    if has_package("jax"):
-        from jax import Array
-    else:
-        Array: TypeAlias = Any  # type: ignore[no-redef]
+if has_package("jax"):
+    from jax import Array
 else:
-    Array: TypeAlias = ArrayLike
+    type Array = ArrayLike  # type: ignore[no-redef]
 
 
 class Potential(_BaseModel):

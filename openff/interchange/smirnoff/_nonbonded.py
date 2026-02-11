@@ -19,7 +19,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.utils.exceptions import MissingPackageError, SMIRNOFFSpecError
 from packaging.version import Version
 from pydantic import Field, PrivateAttr, computed_field
-from typing_extensions import TypeAliasType, TypeVar
+from typing_extensions import TypeVar
 
 from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
@@ -60,14 +60,12 @@ logger = logging.getLogger(__name__)
 # type ElectrostaticsHandlerType = ...
 # https://docs.python.org/3/library/typing.html#type-aliases
 EHT = TypeVar("EHT")
-ElectrostaticsHandlerType = TypeAliasType(
-    "ElectrostaticsHandlerType",
+type ElectrostaticsHandlerType[EHT] = (
     ElectrostaticsHandler
     | ToolkitAM1BCCHandler
     | ChargeIncrementModelHandler
     | LibraryChargeHandler
-    | NAGLChargesHandler,
-    type_params=(EHT,),
+    | NAGLChargesHandler
 )
 
 

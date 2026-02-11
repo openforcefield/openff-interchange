@@ -1,19 +1,19 @@
 """Functions for running energy evluations with OpenMM."""
 
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import numpy
 from openff.toolkit import Quantity
 from openff.units import ensure_quantity
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 from openff.interchange.interop.openmm._positions import to_openmm_positions
 
-if has_package("openmm") or TYPE_CHECKING:
+if has_package("openmm"):
     import openmm
     import openmm.unit
 

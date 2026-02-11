@@ -3,11 +3,11 @@
 import copy
 import logging
 import warnings
-from typing import TYPE_CHECKING
 
 import numpy
 from openff.toolkit import Quantity
 
+from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _combine_topologies
 from openff.interchange.exceptions import (
     CutoffMismatchError,
@@ -15,10 +15,6 @@ from openff.interchange.exceptions import (
     UnsupportedCombinationError,
 )
 from openff.interchange.warnings import InterchangeCombinationWarning
-
-if TYPE_CHECKING:
-    from openff.interchange import Interchange
-
 
 logger = logging.getLogger(__name__)
 

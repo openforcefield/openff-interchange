@@ -14,8 +14,7 @@ from openff.toolkit import (
     RDKitToolkitWrapper,
     Topology,
 )
-from openff.utilities import get_data_file_path
-from openff.utilities.utilities import has_executable, has_package
+from openff.utilities import get_data_file_path, has_executable, has_package
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable

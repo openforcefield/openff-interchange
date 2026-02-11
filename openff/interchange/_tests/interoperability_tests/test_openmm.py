@@ -55,13 +55,13 @@ else:
     nonbonded_methods = list()
 
 
-def _get_num_virtual_sites(openmm_topology: "openmm.app.Topology") -> int:
+def _get_num_virtual_sites(openmm_topology: openmm.app.Topology) -> int:
     return sum(atom.element is None for atom in openmm_topology.atoms())
 
 
 def _compare_openmm_topologies(
-    top1: "openmm.app.Topology",
-    top2: "openmm.app.Topology",
+    top1: openmm.app.Topology,
+    top2: openmm.app.Topology,
 ):
     """
     In lieu of first-class serializaiton in OpenMM (https://github.com/openmm/openmm/issues/1543),

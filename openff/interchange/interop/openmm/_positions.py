@@ -2,18 +2,17 @@
 Helper functions for exporting positions to OpenMM.
 """
 
-from typing import TYPE_CHECKING
+from openff.utilities import has_package
 
+from openff.interchange import Interchange
 from openff.interchange.interop.common import _to_positions
 
-if TYPE_CHECKING:
+if has_package("openmm"):
     import openmm.unit
-
-    from openff.interchange import Interchange
 
 
 def to_openmm_positions(
-    interchange: "Interchange",
+    interchange: Interchange,
     include_virtual_sites: bool = True,
 ) -> "openmm.unit.Quantity":
     """Generate an array of positions of all particles, optionally excluding virtual sites."""

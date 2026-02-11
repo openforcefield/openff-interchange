@@ -1,5 +1,4 @@
 import itertools
-from typing import TYPE_CHECKING
 
 import numpy
 import pytest
@@ -14,7 +13,7 @@ from openff.units import Unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 
-if has_package("openmm") or TYPE_CHECKING:
+if has_package("openmm"):
     import openmm
     import openmm.unit
 

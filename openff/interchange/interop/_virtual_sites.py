@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import numpy
 from openff.toolkit import Quantity
+from openff.utilities import has_package
 
 from openff.interchange.exceptions import (
     MissingPositionsError,
@@ -17,16 +18,16 @@ from openff.interchange.models import BaseVirtualSiteKey
 from openff.interchange.pydantic import _BaseModel
 
 if TYPE_CHECKING:
-    import openmm
-
     from openff.interchange import Interchange
+if has_package("openmm"):
+    import openmm
 
 
 class _OpenMMVirtualSite(_BaseModel, abc.ABC):
     particles: list[int]
 
     @abc.abstractmethod
-    def to_openmm(self) -> "openmm.VirtualSite":
+    def to_openmm(self) -> openmm.VirtualSite:
         """Create a (subclass of) openmm.VirtualSite"""
         raise NotImplementedError()
 

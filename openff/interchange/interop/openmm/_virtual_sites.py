@@ -2,7 +2,7 @@
 Helper functions for exporting virutal sites to OpenMM.
 """
 
-from openff.utilities.utilities import has_package
+from openff.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.components._particles import _VirtualSite

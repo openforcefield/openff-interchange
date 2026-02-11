@@ -22,6 +22,7 @@ from openff.interchange.warnings import SwitchingFunctionNotImplementedWarning
 if TYPE_CHECKING:
     from openff.interchange import Interchange
 
+
 MDP_HEADER = """\
 ; Single point energy
 nsteps                   = 0      ; Perform no MD steps

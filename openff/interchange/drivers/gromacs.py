@@ -7,7 +7,7 @@ from pathlib import Path
 from shutil import which
 
 from openff.toolkit import Quantity
-from openff.utilities.utilities import requires_package, temporary_cd
+from openff.utilities import requires_package, temporary_cd
 
 from openff.interchange import Interchange
 from openff.interchange.components.mdconfig import MDConfig

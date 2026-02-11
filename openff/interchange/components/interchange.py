@@ -5,10 +5,10 @@ import tempfile
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Union, overload
+from typing import Literal, overload
 
-from openff.toolkit import Molecule, Quantity, Topology
-from openff.utilities.utilities import has_package, requires_package
+from openff.toolkit import ForceField, Molecule, Quantity, Topology
+from openff.utilities import has_package, requires_package
 from pydantic import Field
 
 from openff.interchange._annotations import (
@@ -33,6 +33,7 @@ from openff.interchange.exceptions import (
     MissingPositionsError,
     UnsupportedExportError,
 )
+from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.operations.minimize import (
     _DEFAULT_ENERGY_MINIMIZATION_TOLERANCE,
 )
@@ -45,21 +46,18 @@ from openff.interchange.smirnoff import (
 from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
-if TYPE_CHECKING:
+if has_foyer:
+    try:
+        from foyer import Forcefield as FoyerForcefield
+    except ModuleNotFoundError:
+        # case of openff/interchange/foyer/ being detected as the real package
+        pass
+if has_package("nglview"):
+    import nglview
+
+if has_package("openmm"):
     import openmm
     import openmm.app
-    from openff.toolkit import ForceField
-
-    from openff.interchange.foyer._guard import has_foyer
-
-    if has_foyer:
-        try:
-            from foyer import Forcefield as FoyerForcefield
-        except ModuleNotFoundError:
-            # case of openff/interchange/foyer/ being detected as the real package
-            pass
-    if has_package("nglview"):
-        import nglview
 
 
 class Interchange(_BaseModel):
@@ -918,8 +916,8 @@ class Interchange(_BaseModel):
     @classmethod
     def from_openmm(
         cls,
-        system: "openmm.System",
-        topology: Union["openmm.app.Topology", Topology],
+        system: openmm.System,
+        topology: openmm.app.Topology | Topology,
         positions: Quantity | None = None,
         box_vectors: Quantity | None = None,
     ) -> "Interchange":

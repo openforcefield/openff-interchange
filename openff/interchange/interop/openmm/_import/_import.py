@@ -1,13 +1,13 @@
 import warnings
 from collections import defaultdict
-from typing import TYPE_CHECKING, Union
 
 from openff.toolkit import Quantity, Topology
 from openff.units import ensure_quantity
 from openff.units.openmm import from_openmm as from_openmm_
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 from pydantic import ValidationError
 
+from openff.interchange import Interchange
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
 from openff.interchange.common._topology import InterchangeTopology
 from openff.interchange.common._valence import (
@@ -27,19 +27,12 @@ if has_package("openmm"):
     import openmm.app
     import openmm.unit
 
-if TYPE_CHECKING:
-    import openmm
-    import openmm.app
-    import openmm.unit
-
-    from openff.interchange import Interchange
-
 
 @requires_package("openmm")
 def from_openmm(
     *,
-    system: "openmm.System",
-    topology: Union["openmm.app.Topology", Topology],
+    system: openmm.System,
+    topology: openmm.app.Topology | Topology,
     positions: Quantity | None = None,
     box_vectors: Quantity | None = None,
 ) -> "Interchange":

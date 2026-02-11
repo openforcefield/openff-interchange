@@ -1,14 +1,10 @@
 """Minimize energy using OpenMM."""
 
-from typing import TYPE_CHECKING
-
 from openff.toolkit import Quantity
-from openff.utilities.utilities import requires_package
+from openff.utilities import requires_package
 
+from openff.interchange import Interchange
 from openff.interchange.exceptions import MinimizationError, MissingPositionsError
-
-if TYPE_CHECKING:
-    from openff.interchange import Interchange
 
 
 @requires_package("openmm")

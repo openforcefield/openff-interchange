@@ -2,7 +2,6 @@
 
 from collections import defaultdict
 from functools import lru_cache
-from typing import TYPE_CHECKING
 
 import networkx
 import numpy
@@ -10,11 +9,11 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler, VirtualSiteHandler
 from openff.toolkit.utils.collections import ValidatedList
-from openff.utilities.utilities import has_package
+from openff.utilities import has_package
 
 from openff.interchange.models import ImportedVirtualSiteKey, PotentialKey
 
-if has_package("openmm") or TYPE_CHECKING:
+if has_package("openmm"):
     import openmm.app
 
 
@@ -121,7 +120,7 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
 
 
 def _simple_topology_from_openmm(
-    openmm_topology: "openmm.app.Topology",
+    openmm_topology: openmm.app.Topology,
     system: openmm.System | None = None,
 ) -> Topology:
     """
