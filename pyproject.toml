@@ -212,6 +212,9 @@ openff-nagl-models = "*"
 mypy = "*"
 pandas-stubs = "*"
 
+[tool.pixi.pypi-dependencies]
+openff-packmol = { git = "https://github.com/openforcefield/openff-packmol.git" }
+
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
 run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
