@@ -61,3 +61,23 @@ class TestToOpenMM:
         # epsilon of 1-4 interaction matches either atom's sigma
         scale = sage_unconstrained["vdW"].scale14
         assert epsilon == vdw_force.getParticleParameters(0)[1] * scale
+
+    def test_particles_exist_without_nonbonded_force(self, sage_unconstrained):
+        valence_ff = ForceField()
+
+        valence_ff.register_parameter_handler(sage_unconstrained["Bonds"])
+        valence_ff.register_parameter_handler(sage_unconstrained["Angles"])
+
+        valence_ff.register_parameter_handler(sage_unconstrained["ProperTorsions"])
+        valence_ff.register_parameter_handler(sage_unconstrained["ImproperTorsions"])
+
+        interchange = valence_ff.create_interchange(Molecule.from_smiles("CCO").to_topology())
+
+        assert "vdW" not in interchange.collections
+        assert "Electrostatics" not in interchange.collections
+
+        openmm_system = interchange.to_openmm()
+
+        # do we want to check the PDB file / OpenMM topology exported fro this state, too?
+
+        assert openmm_system.getNumParticles() == 9
