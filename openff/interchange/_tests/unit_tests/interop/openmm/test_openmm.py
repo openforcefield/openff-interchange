@@ -1,9 +1,11 @@
 import pandas
+import pytest
 from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers import get_summary_data
+from openff.interchange.exceptions import UnsupportedExportError
 
 
 def run(smiles: str, constrained: bool) -> pandas.DataFrame:
@@ -61,6 +63,14 @@ class TestToOpenMM:
         # epsilon of 1-4 interaction matches either atom's sigma
         scale = sage_unconstrained["vdW"].scale14
         assert epsilon == vdw_force.getParticleParameters(0)[1] * scale
+
+    def test_virtual_sites_no_vdw_error(self, tip4p, water):
+        tip4p.deregister_parameter_handler("vdW")
+        with pytest.raises(
+            UnsupportedExportError,
+            match="Virtual sites with no vdW handler",
+        ):
+            tip4p.create_interchange(water.to_topology()).to_openmm_system()
 
     def test_particles_exist_without_nonbonded_force(self, sage_unconstrained):
         import openmm

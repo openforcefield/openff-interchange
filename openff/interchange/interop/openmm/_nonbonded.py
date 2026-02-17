@@ -102,24 +102,6 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    has_vdw = False
-
-    for name, collection in interchange.collections.items():
-        if name == "vdW":
-            has_vdw = True
-            break
-        if collection.is_plugin:
-            # TODO: Here is where to detect an electrostatics plugin, if one ever exists
-            if collection.acts_as == "vdW":  # type: ignore[attr-defined]
-                has_vdw = True
-                break
-
-    if not has_vdw and "VirtualSites" in interchange.collections:
-        raise UnsupportedExportError(
-            "Virtual sites with no vdW handler not currently supported. If this use case is "
-            "important to you, please raise an issue describing the functionality you wish to "
-            "see.",
-        )
 
     _data = _prepare_input_data(interchange)
 
