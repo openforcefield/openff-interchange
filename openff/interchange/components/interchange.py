@@ -320,6 +320,7 @@ class Interchange(_BaseModel):
         hydrogen_mass: PositiveFloat = 1.007947,
         monolithic: bool = True,
         _merge_atom_types: bool = False,
+        _normalize_charges: bool = False,
     ):
         """
         Export this Interchange object to GROMACS files.
@@ -341,6 +342,14 @@ class Interchange(_BaseModel):
         _merge_atom_types
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
+        _normalize_charges: bool, default = False
+            If True charges written to the topology are normalized per molecule to ensure that each molecule has a
+            charge which is exactly integer. Charges that are exactly 0 are not touched.
+            If False, charges are untouched.
+        _normalize_charges: bool, default = False
+            If True charges written to the topology are normalized per molecule to ensure that each molecule has a
+            charge which is exactly integer. Charges that are exactly 0 are not touched.
+            If False, charges are untouched.
 
         Notes
         -----
@@ -359,7 +368,11 @@ class Interchange(_BaseModel):
             gro_file=prefix + ".gro",
         )
 
-        writer.to_top(monolithic=monolithic, _merge_atom_types=_merge_atom_types)
+        writer.to_top(
+            monolithic=monolithic,
+            _merge_atom_types=_merge_atom_types,
+            _normalize_charges=_normalize_charges,
+        )
         writer.to_gro(decimal=decimal)
 
         self.to_mdp(prefix + "_pointenergy.mdp")
@@ -395,6 +408,7 @@ class Interchange(_BaseModel):
         hydrogen_mass: PositiveFloat = 1.007947,
         monolithic: bool = True,
         _merge_atom_types: bool = False,
+        _normalize_charges: bool = False,
     ):
         """
         Export this Interchange to a GROMACS topology file.
@@ -413,11 +427,18 @@ class Interchange(_BaseModel):
         _merge_atom_types
             The flag to define behaviour of GROMACSWriter. If True, then similar atom types will be merged.
             If False, each atom will have its own atom type.
+        _normalize_charges: bool, default = False
+            If True charges written to the topology are normalized per molecule to ensure that each molecule has a
+            charge which is exactly integer. Charges that are exactly 0 are not touched.
+            If False, charges are untouched.
 
         Notes
         -----
         Molecule names in written files are not guaranteed to match the `Moleclue.name` attribute of the
         molecules in the topology, especially if they are empty strings or not unique.
+
+        Charges written to the topology are normalized per molecule to ensure that each molecule has a charge which is
+        exactly integer. Charges that are exactly 0 are not touched.
 
         """
         from openff.interchange.interop.gromacs.export._export import GROMACSWriter
@@ -430,6 +451,7 @@ class Interchange(_BaseModel):
         ).to_top(
             monolithic=monolithic,
             _merge_atom_types=_merge_atom_types,
+            _normalize_charges=_normalize_charges,
         )
 
     def to_gro(self, file_path: Path | str, decimal: int = 3):
