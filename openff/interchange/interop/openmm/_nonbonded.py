@@ -67,19 +67,7 @@ def _process_nonbonded_forces(
     `combine_nonbondoed_forces=False`.
 
     """
-    from openff.interchange.common._nonbonded import _NonbondedCollection
-
-    for collection in interchange.collections.values():
-        if isinstance(collection, _NonbondedCollection):
-            break
-    else:
-        # If there are no non-bonded collections, assume here that there can be no virtual sites,
-        # so just return an i-i mapping between OpenFF and OpenMM indices
-        return {i: i for i in range(interchange.topology.n_atoms)}
-
-    has_virtual_sites = "VirtualSites" in interchange.collections
-
-    if has_virtual_sites:
+    if "VirtualSites" in interchange.collections:
         from openff.interchange.interop._virtual_sites import (
             _virtual_site_parent_molecule_mapping,
         )
@@ -126,26 +114,19 @@ def _process_nonbonded_forces(
                 has_vdw = True
                 break
 
-    if not has_vdw:
-        if has_virtual_sites:
-            raise UnsupportedExportError(
-                "Virtual sites with no vdW handler not currently supported. If this use case is "
-                "important to you, please raise an issue describing the functionality you wish to "
-                "see.",
-            )
-
-        try:
-            interchange["Electrostatics"]
-        except LookupError:
-            raise InternalInconsistencyError(
-                "In a confused state, could not find any vdW interactions but also failed to find "
-                "any electrostatics collection. This is a supported use case but should have been caught "
-                "earlier in this function. Please file an issue with a minimal reproducing example.",
-            )
+    if not has_vdw and "VirtualSites" in interchange.collections:
+        raise UnsupportedExportError(
+            "Virtual sites with no vdW handler not currently supported. If this use case is "
+            "important to you, please raise an issue describing the functionality you wish to "
+            "see.",
+        )
 
     _data = _prepare_input_data(interchange)
 
-    if combine_nonbonded_forces:
+    if _data.vdw_collection is None and _data.electrostatics_collection is None:
+        # Will not make any non-bonded forces, but we have made particles, so just return early
+        return openff_openmm_particle_map
+    elif combine_nonbonded_forces:
         _func = _create_single_nonbonded_force
     else:
         _func = _create_multiple_nonbonded_forces

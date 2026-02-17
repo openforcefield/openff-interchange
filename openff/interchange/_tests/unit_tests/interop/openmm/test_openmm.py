@@ -63,6 +63,8 @@ class TestToOpenMM:
         assert epsilon == vdw_force.getParticleParameters(0)[1] * scale
 
     def test_particles_exist_without_nonbonded_force(self, sage_unconstrained):
+        import openmm
+
         valence_ff = ForceField()
 
         valence_ff.register_parameter_handler(sage_unconstrained["Bonds"])
@@ -81,3 +83,13 @@ class TestToOpenMM:
         # do we want to check the PDB file / OpenMM topology exported fro this state, too?
 
         assert openmm_system.getNumParticles() == 9
+
+        for force in openmm_system.getForces():
+            assert not isinstance(force, openmm.NonbondedForce | openmm.CustomNonbondedForce)
+            assert isinstance(
+                force,
+                openmm.HarmonicBondForce
+                | openmm.HarmonicAngleForce
+                | openmm.PeriodicTorsionForce
+                | openmm.CMMotionRemover,
+            )
