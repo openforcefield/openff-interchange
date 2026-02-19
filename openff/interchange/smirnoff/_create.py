@@ -13,6 +13,7 @@ from openff.interchange.exceptions import (
     MissingParameterHandlerError,
     PresetChargesError,
     SMIRNOFFHandlersNotImplementedError,
+    UnsupportedExportError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
 from openff.interchange.smirnoff._base import SMIRNOFFCollection, _check_all_valence_terms_assigned
@@ -469,7 +470,11 @@ def _virtual_sites(
                     vdw = collection  # type: ignore[assignment]
                     break
         else:
-            vdw = None
+            raise UnsupportedExportError(
+                "Virtual sites with no vdW handler not currently supported. If this use case is "
+                "important to you, please raise an issue describing the functionality you wish to "
+                "see.",
+            )
 
     electrostatics: SMIRNOFFElectrostaticsCollection = interchange["Electrostatics"]  # type: ignore[assignment]
 
