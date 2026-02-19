@@ -108,7 +108,8 @@ def _process_nonbonded_forces(
     if _data.vdw_collection is None and _data.electrostatics_collection is None:
         # Will not make any non-bonded forces, but we have made particles, so just return early
         return openff_openmm_particle_map
-    elif combine_nonbonded_forces:
+
+    if combine_nonbonded_forces:
         _func = _create_single_nonbonded_force
     else:
         _func = _create_multiple_nonbonded_forces
