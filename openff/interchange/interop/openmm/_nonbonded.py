@@ -64,7 +64,7 @@ def _process_nonbonded_forces(
     This typically involves processing the vdW and Electrostatics sections of an Interchange object
     into a corresponding openmm.NonbondedForce (if `combine_nonbonded_forces=True`) or a
     collection of other forces (NonbondedForce, CustomNonbondedForce, CustomBondForce) if
-    `combine_nonbondoed_forces=False`.
+    `combine_nonbonded_forces=False`.
 
     """
     if "VirtualSites" in interchange.collections:
