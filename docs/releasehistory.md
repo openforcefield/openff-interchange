@@ -19,6 +19,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Bug fixes
 
+* #1431 Exported OpenMM systems no longer lack particles when no non-bonded handlers are present in the force field.
 * #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
 
 ## 0.5.0 - 2025-01-08
