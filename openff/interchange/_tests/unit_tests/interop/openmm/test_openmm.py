@@ -103,3 +103,25 @@ class TestToOpenMM:
                 | openmm.PeriodicTorsionForce
                 | openmm.CMMotionRemover,
             )
+
+    def test_particles_exist_with_no_forces(self):
+        import openmm
+
+        empty_ff = ForceField()
+
+        assert len(empty_ff.registered_parameter_handlers) == 0
+
+        interchange = empty_ff.create_interchange(Molecule.from_smiles("CCO").to_topology())
+
+        # Interchange creates an empty ConstraintsCollection by default, even with no
+        # constraints handler or other handlers that would populate it
+        assert len(interchange.collections) == 1
+
+        openmm_system = interchange.to_openmm()
+
+        assert openmm_system.getNumParticles() == 9
+
+        # CMMotionRemover is added by default, even with no forces
+        assert openmm_system.getNumForces() == 1
+
+        assert type(openmm_system.getForce(0)) is openmm.CMMotionRemover
