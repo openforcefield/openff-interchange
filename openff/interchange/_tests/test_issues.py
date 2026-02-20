@@ -230,3 +230,41 @@ def test_issue_1395_amber(caffeine, sage, water, tmp_path):
             "Electrostatics": Quantity("0.5 kilojoule_per_mole"),
         },
     )
+
+
+@skip_if_missing("openmm")
+@pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions"])
+def test_issue_1234_openmm(sage, valence_handler):
+    """Test that modifications to a `ForceField` object are reflected in re-creating new `Interchange`s."""
+    topology = MoleculeWithConformer.from_smiles(
+        "Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C",
+        allow_undefined_stereo=True,
+    ).to_topology()
+    original_interchange = sage.create_interchange(topology)
+
+    original_energy = get_openmm_energies(original_interchange).total_energy.m
+
+    for parameter in sage[valence_handler].parameters:
+        if hasattr(parameter, "k"):
+            if isinstance(parameter.k, list):
+                parameter.k = [k * 100 for k in parameter.k]
+            else:
+                parameter.k = parameter.k * 100
+
+        # Impropers contribute basically nothing to energies, so modifying the force constant doesn't do much.
+        # Instead, shift the phase by 5 degrees, which should have a much more significant effect on energies.
+        if hasattr(parameter, "phase"):
+            parameter.phase = [phase + Quantity("5 degree") for phase in parameter.phase]
+        elif hasattr(parameter, "length"):
+            parameter.length = parameter.length * 1.2
+        elif hasattr(parameter, "angle"):
+            parameter.angle = parameter.angle * 1.1
+        else:
+            raise ValueError("Don't know how to modify parameter with k of type {type(parameter.k)}")
+
+    new_interchange = sage.create_interchange(topology)
+
+    new_energy = get_openmm_energies(new_interchange).total_energy.m
+
+    # energies should be different, since parameters are (wildly!) different
+    assert abs(original_energy - new_energy) > 0.001
