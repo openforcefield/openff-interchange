@@ -20,6 +20,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ### Bug fixes
 
 * #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
+* #1435 Fixes a bug in which `Colletion.set_force_field_parameters` did not update force field parameters upon export to simulation engines.
 
 ## 0.5.0 - 2025-01-08
 
