@@ -249,6 +249,12 @@ def test_issue_1433_openmm(sage, valence_handler):
 
     # multiple force constant (0th column for each handler) by arbtirarily large number
     valence_parameters[:, 0] = valence_parameters[:, 0] * 100
+
+    # impropers do basically nothing energetically, so also shift phase by a few degrees
+    # to force an energy change
+    if valence_handler == "ImproperTorsions":
+        valence_parameters[:, 2] = valence_parameters[:, 2] + 10  # implicit degrees
+
     interchange[valence_handler].set_force_field_parameters(valence_parameters)
 
     new_energy = get_openmm_energies(interchange).total_energy.m
