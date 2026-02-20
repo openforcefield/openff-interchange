@@ -230,3 +230,34 @@ def test_issue_1395_amber(caffeine, sage, water, tmp_path):
             "Electrostatics": Quantity("0.5 kilojoule_per_mole"),
         },
     )
+
+
+@skip_if_missing("openmm")
+@pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions"])
+def test_issue_1433_openmm(sage, valence_handler):
+    """Test that changes in Collection.set_force_field_parameters are reflected in re-computed energies."""
+    interchange = sage.create_interchange(
+        MoleculeWithConformer.from_smiles(
+            "Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C",
+            allow_undefined_stereo=True,
+        ).to_topology(),
+    )
+
+    valence_parameters = interchange[valence_handler].get_force_field_parameters()
+
+    original_energy = get_openmm_energies(interchange).total_energy.m
+
+    # multiple force constant (0th column for each handler) by arbtirarily large number
+    valence_parameters[:, 0] = valence_parameters[:, 0] * 100
+
+    # impropers do basically nothing energetically, so also shift phase by a few degrees
+    # to force an energy change
+    if valence_handler == "ImproperTorsions":
+        valence_parameters[:, 2] = valence_parameters[:, 2] + 10  # implicit degrees
+
+    interchange[valence_handler].set_force_field_parameters(valence_parameters)
+
+    new_energy = get_openmm_energies(interchange).total_energy.m
+
+    # energies should be different, since parameters are (wildly!) different
+    assert abs(original_energy - new_energy) > 0.1
