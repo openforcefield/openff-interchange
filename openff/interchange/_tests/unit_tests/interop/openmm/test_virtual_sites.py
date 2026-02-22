@@ -1,3 +1,5 @@
+import random
+
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
@@ -669,3 +671,107 @@ class TestvdWOnVirtualSites:
             break
         else:
             raise Exception("Did not find a NonbondedForce")
+
+    @pytest.mark.parametrize(
+        "nonbonded_handler",
+        ["vdW", "Electrostatics"],
+    )
+    def test_virtual_site_virtual_site_custom_14_scaling(
+        self,
+        nonbonded_handler,
+    ):
+        """
+        Given virtual site parameters with non-zero vdW interactions and a
+        non-standard 1-4 scaling factor, test that the 1-4 interactions between
+        two virtual sites (whos parents also participate in a 1-4 interaction)
+        have their 1-4 interactions correctly scaled.
+
+        Lightly adapted from Evan Pretti's reproduction in issue #1436
+        """
+        force_field = ForceField("""<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+<VirtualSites version="0.3">
+  <VirtualSite
+    type="BondCharge"
+    match="all_permutations"
+    smirks="[H:1]-[O:2]"
+    distance="1 * angstrom"
+    charge_increment1="-1 * elementary_charge"
+    sigma="1.0 * angstrom"
+    epsilon="1.0 * kilojoule_per_mole"
+  />
+</VirtualSites>
+<LibraryCharges version="0.3">
+  <LibraryCharge smirks="[#1:1]" charge1="2 * elementary_charge" />
+  <LibraryCharge smirks="[#8:1]" charge1="-2 * elementary_charge" />
+</LibraryCharges>
+<Electrostatics version="0.3" />
+<vdW version="0.3">
+  <Atom smirks="[*:1]" sigma="1.0 * angstrom" epsilon="1.0 * kilojoule_per_mole" />
+</vdW>
+</SMIRNOFF>""")
+        topology = Molecule.from_mapped_smiles("[H:1][O:2][O:3][H:4]").to_topology()
+
+        # Graph of molecule after parametrization (using zero-indexed OpenMM particle indices):
+        #
+        # H(0) - O(1) - O(2) - H(3)
+        # |                    |
+        # VS(4)                VS(5)
+        #
+        # Using exclusion rule "parents," H-H are a 1-4 pair and so VS-VS are also a 1-4 pair
+        # also H(0)-VS(5) and H(3)-VS(4) are 1-4 pairs, everything else is 1-2, 1-3, so non-interacting
+
+        scale_14 = random.uniform(0.5, 1.0)
+        force_field[nonbonded_handler].scale14 = scale_14
+
+        system = force_field.create_openmm_system(topology)
+
+        def get_applied_scaling_factor(
+            force: openmm.NonbondedForce,
+            handler_name: str,
+        ) -> list[float]:
+            """
+            Get the 1-4 scaling factor that was applied to exceptions
+            0-3, 0-5, 3-4, and 4-5, which should nonzero for this molecule.
+            Look separately at vdW or electrostatics parameters.
+
+            This helper function only works for this test case!
+            """
+            look_at = [
+                (0, 3),
+                (0, 5),
+                (3, 4),
+                (4, 5),
+            ]
+
+            found_factors = list()
+
+            for index in range(force.getNumExceptions()):
+                p1, p2, qq, _, epsilon = force.getExceptionParameters(index)
+
+                if tuple(sorted((p1, p2))) not in look_at:
+                    continue
+
+                if handler_name == "Electrostatics":
+                    # charges are just +1 e to make math simpler
+                    found_factors.append(
+                        round(
+                            qq / openmm.unit.elementary_charge**2,
+                            8,
+                        ),
+                    )
+                elif handler_name == "vdW":
+                    # same but with epsilon being 1 kJ/mol
+                    found_factors.append(
+                        round(
+                            epsilon / openmm.unit.kilojoule_per_mole,
+                            8,
+                        ),
+                    )
+                else:
+                    raise Exception("Unknown nonbonded handler")
+
+            return found_factors
+
+        nonbonded_force = next(force for force in system.getForces() if isinstance(force, openmm.NonbondedForce))
+
+        assert get_applied_scaling_factor(nonbonded_force, nonbonded_handler) == 4 * [round(scale_14, 8)]
