@@ -9,6 +9,7 @@ from openff.interchange._tests import MoleculeWithConformer
 if has_package("openmm"):
     import openmm
 
+
 @skip_if_missing("openmm")
 class TestBondChargeVirtualSite:
     @pytest.mark.parametrize(
@@ -102,7 +103,6 @@ class TestDivalentLonePairVirtualSite:
         distance,
     ):
         from rdkit import Chem
-        import rdkit.Chem.rdMolTransforms
 
         ff = ForceField("tip3p.offxml")
         vsite_handler = ff.get_parameter_handler("VirtualSites")
@@ -118,7 +118,7 @@ class TestDivalentLonePairVirtualSite:
             "charge_increment": [0 * unit.elementary_charge] * 3,
             "epsilon": 0.0 * unit.kilocalorie_per_mole,
             "sigma": 1.0 * unit.angstrom,
-            "id": "water-l"
+            "id": "water-l",
         }
         vsite_handler.add_parameter(l_parameter_kwargs)
 
@@ -355,27 +355,27 @@ class TestTIP5PVsOpenMM:
         # Create OpenMM context to compute virtual site positions
         integrator = openmm.VerletIntegrator(0.001)
         context = openmm.Context(openff_system, integrator)
-        
+
         # set up positions
         positions = water.conformers[0].to_openmm().value_in_unit(openmm.unit.nanometer)
         positions = numpy.concatenate([positions, numpy.zeros((2, 3))])  # add placeholders for virtual sites
         context.setPositions(positions)
-        
+
         # Compute virtual site positions using OpenMM's algorithm
         context.computeVirtualSites()
-        
+
         # Get all positions including computed virtual sites
         openmm_state = context.getState(getPositions=True)
         openmm_positions = openmm_state.getPositions(asNumpy=True).value_in_unit(
             openmm.unit.nanometer,
         )
-        
+
         # Get OpenFF interchange positions with virtual sites
         openff_interchange = tip5p.create_interchange(water.to_topology())
         openff_positions = openff_interchange.get_positions(
             include_virtual_sites=True,
         ).m_as("nanometer")
-        
+
         # Compare all 5 particle positions (O, H, H, VS1, VS2)
         numpy.testing.assert_allclose(
             openmm_positions,
