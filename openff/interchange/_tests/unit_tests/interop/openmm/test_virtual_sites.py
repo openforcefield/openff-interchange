@@ -103,6 +103,7 @@ class TestDivalentLonePairVirtualSite:
         distance,
     ):
         from rdkit import Chem
+        import rdkit.Chem.rdMolTransforms
 
         ff = ForceField("tip3p.offxml")
         vsite_handler = ff.get_parameter_handler("VirtualSites")
@@ -147,9 +148,9 @@ class TestDivalentLonePairVirtualSite:
         lol_angle = Chem.rdMolTransforms.GetAngleDeg(conf, 3, 0, 4)
         ol_distance = Chem.rdMolTransforms.GetBondLength(conf, 0, 3)
 
-        assert hoh_angle == pytest.approx(104.52, abs=1.0)
-        assert ol_distance == pytest.approx(distance, abs=0.1)
-        assert lol_angle == pytest.approx(outOfPlaneAngle * 2, abs=1.0)
+        assert hoh_angle == pytest.approx(104.52, abs=1e-4)
+        assert ol_distance == pytest.approx(distance, abs=1e-4)
+        assert lol_angle == pytest.approx(outOfPlaneAngle * 2, abs=1e-4)
 
 
 @skip_if_missing("openmm")
