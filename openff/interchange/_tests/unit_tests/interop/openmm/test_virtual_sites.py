@@ -102,8 +102,8 @@ class TestDivalentLonePairVirtualSite:
         outOfPlaneAngle,
         distance,
     ):
-        from rdkit import Chem
         import rdkit.Chem.rdMolTransforms
+        from rdkit import Chem
 
         ff = ForceField("tip3p.offxml")
         vsite_handler = ff.get_parameter_handler("VirtualSites")
