@@ -102,7 +102,7 @@ class TestDivalentLonePairVirtualSite:
         distance,
     ):
         from rdkit import Chem
-        from rdkit.Chem import rdMolTransforms
+        import rdkit.Chem.rdMolTransforms
 
         ff = ForceField("tip3p.offxml")
         vsite_handler = ff.get_parameter_handler("VirtualSites")
