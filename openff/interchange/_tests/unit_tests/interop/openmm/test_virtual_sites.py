@@ -143,9 +143,9 @@ class TestDivalentLonePairVirtualSite:
             )
         rdmol.AddConformer(conf)
 
-        hoh_angle = Chem.rdMolTransforms.GetAngleDeg(conf, 1, 0, 2)
-        lol_angle = Chem.rdMolTransforms.GetAngleDeg(conf, 3, 0, 4)
-        ol_distance = Chem.rdMolTransforms.GetBondLength(conf, 0, 3)
+        hoh_angle = rdkit.Chem.rdMolTransforms.GetAngleDeg(conf, 1, 0, 2)
+        lol_angle = rdkit.Chem.rdMolTransforms.GetAngleDeg(conf, 3, 0, 4)
+        ol_distance = rdkit.Chem.rdMolTransforms.GetBondLength(conf, 0, 3)
 
         assert hoh_angle == pytest.approx(104.52, abs=1e-4)
         assert ol_distance == pytest.approx(distance, abs=1e-4)
