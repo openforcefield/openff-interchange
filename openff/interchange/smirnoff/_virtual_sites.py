@@ -450,7 +450,7 @@ def _build_local_coordinate_frames(
             else:
                 z_hat = numpy.cross(x_hat, numpy.array([0.0, 1.0, 0.0]))
             z_hat = z_hat / numpy.linalg.norm(z_hat)
-        
+
         y_hat = numpy.cross(z_hat, x_hat)
 
         stacked_frames[0].append(origin.reshape(1, -1))
