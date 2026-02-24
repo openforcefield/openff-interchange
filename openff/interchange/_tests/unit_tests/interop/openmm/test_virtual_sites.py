@@ -865,4 +865,6 @@ class TestvdWOnVirtualSites:
 
         nonbonded_force = next(force for force in system.getForces() if isinstance(force, openmm.NonbondedForce))
 
-        assert get_applied_scaling_factor(nonbonded_force, nonbonded_handler) == 4 * [round(scale_14, 8)]
+        assert get_applied_scaling_factor(nonbonded_force, nonbonded_handler) == 4 * [round(scale_14, 8)], (
+            f"not all 1-4 interactions appear to be scaled by {scale_14}, a randomly-generated scaling factor"
+        )
