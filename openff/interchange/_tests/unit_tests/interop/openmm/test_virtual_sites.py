@@ -125,7 +125,7 @@ class TestDivalentLonePairVirtualSite:
 
         ic = ff.create_interchange(water.to_topology())
         ic.minimize()
-        positions = ic.get_positions(include_virtual_sites=True)
+        positions = ic.get_positions(include_virtual_sites=True).m_as("angstrom")
 
         rdmol = Chem.RWMol(water.to_rdkit())
         rdmol.AddAtom(Chem.Atom(0))  # virtual site
@@ -134,14 +134,7 @@ class TestDivalentLonePairVirtualSite:
         # Create conformer with virtual site positions
         conf = Chem.Conformer(5)  # 3 atoms + 2 virtual sites
         for i in range(5):
-            conf.SetAtomPosition(
-                i,
-                (
-                    positions[i, 0].m_as("angstrom"),
-                    positions[i, 1].m_as("angstrom"),
-                    positions[i, 2].m_as("angstrom"),
-                ),
-            )
+            conf.SetAtomPosition(i, positions[i])
         rdmol.AddConformer(conf)
 
         hoh_angle = rdkit.Chem.rdMolTransforms.GetAngleDeg(conf, 1, 0, 2)
