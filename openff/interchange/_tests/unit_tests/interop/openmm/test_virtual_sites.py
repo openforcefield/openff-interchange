@@ -2,7 +2,7 @@ import random
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity, Topology
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import has_package, skip_if_missing
 
@@ -92,6 +92,60 @@ class TestTrivalentLonePairVirtualSite:
         )
 
         assert isinstance(system.getVirtualSite(4), openmm.LocalCoordinatesSite)
+
+
+@skip_if_missing("rdkit")
+class TestDivalentLonePairVirtualSite:
+    @pytest.mark.parametrize("outOfPlaneAngle", [10, 20, 30, 40, 50, 60, 70, 80, 90])
+    @pytest.mark.parametrize("distance", [1, 2, 3, 4, 5])
+    def test_expected_geometry_all_permutations(
+        self,
+        water,
+        outOfPlaneAngle,
+        distance,
+    ):
+        import rdkit.Chem.rdMolTransforms
+        from rdkit import Chem
+
+        ff = ForceField("tip3p.offxml")
+        vsite_handler = ff.get_parameter_handler("VirtualSites")
+        assert len(vsite_handler.parameters) == 0
+
+        l_parameter_kwargs = {
+            "smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]",
+            "type": "DivalentLonePair",
+            "name": "EP-L",
+            "match": "all_permutations",
+            "distance": distance * unit.angstrom,
+            "outOfPlaneAngle": outOfPlaneAngle * unit.degree,
+            "charge_increment": [0 * unit.elementary_charge] * 3,
+            "epsilon": 0.0 * unit.kilocalorie_per_mole,
+            "sigma": 1.0 * unit.angstrom,
+            "id": "water-l",
+        }
+        vsite_handler.add_parameter(l_parameter_kwargs)
+
+        ic = ff.create_interchange(water.to_topology())
+        ic.minimize()
+        positions = ic.get_positions(include_virtual_sites=True).m_as("angstrom")
+
+        rdmol = Chem.RWMol(water.to_rdkit())
+        rdmol.AddAtom(Chem.Atom(0))  # virtual site
+        rdmol.AddAtom(Chem.Atom(0))  # virtual site
+
+        # Create conformer with virtual site positions
+        conf = Chem.Conformer(5)  # 3 atoms + 2 virtual sites
+        for i in range(5):
+            conf.SetAtomPosition(i, positions[i])
+        rdmol.AddConformer(conf)
+
+        hoh_angle = rdkit.Chem.rdMolTransforms.GetAngleDeg(conf, 1, 0, 2)
+        lol_angle = rdkit.Chem.rdMolTransforms.GetAngleDeg(conf, 3, 0, 4)
+        ol_distance = rdkit.Chem.rdMolTransforms.GetBondLength(conf, 0, 3)
+
+        assert hoh_angle == pytest.approx(104.52, abs=1e-4)
+        assert ol_distance == pytest.approx(distance, abs=1e-4)
+        assert lol_angle == pytest.approx(outOfPlaneAngle * 2, abs=1e-4)
 
 
 @skip_if_missing("openmm")
@@ -292,7 +346,38 @@ class TestTIP5PVsOpenMM:
         assert openff_virtual_sites[0].getParticle(1) == openff_virtual_sites[1].getParticle(2)
         assert openff_virtual_sites[0].getParticle(2) == openff_virtual_sites[1].getParticle(1)
 
-        # TODO: Also doubly compare geometry to OpenMM result
+        # Compare virtual site positions computed by OpenMM vs OpenFF
+        # Create OpenMM context to compute virtual site positions
+        integrator = openmm.VerletIntegrator(0.001)
+        context = openmm.Context(openff_system, integrator)
+
+        # set up positions
+        positions = water.conformers[0].to_openmm().value_in_unit(openmm.unit.nanometer)
+        positions = numpy.concatenate([positions, numpy.zeros((2, 3))])  # add placeholders for virtual sites
+        context.setPositions(positions)
+
+        # Compute virtual site positions using OpenMM's algorithm
+        context.computeVirtualSites()
+
+        # Get all positions including computed virtual sites
+        openmm_state = context.getState(getPositions=True)
+        openmm_positions = openmm_state.getPositions(asNumpy=True).value_in_unit(
+            openmm.unit.nanometer,
+        )
+
+        # Get OpenFF interchange positions with virtual sites
+        openff_interchange = tip5p.create_interchange(water.to_topology())
+        openff_positions = openff_interchange.get_positions(
+            include_virtual_sites=True,
+        ).m_as("nanometer")
+
+        # Compare all 5 particle positions (O, H, H, VS1, VS2)
+        numpy.testing.assert_allclose(
+            openmm_positions,
+            openff_positions,
+            rtol=1e-6,
+            atol=1e-8,
+        )
 
 
 # TODO: Port xml_ff_virtual_sites_monovalent from toolkit
