@@ -810,6 +810,12 @@ class TestvdWOnVirtualSites:
 
         system = force_field.create_openmm_system(topology)
 
+        for index in range(4):
+            assert system.getParticleMass(index)._value > 0.0
+
+        system.getVirtualSite(4)
+        system.getVirtualSite(5)
+
         def get_applied_scaling_factor(
             force: openmm.NonbondedForce,
             handler_name: str,
