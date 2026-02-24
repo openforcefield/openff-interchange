@@ -443,9 +443,9 @@ def _build_local_coordinate_frames(
         if z_norm > THRESHOLD:
             z_hat /= z_norm
         else:
-            # Degenerate case for BondCharges
+            # Degenerate case for co-linear atoms, most likely as BondCharges
             # Construct an arbitrary perpendicular vector to x_hat
-            if abs(x_hat[0]) < 0.9:
+            if abs(x_hat[0]) < 0.9: # corresponds to >= ~26 degrees away from x-axis
                 z_hat = numpy.cross(x_hat, numpy.array([1.0, 0.0, 0.0]))
             else:
                 z_hat = numpy.cross(x_hat, numpy.array([0.0, 1.0, 0.0]))
