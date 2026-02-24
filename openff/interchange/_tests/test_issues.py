@@ -260,11 +260,11 @@ def test_issue_1234_openmm(sage, valence_handler):
         elif hasattr(parameter, "angle"):
             parameter.angle = parameter.angle * 1.1
         else:
-            raise ValueError("Don't know how to modify parameter with k of type {type(parameter.k)}")
+            raise ValueError(f"Don't know how to modify parameter with k of type {type(parameter.k)}")
 
     new_interchange = sage.create_interchange(topology)
 
     new_energy = get_openmm_energies(new_interchange).total_energy.m
 
     # energies should be different, since parameters are (wildly!) different
-    assert abs(original_energy - new_energy) > 0.001
+    assert abs(original_energy - new_energy) > 0.1
