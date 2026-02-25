@@ -651,7 +651,7 @@ def _create_multiple_nonbonded_forces(
 
     coul_14, vdw_14 = _get_14_scaling_factors(data)
 
-    openmm_pairs = list()
+    openmm_pairs = set()
 
     for atom1, atom2 in _get_14_pairs(interchange.topology):
         openff_indices = (
@@ -664,7 +664,7 @@ def _create_multiple_nonbonded_forces(
             openff_openmm_particle_map[openff_indices[1]],
         )
 
-        openmm_pairs.append(openmm_indices)
+        openmm_pairs.add(openmm_indices)
 
     if electrostatics_force is not None:
         for i in range(electrostatics_force.getNumExceptions()):
