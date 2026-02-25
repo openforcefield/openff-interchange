@@ -23,6 +23,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
 * #1434 Fixes a bug in which re-creating an `Interchange` with a modified SMIRNOFF force field would not use modified parameters.
 
+### Performance improvements
+
+* #1445 Improves OpenMM export speed for systems containing very large molecules
+
 ## 0.5.0 - 2025-01-08
 
 * #1332 Introduces the following behavior changes to the private Packmol wrappers:
