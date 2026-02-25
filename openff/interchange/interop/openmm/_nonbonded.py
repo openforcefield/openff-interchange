@@ -506,6 +506,8 @@ def _create_exceptions(
                         existing_exception_index=exception_index,
                         new_p1=virtual_particle_of_p1,
                         new_p2=p2,
+                        charge_scaling=coul_14,
+                        vdw_scaling=vdw_14,
                     )
 
             # If this iterable is not empty, add an exception between p2's virtual
@@ -517,6 +519,8 @@ def _create_exceptions(
                         existing_exception_index=exception_index,
                         new_p1=virtual_particle_of_p2,
                         new_p2=p1,
+                        charge_scaling=coul_14,
+                        vdw_scaling=vdw_14,
                     )
 
             # Adding (child of this parent)-(child of neighbor) exceptions
@@ -529,6 +533,8 @@ def _create_exceptions(
                     existing_exception_index=exception_index,
                     new_p1=v1,
                     new_p2=v2,
+                    charge_scaling=coul_14,
+                    vdw_scaling=vdw_14,
                 )
 
         for (
