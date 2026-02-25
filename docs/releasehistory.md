@@ -11,7 +11,7 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.5.1 - 2025-02-25
 
 ### Breaking changes
 
@@ -21,11 +21,14 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1431 Exported OpenMM systems no longer lack particles when no non-bonded handlers are present in the force field.
 * #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
-* #1434 Fixes a bug in which re-creating an `Interchange` with a modified SMIRNOFF force field would not use modified parameters.
+* #1435 Fixes issues in which re-creating an `Interchange` with a modified SMIRNOFF force field would not use modified parameters.
+* #1440 Fixes issues in which z coordinates of `DivalentLonePair` SMIRNOFF virtual site types were incorrect.
+* #1442 Ensures improper torsions are added to OpenMM systems, even when proper torsions are not present.
+* #1437 Fixes issues in which custom 1-4 scaling factors were not proplerly applied to some interactions involving virtual sites.
 
 ### Performance improvements
 
-* #1445 Improves OpenMM export speed for systems containing very large molecules
+* #1446 Improves OpenMM export speed for systems containing very large molecules
 
 ## 0.5.0 - 2025-01-08
 
