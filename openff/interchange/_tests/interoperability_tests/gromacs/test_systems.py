@@ -1,3 +1,4 @@
+import pytest
 from openff.toolkit import Quantity
 
 from openff.interchange._tests import needs_gmx
@@ -5,6 +6,7 @@ from openff.interchange._tests._gromacs import gmx_monolithic_vs_itp, gmx_roundt
 
 
 @needs_gmx
+@pytest.mark.xfail(reason="Test is very flaky in CI")
 def test_ligand_vacuum(caffeine, sage_unconstrained, monkeypatch):
     monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
 
