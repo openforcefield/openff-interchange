@@ -24,7 +24,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 * #1435 Fixes issues in which re-creating an `Interchange` with a modified SMIRNOFF force field would not use modified parameters.
 * #1440 Fixes issues in which z coordinates of `DivalentLonePair` SMIRNOFF virtual site types were incorrect.
 * #1442 Ensures improper torsions are added to OpenMM systems, even when proper torsions are not present.
-* #1437 Fixes issues in which custom 1-4 scaling factors were not proplerly applied to some interactions involving virtual sites.
+* #1437 Fixes issues in which custom 1-4 scaling factors were not properly applied to some interactions involving virtual sites.
 
 ### Performance improvements
 
