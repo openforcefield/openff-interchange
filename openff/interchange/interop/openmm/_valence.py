@@ -307,6 +307,7 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
             break
     else:
         torsion_force = openmm.PeriodicTorsionForce()
+        openmm_sys.addForce(torsion_force)
 
     improper_torsion_handler = interchange["ImproperTorsions"]
 
