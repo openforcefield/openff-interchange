@@ -262,6 +262,39 @@ def test_issue_1433_openmm(sage, valence_handler):
     assert abs(original_energy - new_energy) > 0.1
 
 
+def test_isssue_1450_reassign_vdw(sage, water_dimer):
+    """Sanity check that re-assigning vdW parameters actually changes energies."""
+    original_interchange = sage.create_interchange(water_dimer)
+
+    original_energy = get_openmm_energies(original_interchange).energies["Nonbonded"]
+
+    for potential in original_interchange["vdW"].potentials.values():
+        potential.parameters["epsilon"] = potential.parameters["epsilon"] * 100
+
+    new_energy = get_openmm_energies(original_interchange).energies["Nonbonded"]
+
+    assert original_energy != new_energy, "Energies should be different after modifying vdW parameters"
+
+
+@pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions"])
+def test_issue_1450_reassign_valence(sage, valence_handler):
+    """Sanity check that re-assigning valence parameters actually changes energies."""
+    topology = MoleculeWithConformer.from_smiles(
+        "c1c(cccc1)C(c2ccccc2)c3ccccc3",
+        allow_undefined_stereo=True,
+    ).to_topology()
+    original_interchange = sage.create_interchange(topology)
+
+    original_energy = get_openmm_energies(original_interchange)
+
+    for potential in original_interchange[valence_handler].potentials.values():
+        potential.parameters["k"] = potential.parameters["k"] * 100
+
+    new_energy = get_openmm_energies(original_interchange)
+
+    assert original_energy != new_energy, "Energies should be different after modifying valence parameters"
+
+
 @pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions"])
 def test_issue_1234_openmm(sage, valence_handler):
     """Test that modifications to a `ForceField` object are reflected in re-creating new `Interchange`s."""
