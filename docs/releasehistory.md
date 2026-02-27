@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bug fixes
+
+* #1435 Fixes a bug in which `Colletion.set_force_field_parameters` did not update force field parameters upon export to simulation engines.
+
 ## 0.5.1 - 2025-02-25
 
 ### Breaking changes
