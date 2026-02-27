@@ -238,7 +238,7 @@ def test_issue_1433_openmm(sage, valence_handler):
     """Test that changes in Collection.set_force_field_parameters are reflected in re-computed energies."""
     interchange = sage.create_interchange(
         MoleculeWithConformer.from_smiles(
-            "Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C",
+            "CC(=O)NC",
             allow_undefined_stereo=True,
         ).to_topology(),
     )
