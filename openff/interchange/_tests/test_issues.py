@@ -266,7 +266,7 @@ def test_issue_1433_openmm(sage, valence_handler):
 def test_issue_1450_reassign_vdw(sage, water_dimer, engine):
     """Sanity check that re-assigning vdW parameters actually changes energies."""
 
-    if not has_executable("sander"):
+    if engine == "amber" and not has_executable("sander"):
         pytest.skip(reason="sander not installed")
 
     pytest.importorskip("openmm")
@@ -299,6 +299,9 @@ def test_issue_1450_reassign_vdw(sage, water_dimer, engine):
 @pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions"])
 def test_issue_1450_reassign_valence(sage, valence_handler, engine):
     """Sanity check that re-assigning valence parameters actually changes energies."""
+
+    if engine == "amber" and not has_executable("sander"):
+        pytest.skip(reason="sander not installed")
 
     topology = MoleculeWithConformer.from_smiles(
         "CC(=O)NC",
