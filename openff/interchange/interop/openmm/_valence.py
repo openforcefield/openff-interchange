@@ -77,8 +77,6 @@ def _process_bond_forces(
     """
     Process the Bonds section of an Interchange object.
     """
-    _lookup_bond_parameters_from_potential_key.cache_clear()
-
     try:
         bond_handler = interchange.collections["Bonds"]
     except KeyError:
@@ -140,8 +138,6 @@ def _process_angle_forces(
     """
     Process the Angles section of an Interchange object.
     """
-    _lookup_angle_parameters_from_potential_key.cache_clear()
-
     try:
         angle_handler = interchange.collections["Angles"]
     except KeyError:
@@ -237,8 +233,6 @@ def _process_proper_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process the Propers section of an Interchange object.
     """
-    _lookup_torsion_parameters_from_potential_key.cache_clear()
-
     torsion_force = openmm.PeriodicTorsionForce()
     openmm_sys.addForce(torsion_force)
 
@@ -304,8 +298,6 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process the Impropers section of an Interchange object.
     """
-    _lookup_torsion_parameters_from_potential_key.cache_clear()
-
     if "ImproperTorsions" not in interchange.collections.keys():
         return
 
