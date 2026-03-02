@@ -297,3 +297,28 @@ def test_issue_1234_openmm(sage, valence_handler):
 
     # energies should be different, since parameters are (wildly!) different
     assert abs(original_energy - new_energy) > 0.1
+
+
+def test_clear_caches_with_dead_weakref_proxy():
+    """Reproduce a bug where _clear_caches raises ReferenceError when dead
+    weakref proxies exist in gc.get_objects(). See
+    https://github.com/openforcefield/openff-interchange/issues/1453
+    """
+    import gc
+    import weakref
+
+    class _Dummy:
+        pass
+
+    # Create a dead weakref proxy that remains tracked by gc
+    obj = _Dummy()
+    proxy = weakref.proxy(obj)
+    container = [proxy]  # noqa: F841
+    del obj
+    gc.collect()
+
+    molecule = MoleculeWithConformer.from_smiles("C")
+    force_field = ForceField("openff-2.2.0.offxml")
+
+    # This raised ReferenceError before the fix
+    Interchange.from_smirnoff(force_field=force_field, topology=[molecule])

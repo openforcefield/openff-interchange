@@ -15,6 +15,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ### Bug fixes
 
+* #1454 Fixes a bug that causes cache operations to error under some circumstances.
 * #1435 Fixes a bug in which `Colletion.set_force_field_parameters` did not update force field parameters upon export to simulation engines.
 
 ## 0.5.1 - 2025-02-25
