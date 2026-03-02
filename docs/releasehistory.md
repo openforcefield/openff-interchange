@@ -11,7 +11,7 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.5.2 - 2025-03-02
 
 ### Bug fixes
 
