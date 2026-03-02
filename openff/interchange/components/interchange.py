@@ -158,7 +158,7 @@ class Interchange(_BaseModel):
         """
         from openff.interchange.smirnoff._create import _create_interchange
 
-        _clear_caches()
+        _clear_smirnoff_creation_caches()
 
         return _create_interchange(
             force_field=force_field,
@@ -845,8 +845,6 @@ class Interchange(_BaseModel):
         """
         from openff.interchange.foyer._create import _create_interchange
 
-        _clear_caches()
-
         return _create_interchange(
             force_field=force_field,
             topology=topology,
@@ -1110,10 +1108,19 @@ class Interchange(_BaseModel):
         )
 
 
-def _clear_caches():
-    import functools
-    import gc
+def _clear_smirnoff_creation_caches():
+    """
+    Due to bugs in the toolkit, these caches can be invalid of a force field is modified and then
+    sent to (SMIRNOFF) creation pathways again. This function clears those caches - call it whenever
+    `Interchange.from_smirnoff` may be called multiple times on the same force field object
+    (including possible modifications).
 
-    for obj in gc.get_objects():
-        if isinstance(obj, functools._lru_cache_wrapper) and obj.__module__.startswith("openff.interchange"):
-            obj.cache_clear()
+    https://github.com/openforcefield/openff-toolkit/issues/2065
+    """
+    from openff.interchange.components.toolkit import _cache_angle_parameter_lookup, _cache_torsion_parameter_lookup
+
+    for obj in [
+        _cache_angle_parameter_lookup,
+        _cache_torsion_parameter_lookup,
+    ]:
+        obj.cache_clear()
