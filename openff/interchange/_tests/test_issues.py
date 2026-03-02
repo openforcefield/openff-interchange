@@ -302,7 +302,7 @@ def test_issue_1234_openmm(sage, valence_handler):
 def test_clear_caches_with_dead_weakref_proxy():
     """Reproduce a bug where _clear_caches raises ReferenceError when dead
     weakref proxies exist in gc.get_objects(). See
-    https://github.com/OpenFreeEnergy/ExampleNotebooks/actions/runs/22472512331/job/65092363261
+    https://github.com/openforcefield/openff-interchange/issues/1453
     """
     import gc
     import weakref
