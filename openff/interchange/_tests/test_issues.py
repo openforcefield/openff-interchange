@@ -300,6 +300,8 @@ def test_issue_1450_reassign_vdw(sage, water_dimer, engine):
 def test_issue_1450_reassign_valence(sage, valence_handler, engine):
     """Sanity check that re-assigning valence parameters actually changes energies."""
 
+    pytest.importorskip("openmm")
+
     if engine == "amber" and not has_executable("sander"):
         pytest.skip(reason="sander not installed")
 
@@ -330,6 +332,9 @@ def test_issue_1450_reassign_valence(sage, valence_handler, engine):
 
     for potential in original_interchange[valence_handler].potentials.values():
         potential.parameters["k"] = potential.parameters["k"] * 100
+
+        if "phase" in potential.parameters:
+            potential.parameters["phase"] = potential.parameters["phase"] + Quantity(20, "degree")
 
     match engine:
         case "openmm":
