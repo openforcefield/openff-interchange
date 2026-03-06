@@ -11,6 +11,10 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+* #1452 Better manage some caches by invalidate OpenMM export-specific caches at export time
+
 ## 0.5.2 - 2025-03-02
 
 ### Bug fixes
