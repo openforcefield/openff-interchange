@@ -304,6 +304,8 @@ def _process_improper_torsion_forces(interchange, openmm_sys, particle_map):
     """
     Process the Impropers section of an Interchange object.
     """
+    # Possible performance improvement to be had by more carefully managing this cache, see:
+    # https://github.com/openforcefield/openff-interchange/pull/1452#discussion_r2891781038
     _lookup_torsion_parameters_from_potential_key.cache_clear()
 
     if "ImproperTorsions" not in interchange.collections.keys():
