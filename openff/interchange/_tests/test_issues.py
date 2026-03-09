@@ -1,6 +1,7 @@
 """Tests reproducing specific issues that are otherwise uncategorized."""
 
 import random
+import warnings
 
 import numpy
 import pytest
@@ -12,6 +13,7 @@ from openff.interchange._tests import MoleculeWithConformer, needs_gmx, shuffle_
 from openff.interchange.components._packmol import UNIT_CUBE, pack_box, solvate_topology
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import NonperiodicNoCutoffNotSupportedError
+from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
 
 
 def test_issue_723():
@@ -408,3 +410,11 @@ def test_clear_caches_with_dead_weakref_proxy():
 
     # This raised ReferenceError before the fix
     Interchange.from_smirnoff(force_field=force_field, topology=[molecule])
+
+
+def test_issue_1461(sage, opc, ethanol):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PresetChargesAndVirtualSitesWarning)
+
+        sage_opc = sage.combine(opc)
+        sage_opc.create_interchange(ethanol.to_topology(), charge_from_molecules=[])
