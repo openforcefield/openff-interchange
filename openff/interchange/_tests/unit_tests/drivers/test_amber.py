@@ -8,7 +8,7 @@ from openff.interchange.drivers.amber import AmberError, get_amber_energies
 @pytest.mark.skipif(not HAS_SANDER, reason="Needs sander")
 def test_error_bad_vdw():
     """Force Amber to report bad vdW energies by putting two atoms too close together."""
-    x = ForceField("openff-2.0.0.offxml").create_interchange(
+    x = ForceField("openff-2.3.0.offxml").create_interchange(
         Topology.from_molecules(
             [
                 Molecule.from_smiles("[Na+]"),

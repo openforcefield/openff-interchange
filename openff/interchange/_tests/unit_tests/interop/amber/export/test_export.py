@@ -28,7 +28,7 @@ if has_package("openmm"):
         "c1ccc2ccccc2c1",
     ],
 )
-def test_atom_names_with_padding(molecule):
+def test_atom_names_with_padding(molecule, sage):
     # pytest processes fixtures before the decorator can be applied
 
     parmed = pytest.importorskip("parmed")
@@ -46,10 +46,7 @@ def test_atom_names_with_padding(molecule):
         molecule = Molecule.from_smiles(molecule)
 
     # Unclear if the toolkit will always load PDBs with padded whitespace in name
-    Interchange.from_smirnoff(
-        ForceField("openff-2.0.0.offxml"),
-        molecule.to_topology(),
-    ).to_prmtop("tmp.prmtop")
+    sage.create_interchange(molecule.to_topology()).to_prmtop("tmp.prmtop")
 
     # Loading with ParmEd striggers #679 if exclusions lists are wrong
     parmed.load_file("tmp.prmtop")
@@ -61,7 +58,7 @@ def exclusions_in_rings(molecule):
     topology = molecule.to_topology()
     topology.box_vectors = [4, 4, 4]
 
-    sage_no_impropers = ForceField("openff-2.0.0.offxml")
+    sage_no_impropers = ForceField("openff-2.3.0.offxml")
     sage_no_impropers.deregister_parameter_handler("ImproperTorsions")
 
     interchange = sage_no_impropers.create_interchange(topology)

@@ -127,35 +127,35 @@ class TestAddRemoveMoleculeType:
         system1,
         molecule2,
         sage,
-        parsley,
+        rosemary,
     ):
         box = Quantity(5 * numpy.eye(3), "nanometer")
 
-        parsley_system = deepcopy(system1)
+        rosemary_system = deepcopy(system1)
         sage_system = deepcopy(system1)
 
-        molecule2_parsley = _convert(
-            Interchange.from_smirnoff(parsley, [molecule2], box=box),
+        molecule2_rosemary = _convert(
+            Interchange.from_smirnoff(rosemary, [molecule2], box=box),
         )
         molecule2_sage = _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
-        parsley_system.add_molecule_type(molecule2_parsley.molecule_types["MOL__2"], 1)
+        rosemary_system.add_molecule_type(molecule2_rosemary.molecule_types["MOL__2"], 1)
         sage_system.add_molecule_type(molecule2_sage.molecule_types["MOL__2"], 1)
 
-        parsley_system.positions = combined_system.positions
+        rosemary_system.positions = combined_system.positions
         sage_system.positions = combined_system.positions
 
-        parsley_system.to_files(prefix="parsley", decimal=8)
+        rosemary_system.to_files(prefix="rosemary", decimal=8)
         sage_system.to_files(prefix="sage", decimal=8)
 
         get_intermol_defaults(periodic=True).write_mdp_file("tmp.mdp")
 
-        _parsley_energy = _process(
-            _run_gmx_energy("parsley.top", "parsley.gro", "tmp.mdp"),
+        _rosemary_energy = _process(
+            _run_gmx_energy("rosemary.top", "rosemary.gro", "tmp.mdp"),
         )
         _sage_energy = _process(_run_gmx_energy("sage.top", "sage.gro", "tmp.mdp"))
 
-        assert _parsley_energy != _sage_energy
+        assert _rosemary_energy != _sage_energy
 
     @needs_gmx
     @pytest.mark.slow

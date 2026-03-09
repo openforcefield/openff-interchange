@@ -458,11 +458,10 @@ class TestNAGLChargesIntegration:
         atom_charge_sum = sum([charge for tk, charge in assigned_charges.items() if tk.atom_indices is not None])
         assert abs(atom_charge_sum - Quantity(0.123, "elementary_charge")) < Quantity(1e-10, "elementary_charge")
 
-    def test_nagl_charges_force_field_creation_complete(self, hexane_diol):
+    def test_nagl_charges_force_field_creation_complete(self, sage_no_nagl, hexane_diol):
         """Test complete interchange creation with NAGLCharges."""
 
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
+        sage_no_nagl.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -471,7 +470,7 @@ class TestNAGLChargesIntegration:
         )
 
         # Should create complete interchange without errors
-        interchange = ff.create_interchange(topology=hexane_diol.to_topology())
+        interchange = sage_no_nagl.create_interchange(topology=hexane_diol.to_topology())
 
         # Should have all expected collections
         expected_collections = ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions", "vdW", "Electrostatics"]
@@ -486,7 +485,7 @@ class TestNAGLChargesIntegration:
         total_charge = sum(charge.m for charge in charges)
         assert abs(total_charge) < 1e-10
 
-    def test_nagl_charges_identical_molecules_same_charges(self):
+    def test_nagl_charges_identical_molecules_same_charges(self, sage_no_nagl):
         """Test that identical molecules get identical charges from NAGLCharges."""
 
         # Create topology with two identical molecules
@@ -494,8 +493,7 @@ class TestNAGLChargesIntegration:
         molecule2 = Molecule.from_smiles("CCO")
         topology = Topology.from_molecules([molecule1, molecule2])
 
-        ff = ForceField("openff-2.1.0.offxml")
-        ff.get_parameter_handler(
+        sage_no_nagl.get_parameter_handler(
             "NAGLCharges",
             {
                 "model_file": "openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -503,7 +501,7 @@ class TestNAGLChargesIntegration:
             },
         )
 
-        interchange = ff.create_interchange(topology=topology)
+        interchange = sage_no_nagl.create_interchange(topology=topology)
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # First molecule charges
@@ -701,12 +699,7 @@ class TestElectrostatics:
         def get_charges_from_interchange(
             molecule: Molecule,
         ) -> dict[int, Quantity]:
-            return {
-                key.atom_indices[0]: val
-                for key, val in sage.create_interchange(molecule.to_topology())["Electrostatics"]
-                ._get_charges()
-                .items()
-            }
+            return sage.create_interchange(molecule.to_topology())["Electrostatics"].get_charge_array()
 
         def compare_charges(
             molecule: Molecule,
