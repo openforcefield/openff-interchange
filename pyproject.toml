@@ -1,5 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
+
 requires = [
   "setuptools",
   "setuptools-scm>=8",
@@ -57,6 +58,7 @@ exclude_lines = [
   "raise NotImplementedError",
   "@overload",
 ]
+
 [tool.coverage.run]
 omit = [
   "*/*/_tests/*",
@@ -71,6 +73,7 @@ warn_unused_ignores = true
 warn_incomplete_stub = true
 show_error_codes = true
 exclude = "openff/interchange/_tests"
+
 [[tool.mypy.overrides]]
 module = [
   "pyedr",
@@ -113,3 +116,4 @@ ignore-nested-classes = true
 ignore-setters = true
 ignore-regex = [ "^Test.*", "test_.*", "^_.*" ]
 fail-under = 90
+
