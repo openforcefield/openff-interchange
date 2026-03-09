@@ -27,12 +27,15 @@ py312etc = [ "py312", "openeye", "mosdef", "test", "typing", "etc" ]
 dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
 betas = [ "py311", "test", "typing", "engines", "betas" ]
 
+[tool.pixi.pypi-dependencies]
+openff-interchnge = { path = ".", editable = true }
+nonbonded-plugins = { path = "plugins/", editable = true }
+
 [tasks]
-postinstall = "pip install -e . plugins/"
-run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical", depends-on = "postinstall" }
-run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
-run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
+run_mypy = { cmd = "python -m mypy -p 'openff.interchange'"}
+run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical"}
+run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly"}
+run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh"}
 
 [feature.ambertools.dependencies]
 ambertools = "24.*"
