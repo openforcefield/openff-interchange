@@ -1115,5 +1115,8 @@ def _clear_caches():
     import gc
 
     for obj in gc.get_objects():
-        if isinstance(obj, functools._lru_cache_wrapper) and obj.__module__.startswith("openff.interchange"):
-            obj.cache_clear()
+        try:
+            if isinstance(obj, functools._lru_cache_wrapper) and obj.__module__.startswith("openff.interchange"):
+                obj.cache_clear()
+        except ReferenceError:
+            continue

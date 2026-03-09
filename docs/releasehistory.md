@@ -13,8 +13,13 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #1452 Better manage some caches by invalidate OpenMM export-specific caches at export time
+
+## 0.5.2 - 2025-03-02
+
 ### Bug fixes
 
+* #1454 Fixes a bug that causes cache operations to error under some circumstances.
 * #1435 Fixes a bug in which `Colletion.set_force_field_parameters` did not update force field parameters upon export to simulation engines.
 
 ## 0.5.1 - 2025-02-25
