@@ -20,7 +20,7 @@ jobs:
     name: Test on ${{ matrix.os }}, ${{ matrix.environment }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os:
           - ubuntu-latest
