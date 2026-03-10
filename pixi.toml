@@ -29,10 +29,10 @@ betas = [ "py311", "test", "typing", "engines", "betas" ]
 
 [tasks]
 postinstall = "pip install -e . plugins/"
-run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical", depends-on = "postinstall" }
-run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
-run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
+run_mypy = "python -m mypy -p 'openff.interchange'"
+run_tests = "python -m pytest openff/interchange/ --durations=20 -n auto"
+run_examples = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly"
+run_regression_tests = "sh devtools/scripts/run_regression_tests.sh"
 
 [feature.ambertools.dependencies]
 ambertools = "24.*"
