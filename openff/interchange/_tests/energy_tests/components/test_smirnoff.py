@@ -1,6 +1,6 @@
 import numpy
 import pytest
-from openff.toolkit import ForceField, Molecule, Quantity
+from openff.toolkit import Molecule, Quantity
 from openff.utilities import get_data_file_path, has_package, skip_if_missing
 
 from openff.interchange import Interchange
@@ -21,22 +21,14 @@ if has_package("openmm"):
 @skip_if_missing("openmm")
 class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
     @pytest.mark.slow
-    def test_basic_bond_order_interpolation_energies(self, xml_ff_bo_bonds):
-        forcefield = ForceField(
-            get_data_file_path(
-                "test_forcefields/test_forcefield.offxml",
-                "openff.toolkit",
-            ),
-            xml_ff_bo_bonds,
-        )
-
+    def test_basic_bond_order_interpolation_energies(self, sage_bo_bonds):
         mol = Molecule.from_file(
             get_data_file_path("molecules/CID20742535_anion.sdf", "openff.toolkit"),
         )
         mol.generate_conformers(n_conformers=1)
         top = mol.to_topology()
 
-        out = Interchange.from_smirnoff(forcefield, top)
+        out = Interchange.from_smirnoff(sage_bo_bonds, top)
         out.box = Quantity([4, 4, 4], "nanometer")
         out.positions = mol.conformers[0]
 
@@ -45,7 +37,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
             combine_nonbonded_forces=True,
         ).energies["Bond"]
 
-        system = forcefield.create_openmm_system(top)
+        system = sage_bo_bonds.create_openmm_system(top)
         toolkit_bond_energy = _process(
             _get_openmm_energies(
                 system=system,
@@ -62,7 +54,7 @@ class TestBondOrderInterpolationEnergies(TestBondOrderInterpolation):
         assert abs(interchange_bond_energy - toolkit_bond_energy).m < 1e-2
 
         new = out.to_openmm(combine_nonbonded_forces=True)
-        ref = forcefield.create_openmm_system(top)
+        ref = sage_bo_bonds.create_openmm_system(top)
 
         new_k = []
         new_length = []
