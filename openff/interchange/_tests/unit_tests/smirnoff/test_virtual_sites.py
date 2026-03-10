@@ -537,18 +537,20 @@ class TestSMIRNOFFVirtualSites:
     def test_virtual_site_type_stored_in_potential_key(
         self,
         ethanol,
-        sage,
+        sage_no_nagl,
         sage_with_bond_charge,
         sage_with_trivalent_nitrogen,
     ):
-        assert {key.virtual_site_type for key in sage.create_interchange(ethanol.to_topology())["vdW"].potentials} == {
+        assert {
+            key.virtual_site_type for key in sage_no_nagl.create_interchange(ethanol.to_topology())["vdW"].potentials
+        } == {
             None,
         }
 
         with pytest.raises(LookupError):
             assert {
                 key.virtual_site_type
-                for key in sage.create_interchange(ethanol.to_topology())["VirtualSites"].potentials
+                for key in sage_no_nagl.create_interchange(ethanol.to_topology())["VirtualSites"].potentials
             } == {None}
 
         assert {
