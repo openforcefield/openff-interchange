@@ -1,6 +1,7 @@
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
+from openff.toolkit._tests.test_forcefield import create_ethanol
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -191,7 +192,7 @@ class TestConstraintCollection:
 
 
 class TestBondOrderInterpolation:
-    def test_input_bond_orders_ignored(self, ethanol, xml_ff_bo_bonds):
+    def test_input_bond_orders_ignored(self, ethanol, sage_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
 
@@ -204,17 +205,12 @@ class TestBondOrderInterpolation:
         top = Topology.from_molecules(mol)
         mod_top = Topology.from_molecules(mod_mol)
 
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo_bonds,
-        )
-
         bonds = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
+            parameter_handler=sage_bo_bonds["Bonds"],
             topology=top,
         )
         bonds_mod = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
+            parameter_handler=sage_bo_bonds["Bonds"],
             topology=mod_top,
         )
 
@@ -227,10 +223,9 @@ class TestBondOrderInterpolation:
             assert k1 == pytest.approx(k2, rel=1e-5), (k1, k2)
 
     @skip_if_missing("openmm")
-    def test_input_conformers_ignored(self, xml_ff_bo_bonds):
+    def test_input_conformers_ignored(self, sage_bo_bonds):
         """Test that conformers existing in the topology are not considered in the bond order interpolation
         part of the parametrization process"""
-        from openff.toolkit._tests.test_forcefield import create_ethanol
 
         mol = create_ethanol()
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
@@ -243,17 +238,12 @@ class TestBondOrderInterpolation:
         top = Topology.from_molecules(mol)
         mod_top = Topology.from_molecules(mod_mol)
 
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo_bonds,
-        )
-
         bonds = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
+            parameter_handler=sage_bo_bonds["Bonds"],
             topology=top,
         )
         bonds_mod = SMIRNOFFBondCollection.create(
-            parameter_handler=forcefield["Bonds"],
+            parameter_handler=sage_bo_bonds["Bonds"],
             topology=mod_top,
         )
 
@@ -264,43 +254,32 @@ class TestBondOrderInterpolation:
 
     def test_fractional_bondorder_invalid_interpolation_method(
         self,
+        sage_bo_bonds,
         ethanol,
-        xml_ff_bo_bonds,
     ):
         """
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo_bonds,
-        )
-        forcefield["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
+        sage_bo_bonds["Bonds"]._fractional_bondorder_interpolation = "invalid method name"
 
         # TODO: Make this a more descriptive custom exception
         with pytest.raises(ValidationError):
-            Interchange.from_smirnoff(forcefield, [ethanol])
+            Interchange.from_smirnoff(sage_bo_bonds, [ethanol])
 
 
 class TestParameterInterpolation:
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation(self, ethanol, xml_ff_bo):
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo,
-        )
-
+    def test_bond_order_interpolation(self, ethanol, sage_bo_bonds):
         ethanol.generate_conformers(n_conformers=1)
 
         ethanol.bonds[1].fractional_bond_order = 1.5
 
-        top = ethanol.to_topology()
-
-        out = Interchange.from_smirnoff(forcefield, ethanol.to_topology())
+        out = Interchange.from_smirnoff(sage_bo_bonds, ethanol.to_topology())
 
         top_key = BondKey(
             atom_indices=(1, 2),
-            bond_order=top.get_bond_between(1, 2).bond.fractional_bond_order,
+            bond_order=out.topology.get_bond_between(1, 2).bond.fractional_bond_order,
         )
 
         found_k = out["Bonds"].potentials[out["Bonds"].key_map[top_key]].parameters["k"]
@@ -308,13 +287,9 @@ class TestParameterInterpolation:
 
     @pytest.mark.slow
     @pytest.mark.xfail(reason="Not yet implemented using input bond orders")
-    def test_bond_order_interpolation_similar_bonds(self, xml_ff_bo):
+    def test_bond_order_interpolation_similar_bonds(self, sage_bo_bonds):
         """Test that key mappings do not get confused when two bonds having similar SMIRKS matches
         have different bond orders"""
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo,
-        )
 
         # TODO: Construct manually to avoid relying on atom ordering
         mol = Molecule.from_smiles("C(CCO)O")
@@ -325,7 +300,7 @@ class TestParameterInterpolation:
 
         top = mol.to_topology()
 
-        out = Interchange.from_smirnoff(forcefield, top)
+        out = Interchange.from_smirnoff(sage_bo_bonds, top)
 
         bond1_top_key = BondKey(
             atom_indices=(2, 3),
@@ -378,7 +353,7 @@ class TestParameterInterpolation:
     )
     def test_fractional_bondorder_from_molecule(
         self,
-        xml_ff_bo,
+        sage_bo_both,
         reversed,
         k_torsion_interpolated,
         k_bond_interpolated,
@@ -409,23 +384,21 @@ class TestParameterInterpolation:
             torsion k = 4.165322743473034 kJ/mol
 
         """
-        mol = reversed_ethanol if reversed else ethanol
 
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo,
+        topology = Topology.from_molecules(
+            [
+                reversed_ethanol if reversed else ethanol,
+            ],
         )
-        topology = Topology.from_molecules(mol)
+        topology.box_vectors = Quantity(4 * numpy.eye(3), "nanometer")
 
-        out = Interchange.from_smirnoff(forcefield, topology)
-        out.box = Quantity(4 * numpy.eye(3), "nanometer")
-        omm_system = out.to_openmm(combine_nonbonded_forces=True)
+        system = sage_bo_both.create_openmm_system(topology)
 
         # Verify that the assigned bond parameters were correctly interpolated
-        off_bond_force = next(force for force in omm_system.getForces() if isinstance(force, openmm.HarmonicBondForce))
+        bond_force = next(force for force in system.getForces() if isinstance(force, openmm.HarmonicBondForce))
 
-        for idx in range(off_bond_force.getNumBonds()):
-            params = off_bond_force.getBondParameters(idx)
+        for idx in range(bond_force.getNumBonds()):
+            params = bond_force.getBondParameters(idx)
 
             atom1, atom2 = params[0], params[1]
             atom1_mol, atom2_mol = central_atoms
@@ -447,12 +420,10 @@ class TestParameterInterpolation:
                 )
 
         # Verify that the assigned torsion parameters were correctly interpolated
-        off_torsion_force = next(
-            force for force in omm_system.getForces() if isinstance(force, openmm.PeriodicTorsionForce)
-        )
+        torsion_force = next(force for force in system.getForces() if isinstance(force, openmm.PeriodicTorsionForce))
 
-        for idx in range(off_torsion_force.getNumTorsions()):
-            params = off_torsion_force.getTorsionParameters(idx)
+        for idx in range(torsion_force.getNumTorsions()):
+            params = torsion_force.getTorsionParameters(idx)
 
             atom2, atom3 = params[1], params[2]
             atom2_mol, atom3_mol = central_atoms

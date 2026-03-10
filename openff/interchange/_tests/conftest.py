@@ -542,8 +542,10 @@ def two_peptides(mainchain_ala, mainchain_arg):
 
 
 @pytest.fixture
-def xml_ff_bo_bonds() -> str:
-    return """<?xml version='1.0' encoding='ASCII'?>
+def sage_bo_bonds(sage) -> ForceField:
+    return sage.combine(
+        ForceField(
+            """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#6:1]~[#8:2]" id="bbo1"
@@ -553,12 +555,15 @@ def xml_ff_bo_bonds() -> str:
         length_bondorder2="1.0*angstrom"/>
   </Bonds>
 </SMIRNOFF>
-"""
+""",
+        ),
+    )
 
 
 @pytest.fixture
-def xml_ff_bo() -> str:
-    return """<?xml version='1.0' encoding='ASCII'?>
+def sage_bo_both(sage) -> str:
+    return sage.combine(
+        ForceField("""<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg"
     fractional_bondorder_interpolation="linear">
@@ -578,7 +583,8 @@ def xml_ff_bo() -> str:
     k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
   </ProperTorsions>
 </SMIRNOFF>
-"""
+"""),
+    )
 
 
 @pytest.fixture
