@@ -59,6 +59,9 @@ jobs:
       env:
         SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
+    - name: Run local installation
+      run: pixi run -e ${{ matrix.environment }} postinstall
+
     - name: Run mypy
       if: ${{ !contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} run_mypy
