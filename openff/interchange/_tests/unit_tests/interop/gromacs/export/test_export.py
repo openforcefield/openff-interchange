@@ -1,4 +1,5 @@
 import random
+from copy import deepcopy
 from importlib import resources
 from math import exp
 
@@ -794,9 +795,10 @@ class TestGROMACSVirtualSites(_NeedsGROMACS):
             charge_increment2=Quantity(0.2, "elementary_charge"),
         )
 
-    @pytest.fixture
+    @pytest.fixture(scope="session")
     def sage_with_monovalent_lone_pair(self, sage):
         """Fixture that loads an SMIRNOFF XML for argon"""
+        sage = deepcopy(sage)
         virtual_site_handler = VirtualSiteHandler(version=0.3)
 
         carbonyl_type = VirtualSiteHandler.VirtualSiteType(

@@ -1,5 +1,6 @@
 """Unit tests for common virtual site functions."""
 
+from copy import deepcopy
 from random import random
 
 import numpy
@@ -140,6 +141,7 @@ class TestVirtualSitePositions:
         distance_,
         theta,
     ):
+        sage_with_planar_monovalent_carbonyl = deepcopy(sage_with_planar_monovalent_carbonyl)
         sage_with_planar_monovalent_carbonyl["VirtualSites"].get_parameter(
             parameter_attrs={"smirks": "[#8:1]=[#6X3+0:2]-[#6:3]"},
         )[0].distance = Quantity(

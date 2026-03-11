@@ -117,13 +117,13 @@ class TestCutoffElectrostatics:
 @skip_if_missing("openmm")
 class TestEwaldSettings:
     @pytest.mark.parametrize("lj_method", ["cutoff", "pme"])
-    def test_set_ewald_tolerance(self, sage, basic_top, lj_method):
+    def test_set_ewald_tolerance(self, fresh_sage, basic_top, lj_method):
         import openmm
 
         if lj_method == "pme":
-            sage["vdW"].periodic_method = "Ewald3D"
+            fresh_sage["vdW"].periodic_method = "Ewald3D"
 
-        system = sage.create_interchange(basic_top).to_openmm(ewald_tolerance=1.234e-5)
+        system = fresh_sage.create_interchange(basic_top).to_openmm(ewald_tolerance=1.234e-5)
 
         for force in system.getForces():
             if isinstance(force, openmm.NonbondedForce):

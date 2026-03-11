@@ -1,7 +1,6 @@
 import pytest
-from openff.toolkit import ForceField, Quantity
+from openff.toolkit import Quantity
 
-from openff.interchange._tests import get_test_file_path
 from openff.interchange.constants import kj_mol
 from openff.interchange.drivers.openmm import _process, get_openmm_energies
 
@@ -99,15 +98,6 @@ class TestProcess:
 
 
 class TestReportWithPlugins:
-    @pytest.fixture
-    def de_force_field(self) -> ForceField:
-        pytest.importorskip("smirnoff_plugins")
-        pytest.importorskip("openeye")
-        return ForceField(
-            get_test_file_path("de-force-1.0.1.offxml"),
-            load_plugins=True,
-        )
-
     @pytest.mark.parametrize("detailed", [True, False])
     def test_nonzero_vdw(self, ligand, de_force_field, detailed):
         energies = get_openmm_energies(
