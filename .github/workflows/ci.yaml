@@ -20,7 +20,7 @@ jobs:
     name: Test on ${{ matrix.os }}, ${{ matrix.environment }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
           - py311openeye
           - py311examples
           - py311etc
-          - py311amber
+          - py312amber
           - py312openeye
           - py312examples
           - py312etc
