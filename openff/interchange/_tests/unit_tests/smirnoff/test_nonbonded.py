@@ -375,10 +375,10 @@ class TestNAGLChargesPrecedence:
         # Should match NAGL charges, not AM1BCC
         numpy.testing.assert_allclose(assigned_charges, nagl_charges)
 
-    def test_library_charges_precedence_over_nagl(self, sage, methane):
+    def test_library_charges_precedence_over_nagl(self, fresh_sage, methane):
         """Test that LibraryCharges takes precedence over NAGLCharges."""
 
-        sage["LibraryCharges"].add_parameter(
+        fresh_sage["LibraryCharges"].add_parameter(
             {
                 "smirks": "[#6X4:1]-[#1:2]",
                 "charge1": Quantity(-0.2, "elementary_charge"),
@@ -386,16 +386,15 @@ class TestNAGLChargesPrecedence:
             },
         )
 
-        interchange = sage.create_interchange(topology=methane.to_topology())
+        interchange = fresh_sage.create_interchange(topology=methane.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match library charges
         expected_charges = [-0.2, 0.05, 0.05, 0.05, 0.05]
         numpy.testing.assert_allclose(assigned_charges, expected_charges)
 
-    def test_nagl_charges_precedence_over_charge_increments(self, sage, hexane_diol):
+    def test_nagl_charges_precedence_over_charge_increments(self, fresh_sage, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
-
         # Get reference charges from NAGL
         hexane_diol.assign_partial_charges("openff-gnn-am1bcc-0.1.0-rc.3.pt")
         nagl_charges = [c.m for c in hexane_diol.partial_charges]
@@ -405,9 +404,9 @@ class TestNAGLChargesPrecedence:
             version=0.3,
             partial_charge_method="formal_charge",
         )
-        sage.register_parameter_handler(increment_handler)
+        fresh_sage.register_parameter_handler(increment_handler)
 
-        interchange = sage.create_interchange(topology=hexane_diol.to_topology())
+        interchange = fresh_sage.create_interchange(topology=hexane_diol.to_topology())
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not formal charges
@@ -818,27 +817,27 @@ class TestSMIRNOFFChargeIncrements:
 
         return handler
 
-    def test_no_charge_increments_applied(self, sage, hexane_diol):
+    def test_no_charge_increments_applied(self, fresh_sage, hexane_diol):
         gastiger_charges = [c.m for c in hexane_diol.partial_charges]
-        sage.deregister_parameter_handler("NAGLCharges")
+        fresh_sage.deregister_parameter_handler("NAGLCharges")
 
         no_increments = ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="gasteiger",
         )
-        sage.register_parameter_handler(no_increments)
+        fresh_sage.register_parameter_handler(no_increments)
 
-        assert len(sage["ChargeIncrementModel"].parameters) == 0
+        assert len(fresh_sage["ChargeIncrementModel"].parameters) == 0
 
-        out = Interchange.from_smirnoff(sage, [hexane_diol])
+        out = Interchange.from_smirnoff(fresh_sage, [hexane_diol])
         assert numpy.allclose(
             numpy.asarray([v.m for v in out["Electrostatics"]._get_charges().values()]),
             gastiger_charges,
         )
 
-    def test_overlapping_increments(self, sage, methane):
+    def test_overlapping_increments(self, fresh_sage, methane):
         """Test that separate charge increments can be properly applied to the same atom."""
-        sage.deregister_parameter_handler("NAGLCharges")
+        fresh_sage.deregister_parameter_handler("NAGLCharges")
         charge_handler = ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="formal_charge",
@@ -850,26 +849,28 @@ class TestSMIRNOFFChargeIncrements:
                 "charge_increment2": Quantity(-0.111, "elementary_charge"),
             },
         )
-        sage.register_parameter_handler(charge_handler)
+        fresh_sage.register_parameter_handler(charge_handler)
         assert 0.0 == pytest.approx(
-            sum(v.m for v in Interchange.from_smirnoff(sage, [methane])["Electrostatics"]._get_charges().values()),
+            sum(
+                v.m for v in Interchange.from_smirnoff(fresh_sage, [methane])["Electrostatics"]._get_charges().values()
+            ),
         )
 
     def test_charge_increment_forwawrd_reverse_molecule(
         self,
-        sage,
+        fresh_sage,
         hydrogen_cyanide,
         hydrogen_cyanide_reversed,
         hydrogen_cyanide_charge_increments,
     ):
-        sage.deregister_parameter_handler("NAGLCharges")
-        sage.register_parameter_handler(hydrogen_cyanide_charge_increments)
+        fresh_sage.deregister_parameter_handler("NAGLCharges")
+        fresh_sage.register_parameter_handler(hydrogen_cyanide_charge_increments)
 
         topology = Topology.from_molecules(
             [hydrogen_cyanide, hydrogen_cyanide_reversed],
         )
 
-        out = sage.create_interchange(topology)
+        out = Interchange.from_smirnoff(fresh_sage, topology)
 
         expected_charges = [-0.111, 0.611, -0.5, -0.5, 0.611, -0.111]
 

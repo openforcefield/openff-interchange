@@ -1,5 +1,5 @@
 import itertools
-from typing import TYPE_CHECKING
+from copy import deepcopy
 
 import numpy
 import pytest
@@ -12,11 +12,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 )
 from openff.units import Unit
 from openff.units.openmm import to_openmm
-from openff.utilities import has_package, skip_if_missing
-
-if has_package("openmm") or TYPE_CHECKING:
-    import openmm
-    import openmm.unit
+from openff.utilities import skip_if_missing
 
 
 def _get_interpolated_bond_k(bond_handler) -> float:
@@ -31,6 +27,7 @@ def _get_interpolated_bond_k(bond_handler) -> float:
 class TestSMIRNOFFVirtualSiteCharges:
     @pytest.mark.parametrize("chlorine_charge", [-0.1, 0.22, 1.3])
     def test_neutral_total_charge(self, sage_with_bond_charge, chlorine_charge):
+        sage_with_bond_charge = deepcopy(sage_with_bond_charge)
         sage_with_bond_charge.deregister_parameter_handler("NAGLCharges")
         sage_with_bond_charge.get_parameter_handler("ChargeIncrementModel")
         sage_with_bond_charge["ChargeIncrementModel"].partial_charge_method = "zeros"
@@ -133,6 +130,8 @@ class TestSMIRNOFFVirtualSites:
     ) -> Quantity:
         # Compute the coordinates of the virtual site. Unfortunately OpenMM does not
         # seem to offer a more compact way to do this currently.
+        openmm = pytest.importorskip("openmm")
+
         handler = VirtualSiteHandler(version="0.3")
         handler.add_parameter(parameter=parameter)
 
@@ -264,6 +263,9 @@ class TestSMIRNOFFVirtualSites:
     ):
         """An integration test that virtual sites are placed correctly relative to the
         parent atoms"""
+        openmm = pytest.importorskip("openmm")
+
+        import openmm.unit  # noqa: F811
 
         for atom_permutation in itertools.permutations(atoms_to_shuffle):
             molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
@@ -450,15 +452,12 @@ class TestSMIRNOFFVirtualSites:
         self,
         topology: Topology,
         parameters: list[VirtualSiteHandler.VirtualSiteType],
-        expected_parameters: list[
-            tuple[
-                "openmm.unit.Quantity",
-                "openmm.unit.Quantity",
-                "openmm.unit.Quantity",
-            ]
-        ],
+        expected_parameters: list[tuple],
         expected_n_v_sites: int,
     ):
+        openmm = pytest.importorskip("openmm")
+        import openmm.unit  # noqa: F811
+
         expected_n_total = topology.n_atoms + expected_n_v_sites
         # sanity check the test input
         assert len(expected_parameters) == expected_n_total

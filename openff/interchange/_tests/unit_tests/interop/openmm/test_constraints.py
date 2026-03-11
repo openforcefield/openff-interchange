@@ -64,19 +64,19 @@ def angle_constraints_with_distance():
 class TestConstraints:
     def test_with_bonds_with_distanceless_constraints(
         self,
-        sage,
+        fresh_sage,
         distanceless_bond_constraints,
         ethanol,
     ):
         """Bonds specified, constraints without distance, length taken from bonds."""
         openmm = pytest.importorskip("openmm")
 
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(distanceless_bond_constraints)
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(distanceless_bond_constraints)
 
         # add in bond parameters which are also constrained, since it's easier and a little safer
         # than looking up what they *should* be
-        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
+        system = fresh_sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
 
         assert system.getNumConstraints() == ethanol.n_bonds
 
@@ -104,7 +104,7 @@ class TestConstraints:
 
     def test_constraint_distances_override_bond_distances(
         self,
-        sage,
+        fresh_sage,
         bond_constraints_with_distance,
         ethanol,
     ):
@@ -113,10 +113,9 @@ class TestConstraints:
 
         # replace original constraints with a single wildcard constraint, since it's
         # easier and a little safer than looking up what each distance  *should* be
-
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(bond_constraints_with_distance)
-        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(bond_constraints_with_distance)
+        system = fresh_sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
 
         assert system.getNumConstraints() == ethanol.n_bonds
 
@@ -135,36 +134,36 @@ class TestConstraints:
 
     def test_distanceless_constraints_without_bonds_error(
         self,
-        sage,
+        fresh_sage,
         distanceless_bond_constraints,
         ethanol,
     ):
         """When constraints are speicifed without distances, but no bonds are present, error."""
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(distanceless_bond_constraints)
-        sage.deregister_parameter_handler("Bonds")
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(distanceless_bond_constraints)
+        fresh_sage.deregister_parameter_handler("Bonds")
 
         # this test short-circuits before anything OpenMM is called, so it could live elsewhere
         with pytest.raises(
             MissingParametersError,
             match=r"The distance of this constraint is not specified.",
         ):
-            sage.create_openmm_system(ethanol.to_topology())
+            fresh_sage.create_openmm_system(ethanol.to_topology())
 
     def test_constraints_with_distances_without_bonds(
         self,
-        sage,
+        fresh_sage,
         bond_constraints_with_distance,
         ethanol,
     ):
         """When constraints are speicifed with distances, but no bonds are present, still sets constraints."""
         openmm = pytest.importorskip("openmm")
 
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(bond_constraints_with_distance)
-        sage.deregister_parameter_handler("Bonds")
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(bond_constraints_with_distance)
+        fresh_sage.deregister_parameter_handler("Bonds")
 
-        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system()
+        system = fresh_sage.create_interchange(ethanol.to_topology()).to_openmm_system()
 
         assert system.getNumConstraints() == ethanol.n_bonds
 
@@ -181,7 +180,7 @@ class TestConstraints:
     def test_angles_with_distanceless_constraints(
         self,
         distanceless_angle_constraints,
-        sage,
+        fresh_sage,
         ethanol,
         remove_angles,
     ):
@@ -189,28 +188,28 @@ class TestConstraints:
         Test that angle-like constraints without specified distance raise an error,
         whether or not there are angle parameters.
         """
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(distanceless_angle_constraints)
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(distanceless_angle_constraints)
 
         if remove_angles:
-            sage.deregister_parameter_handler("Angles")
+            fresh_sage.deregister_parameter_handler("Angles")
 
         with pytest.raises(
             SMIRNOFFSpecError,
             match=r"0, 2.*unsupported in the SMIRNOFF specification",
         ):
-            sage.create_openmm_system(ethanol.to_topology())
+            fresh_sage.create_openmm_system(ethanol.to_topology())
 
     def test_constraint_distances_override_angle_geometry(
         self,
-        sage,
+        fresh_sage,
         ethanol,
         angle_constraints_with_distance,
     ):
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(angle_constraints_with_distance)
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(angle_constraints_with_distance)
 
-        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
+        system = fresh_sage.create_interchange(ethanol.to_topology()).to_openmm_system(add_constrained_forces=True)
 
         assert system.getNumConstraints() == ethanol.n_angles
 
@@ -223,18 +222,18 @@ class TestConstraints:
 
     def test_constraints_with_distances_without_angles(
         self,
-        sage,
+        fresh_sage,
         ethanol,
         angle_constraints_with_distance,
     ):
         """When constraints are speicifed with distances, but no angles are present, still sets constraints."""
         openmm = pytest.importorskip("openmm")
 
-        sage.deregister_parameter_handler("Constraints")
-        sage.register_parameter_handler(angle_constraints_with_distance)
-        sage.deregister_parameter_handler("Angles")
+        fresh_sage.deregister_parameter_handler("Constraints")
+        fresh_sage.register_parameter_handler(angle_constraints_with_distance)
+        fresh_sage.deregister_parameter_handler("Angles")
 
-        system = sage.create_interchange(ethanol.to_topology()).to_openmm_system()
+        system = fresh_sage.create_interchange(ethanol.to_topology()).to_openmm_system()
 
         assert system.getNumConstraints() == ethanol.n_angles
 

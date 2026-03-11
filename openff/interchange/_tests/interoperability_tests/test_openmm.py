@@ -81,8 +81,10 @@ def _compare_openmm_topologies(
 @skip_if_missing("openmm")
 class TestOpenMM:
     @pytest.mark.parametrize("inputs", nonbonded_methods)
-    def test_openmm_nonbonded_methods(self, inputs, sage, ethanol):
+    def test_openmm_nonbonded_methods(self, inputs, fresh_sage, ethanol):
         """See test_nonbonded_method_resolution in openff.toolkit._tests/test_forcefield.py"""
+        sage = fresh_sage
+
         electrostatics_method = inputs["electrostatics_periodic"]
         periodic = inputs["periodic"]
         result = inputs["result"]
@@ -349,17 +351,17 @@ class TestOpenMM:
         assert system.getForce(0).getParticleParameters(0)[0]._value == 1.0
         assert system.getForce(0).getParticleParameters(1)[0]._value == -1.0
 
-    def test_nonstandard_cutoffs_match(self, sage):
+    def test_nonstandard_cutoffs_match(self, fresh_sage):
         """Test that multiple nonbonded forces use the same cutoff."""
         topology = Molecule.from_smiles("C").to_topology()
         topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
         cutoff = Quantity(1.555, "nanometer")
 
-        sage["vdW"].cutoff = cutoff
+        fresh_sage["vdW"].cutoff = cutoff
 
         interchange = Interchange.from_smirnoff(
-            force_field=sage,
+            force_field=fresh_sage,
             topology=topology,
         )
 
@@ -391,10 +393,10 @@ class TestOpenMMSwitchingFunction:
 
         assert found_force, "NonbondedForce not found in system"
 
-    def test_switching_function_not_applied(self, sage, basic_top):
-        sage["vdW"].switch_width = Quantity(0.0, "angstrom")
+    def test_switching_function_not_applied(self, fresh_sage, basic_top):
+        fresh_sage["vdW"].switch_width = Quantity(0.0, "angstrom")
 
-        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+        out = Interchange.from_smirnoff(force_field=fresh_sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
         )
 
@@ -407,10 +409,10 @@ class TestOpenMMSwitchingFunction:
 
         assert found_force, "NonbondedForce not found in system"
 
-    def test_switching_function_nonstandard(self, sage, basic_top):
-        sage["vdW"].switch_width = Quantity(0.12345, "angstrom")
+    def test_switching_function_nonstandard(self, fresh_sage, basic_top):
+        fresh_sage["vdW"].switch_width = Quantity(0.12345, "angstrom")
 
-        out = Interchange.from_smirnoff(force_field=sage, topology=basic_top).to_openmm(
+        out = Interchange.from_smirnoff(force_field=fresh_sage, topology=basic_top).to_openmm(
             combine_nonbonded_forces=True,
         )
 

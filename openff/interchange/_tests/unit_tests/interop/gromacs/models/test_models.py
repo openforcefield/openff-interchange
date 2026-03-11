@@ -2,32 +2,31 @@ from copy import deepcopy
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity, Topology
+from openff.toolkit import Quantity, Topology
 from pydantic import ValidationError
 
 from openff.interchange import Interchange
-from openff.interchange._tests import needs_gmx
+from openff.interchange._tests import MoleculeWithConformer, needs_gmx
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers.gromacs import _process, _run_gmx_energy
 from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
 from openff.interchange.smirnoff._gromacs import _convert
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def molecule1():
-    molecule = Molecule.from_smiles(
+    molecule = MoleculeWithConformer.from_smiles(
         "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
     )
-    molecule.generate_conformers(n_conformers=1)
+
     molecule.name = "MOL__1"
 
     return molecule
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def molecule2():
-    molecule = Molecule.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
-    molecule.generate_conformers(n_conformers=1)
+    molecule = MoleculeWithConformer.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
     molecule.name = "MOL__2"
 
     molecule.conformers[0] += Quantity(numpy.array([5, 0, 0]), "angstrom")
@@ -35,29 +34,28 @@ def molecule2():
     return molecule
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def system1(molecule1, sage):
     box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def system2(molecule2, sage):
     box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def combined_system(molecule1, molecule2, sage):
-    box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(
         Interchange.from_smirnoff(
             sage,
             Topology.from_molecules([molecule1, molecule2]),
-            box=box,
+            box=Quantity(5 * numpy.eye(3), "nanometer"),
         ),
     )
 

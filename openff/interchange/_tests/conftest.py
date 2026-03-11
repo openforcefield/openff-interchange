@@ -1,5 +1,7 @@
 """Pytest configuration."""
 
+from copy import deepcopy
+
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -11,6 +13,31 @@ from openff.utilities import get_data_file_path
 
 from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
 
+fixture_call_counts = {}
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_fixture_setup(fixturedef, request):
+    # This runs before the fixture setup
+    fixture_name = fixturedef.argname
+    if fixture_name not in fixture_call_counts:
+        fixture_call_counts[fixture_name] = 0
+    fixture_call_counts[fixture_name] += 1
+
+    yield  # The fixture setup executes here
+
+    # This runs after the fixture setup (before teardown)
+    # You can also log or inspect counts here
+    # print(f"\nFixture '{fixture_name}' setup count: {fixture_call_counts[fixture_name]}")
+
+
+# You can add another hook to report the final counts at the end of the session
+def pytest_sessionfinish(session, exitstatus):
+    print("\n--- Fixture Load Summary ---")
+    for name, count in fixture_call_counts.items():
+        print(f"* {name}: loaded {count} times")
+    print("----------------------------")
+
 
 @pytest.fixture
 def _simple_force_field():
@@ -18,17 +45,23 @@ def _simple_force_field():
     pass
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def rosemary() -> ForceField:
     return ForceField("openff_no_water-3.0.0-alpha0.offxml")
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
+def fresh_sage() -> ForceField:
+    """Return a new copy of Sage each time."""
+    return ForceField("openff-2.3.0.offxml")
+
+
+@pytest.fixture(scope="session")
 def sage() -> ForceField:
     return ForceField("openff-2.3.0.offxml")
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_unconstrained() -> ForceField:
     return ForceField("openff_unconstrained-2.3.0.offxml")
 
@@ -59,13 +92,15 @@ def opc() -> ForceField:
     return ForceField("opc.offxml")
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_tip4p(sage, tip4p) -> ForceField:
     return sage.combine(tip4p)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_bond_charge(sage):
+    sage = deepcopy(sage)
+
     sage["Bonds"].add_parameter(
         parameter=BondType(
             smirks="[#6:2]-[#17X1:1]",
@@ -90,8 +125,10 @@ def sage_with_bond_charge(sage):
     return sage
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_planar_monovalent_carbonyl(sage):
+    sage = deepcopy(sage)
+
     sage.get_parameter_handler("VirtualSites")
     sage["VirtualSites"].add_parameter(
         parameter=VirtualSiteType(
@@ -110,9 +147,11 @@ def sage_with_planar_monovalent_carbonyl(sage):
     return sage
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_sigma_hole(sage):
     """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
+    sage = deepcopy(sage)
+
     sage.get_parameter_handler("VirtualSites")
     sage["VirtualSites"].add_parameter(
         parameter=VirtualSiteType(
@@ -129,8 +168,10 @@ def sage_with_sigma_hole(sage):
     return sage
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_trivalent_nitrogen(sage):
+    sage = deepcopy(sage)
+
     sage["Bonds"].add_parameter(
         parameter=BondType(
             smirks="[#7:3]-[#1X1:1]",
@@ -159,12 +200,14 @@ def sage_with_trivalent_nitrogen(sage):
     return sage
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_two_virtual_sites_same_smirks(sage):
     """
     Add two virtual site parameters with identical SMIRKS but different
     names, distances, and charges
     """
+    sage = deepcopy(sage)
+
     sage.get_parameter_handler("VirtualSites")
 
     for name, distance, charge in zip(
@@ -189,8 +232,10 @@ def sage_with_two_virtual_sites_same_smirks(sage):
     return sage
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sage_with_off_center_hydrogen(sage):
+    sage = deepcopy(sage)
+
     virtual_sites = sage.get_parameter_handler("VirtualSites")
 
     # Add a virtual site for an off-center hydrogen, see issue #940
@@ -216,86 +261,17 @@ def sage_with_off_center_hydrogen(sage):
     return sage
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def tip5p() -> ForceField:
+    return ForceField("tip5p-1.0.0.offxml")
+
+
+@pytest.fixture
+def de_force_field() -> ForceField:
+    pytest.importorskip("smirnoff_plugins")
     return ForceField(
-        """<?xml version="1.0" encoding="utf-8"?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <LibraryCharges version="0.3">
-        <LibraryCharge
-            name="tip5p"
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-            charge1="0.*elementary_charge"
-            charge2="0.*elementary_charge"
-            charge3="0.*elementary_charge"/>
-    </LibraryCharges>
-    <vdW
-        version="0.3"
-        potential="Lennard-Jones-12-6"
-        combining_rules="Lorentz-Berthelot"
-        scale12="0.0"
-        scale13="0.0"
-        scale14="0.5"
-        scale15="1.0"
-        switch_width="0.0 * angstrom"
-        cutoff="9.0 * angstrom" method="cutoff">
-            <Atom
-                smirks="[#1:1]-[#8X2H2+0]-[#1]"
-                epsilon="0.*mole**-1*kilojoule"
-                sigma="1.0 * nanometer"/>
-            <Atom
-                smirks="[#1]-[#8X2H2+0:1]-[#1]"
-                epsilon="0.66944*mole**-1*kilojoule"
-                sigma="0.312*nanometer"/>
-    </vdW>
-    <Constraints version="0.3">
-        <Constraint
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
-            id="c-tip5p-H-O"
-            distance="0.09572 * nanometer ** 1">
-        </Constraint>
-        <Constraint
-            smirks="[#1:1]-[#8X2H2+0]-[#1:2]"
-            id="c-tip5p-H-O-H"
-            distance="0.15139006545 * nanometer ** 1">
-        </Constraint>
-    </Constraints>
-    <Bonds
-        version="0.4"
-        potential="harmonic"
-        fractional_bondorder_method="AM1-Wiberg"
-        fractional_bondorder_interpolation="linear">
-        <Bond
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1]"
-            length="0.9572*angstrom"
-            k="462750.4*nanometer**-2*mole**-1*kilojoule"/>
-    </Bonds>
-    <VirtualSites version="0.3">
-        <VirtualSite
-            type="DivalentLonePair"
-            name="EP"
-            smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
-            distance="0.70 * angstrom"
-            charge_increment1="0.0*elementary_charge"
-            charge_increment2="0.1205*elementary_charge"
-            charge_increment3="0.1205*elementary_charge"
-            sigma="10.0*angstrom"
-            epsilon="0.0*kilocalories_per_mole"
-            outOfPlaneAngle="54.735*degree"
-            match="all_permutations" >
-        </VirtualSite>
-    </VirtualSites>
-    <Electrostatics
-        version="0.3"
-        method="PME"
-        scale12="0.0"
-        scale13="0.0"
-        scale14="0.833333"
-        scale15="1.0"
-        switch_width="0.0 * angstrom"
-        cutoff="9.0 * angstrom"/>
-</SMIRNOFF>
-""",
+        get_test_file_path("de-force-1.0.1.offxml"),
+        load_plugins=True,
     )
 
 
@@ -315,12 +291,12 @@ def ligand():
     return MoleculeWithConformer.from_smiles("CC[C@@](/C=C\\[H])(C=C)O", allow_undefined_stereo=True)
 
 
-@pytest.fixture
-def caffeine():
+@pytest.fixture(scope="session")
+def caffeine() -> Molecule:
     return MoleculeWithConformer.from_smiles("Cn1cnc2c1c(=O)n(C)c(=O)n2C")
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def basic_top() -> Topology:
     topology = MoleculeWithConformer.from_smiles("C").to_topology()
     topology.box_vectors = Quantity([5, 5, 5], "nanometer")
@@ -603,27 +579,26 @@ def hydrogen_cyanide_reversed():
 
 
 @pytest.fixture
-def hexane_diol():
+def hexane_diol(scope="session") -> Molecule:
     molecule = Molecule.from_smiles("OCCCCCCO")
     molecule.assign_partial_charges(partial_charge_method="gasteiger")
+
     return molecule
 
 
 @pytest.fixture
-def hydrogen_chloride():
+def hydrogen_chloride(scope="session") -> Molecule:
     return Molecule.from_mapped_smiles("[Cl:1][H:2]")
 
 
 @pytest.fixture
-def formaldehyde():
+def formaldehyde(scope="session") -> Molecule:
     return Molecule.from_mapped_smiles("[H:3][C:1]([H:4])=[O:2]")
 
 
 @pytest.fixture
-def acetaldehyde():
-    return Molecule.from_mapped_smiles(
-        "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
-    )
+def acetaldehyde(scope="session") -> Molecule:
+    return Molecule.from_mapped_smiles("[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]")
 
 
 @pytest.fixture

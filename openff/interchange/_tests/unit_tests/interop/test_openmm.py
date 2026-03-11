@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import numpy
 import pytest
 from openff.toolkit import Quantity
@@ -22,21 +20,20 @@ if has_package("openmm"):
 
 @skip_if_missing("openmm")
 class TestOpenMM:
-    def test_no_nonbonded_force(self, sage):
+    def test_no_nonbonded_force(self, fresh_sage):
         """
         Ensure a SMIRNOFF-style force field can be exported to OpenMM even if no nonbonded handlers are present. For
         context, see https://github.com/openforcefield/openff-toolkit/issues/1102
         """
-
-        del sage._parameter_handlers["Constraints"]
-        del sage._parameter_handlers["NAGLCharges"]
-        del sage._parameter_handlers["LibraryCharges"]
-        del sage._parameter_handlers["Electrostatics"]
-        del sage._parameter_handlers["vdW"]
+        del fresh_sage._parameter_handlers["Constraints"]
+        del fresh_sage._parameter_handlers["NAGLCharges"]
+        del fresh_sage._parameter_handlers["LibraryCharges"]
+        del fresh_sage._parameter_handlers["Electrostatics"]
+        del fresh_sage._parameter_handlers["vdW"]
 
         methane = MoleculeWithConformer.from_smiles("C")
 
-        openmm_system = Interchange.from_smirnoff(sage, [methane]).to_openmm()
+        openmm_system = Interchange.from_smirnoff(fresh_sage, [methane]).to_openmm()
 
         for force in openmm_system.getForces():
             if isinstance(force, NonbondedForce):
@@ -52,45 +49,37 @@ class TestOpenMM:
             else:
                 pytest.fail(f"Unexpected force found, type: {type(force)}")
 
-    def test_14_scale_factors_missing_electrostatics(self, sage):
+    def test_14_scale_factors_missing_electrostatics(self, fresh_sage):
         # Ported from the toolkit after #1276
         topology = MoleculeWithConformer.from_smiles("CCCC").to_topology()
 
-        ff_no_electrostatics = deepcopy(sage)
-        ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
-        ff_no_electrostatics.deregister_parameter_handler("NAGLCharges")
-        ff_no_electrostatics.deregister_parameter_handler("LibraryCharges")
+        fresh_sage.deregister_parameter_handler("Electrostatics")
+        fresh_sage.deregister_parameter_handler("NAGLCharges")
+        fresh_sage.deregister_parameter_handler("LibraryCharges")
 
-        out = Interchange.from_smirnoff(
-            ff_no_electrostatics,
-            topology,
-        ).to_openmm(combine_nonbonded_forces=True)
+        system = fresh_sage.create_interchange(topology)
 
         numpy.testing.assert_almost_equal(
-            actual=get_14_scaling_factors(out)[1],
-            desired=ff_no_electrostatics["vdW"].scale14,
+            actual=get_14_scaling_factors(system)[1],
+            desired=fresh_sage["vdW"].scale14,
             decimal=8,
         )
 
-    def test_14_scale_factors_missing_vdw(self, sage):
+    def test_14_scale_factors_missing_vdw(self, fresh_sage):
         # Ported from the toolkit after #1276
         topology = MoleculeWithConformer.from_smiles("CCCC").to_topology()
 
-        ff_no_vdw = deepcopy(sage)
-        ff_no_vdw.deregister_parameter_handler("vdW")
+        fresh_sage.deregister_parameter_handler("vdW")
 
-        out = Interchange.from_smirnoff(
-            ff_no_vdw,
-            topology,
-        ).to_openmm(combine_nonbonded_forces=True)
+        system = fresh_sage.create_interchange(topology).to_openmm()
 
         numpy.testing.assert_almost_equal(
-            actual=get_14_scaling_factors(out)[0],
-            desired=ff_no_vdw["Electrostatics"].scale14,
+            actual=get_14_scaling_factors(system)[0],
+            desired=fresh_sage["Electrostatics"].scale14,
             decimal=8,
         )
 
-    def test_to_pdb_box_vectors(self, sage):
+    def test_to_pdb_box_vectors(self, fresh_sage):
         """Reproduce https://github.com/openforcefield/openff-interchange/issues/548."""
         from openmm.app import PDBFile
 
@@ -100,7 +89,7 @@ class TestOpenMM:
             "angstrom",
         )
 
-        interchange = Interchange.from_smirnoff(sage, topology)
+        interchange = Interchange.from_smirnoff(fresh_sage, topology)
 
         interchange.to_pdb("temp.pdb")
 
@@ -114,15 +103,14 @@ class TestOpenMM:
 
 @skip_if_missing("openmm")
 class TestOpenMMMissingHandlers:
-    def test_missing_vdw_combine_energies(self, sage):
+    def test_missing_vdw_combine_energies(self, fresh_sage):
         from openff.interchange.drivers import get_openmm_energies
 
         topology = MoleculeWithConformer.from_smiles("CC").to_topology()
 
-        ff_no_vdw = deepcopy(sage)
-        ff_no_vdw.deregister_parameter_handler("vdW")
+        fresh_sage.deregister_parameter_handler("vdW")
 
-        out = Interchange.from_smirnoff(ff_no_vdw, topology)
+        out = Interchange.from_smirnoff(fresh_sage, topology)
 
         energy1 = get_openmm_energies(out, combine_nonbonded_forces=True).total_energy
         energy2 = get_openmm_energies(out, combine_nonbonded_forces=False).total_energy

@@ -35,14 +35,13 @@ def _get_interpolated_bond_k(bond_handler) -> float:
 
 
 class TestCreate:
-    def test_modified_nonbonded_cutoffs(self, sage, ethanol):
+    def test_modified_nonbonded_cutoffs(self, fresh_sage, ethanol):
         topology = Topology.from_molecules(ethanol)
-        modified_sage = ForceField(sage.to_string())
 
-        modified_sage["vdW"].cutoff = Quantity(0.777, "angstrom")
-        modified_sage["Electrostatics"].cutoff = Quantity(0.777, "angstrom")
+        fresh_sage["vdW"].cutoff = Quantity(0.777, "angstrom")
+        fresh_sage["Electrostatics"].cutoff = Quantity(0.777, "angstrom")
 
-        out = Interchange.from_smirnoff(force_field=modified_sage, topology=topology)
+        out = Interchange.from_smirnoff(force_field=fresh_sage, topology=topology)
 
         assert out["vdW"].cutoff == Quantity(0.777, "angstrom")
         assert out["Electrostatics"].cutoff == Quantity(0.777, "angstrom")
@@ -91,14 +90,14 @@ class TestCreate:
                     "parameterize_eval": "blah=blah2",
                 }
 
-    def test_all_cosmetic(self, sage, basic_top):
-        for handler in sage.registered_parameter_handlers:
-            for parameter in sage[handler].parameters:
+    def test_all_cosmetic(self, fresh_sage, basic_top):
+        for handler in fresh_sage.registered_parameter_handlers:
+            for parameter in fresh_sage[handler].parameters:
                 parameter._cosmetic_attribs = ["fOO"]
                 parameter._fOO = "bAR"
                 parameter.fOO = "bAR"
 
-        out = sage.create_interchange(basic_top)
+        out = fresh_sage.create_interchange(basic_top)
 
         for collection in out.collections:
             if collection == "Electrostatics":
@@ -109,30 +108,30 @@ class TestCreate:
 
 
 class TestUnassignedParameters:
-    def test_catch_unassigned_bonds(self, sage, ethanol_top):
-        for param in sage["Bonds"].parameters:
+    def test_catch_unassigned_bonds(self, fresh_sage, ethanol_top):
+        for param in fresh_sage["Bonds"].parameters:
             param.smirks = "[#99:1]-[#99:2]"
 
-        sage.deregister_parameter_handler(sage["Constraints"])
+        fresh_sage.deregister_parameter_handler(fresh_sage["Constraints"])
 
         with pytest.raises(
             UnassignedBondError,
             match="BondHandler was not able to find par",
         ):
-            Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
+            Interchange.from_smirnoff(force_field=fresh_sage, topology=ethanol_top)
 
-    def test_catch_unassigned_angles(self, sage, ethanol_top):
-        for param in sage["Angles"].parameters:
+    def test_catch_unassigned_angles(self, fresh_sage, ethanol_top):
+        for param in fresh_sage["Angles"].parameters:
             param.smirks = "[#99:1]-[#99:2]-[#99:3]"
 
         with pytest.raises(
             UnassignedAngleError,
             match="AngleHandler was not able to find par",
         ):
-            Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
+            Interchange.from_smirnoff(force_field=fresh_sage, topology=ethanol_top)
 
-    def test_catch_unassigned_torsions(self, sage, ethanol_top):
-        for param in sage["ProperTorsions"].parameters:
+    def test_catch_unassigned_torsions(self, fresh_sage, ethanol_top):
+        for param in fresh_sage["ProperTorsions"].parameters:
             param.smirks = "[#99:1]-[#99:2]-[#99:3]-[#99:4]"
 
         with pytest.raises(
@@ -140,7 +139,7 @@ class TestUnassignedParameters:
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
-            Interchange.from_smirnoff(force_field=sage, topology=ethanol_top)
+            Interchange.from_smirnoff(force_field=fresh_sage, topology=ethanol_top)
 
 
 # TODO: Remove xfail after openff-toolkit 0.10.0

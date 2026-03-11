@@ -96,10 +96,13 @@ def parse_sander(file: str) -> dict[str, dict | str]:
 class TestMDConfigFromInterchange:
     @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("switch", [True, False])
-    def test_from_interchange(self, sage, basic_top, switch, periodic):
+    def test_from_interchange(self, fresh_sage, basic_top, switch, periodic):
         from packaging.version import Version
 
         from openff.interchange import Interchange
+
+        sage = fresh_sage
+        basic_top = Topology(basic_top)
 
         # After openff-toolkit 0.14.2, this should mean
         # periodic_method="cutoff", nonperiodic-method="no-cutoff"

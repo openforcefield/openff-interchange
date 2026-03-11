@@ -316,17 +316,18 @@ class TestToPDB:
 
 
 class TestUnimplementedSMIRNOFFCases:
-    def test_bogus_smirnoff_handler(self, sage):
+    def test_bogus_smirnoff_handler(self, fresh_sage):
         top = Molecule.from_smiles("CC").to_topology()
 
         bogus_parameter_handler = ParameterHandler(version=0.3)
         bogus_parameter_handler._TAGNAME = "bogus"
-        sage.register_parameter_handler(bogus_parameter_handler)
+        fresh_sage.register_parameter_handler(bogus_parameter_handler)
+
         with pytest.raises(
             SMIRNOFFHandlersNotImplementedError,
             match=r"not implemented in Interchange:.*bogus",
         ):
-            Interchange.from_smirnoff(force_field=sage, topology=top)
+            Interchange.from_smirnoff(force_field=fresh_sage, topology=top)
 
 
 class TestBadExports:
