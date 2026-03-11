@@ -167,7 +167,7 @@ def _create_interchange(
 
     _clear_smirnoff_creation_caches()
 
-    if molecules_with_preset_charges is not None and "VirtualSites" in force_field.registered_parameter_handlers:
+    if molecules_with_preset_charges and "VirtualSites" in force_field.registered_parameter_handlers:
         warnings.warn(
             "Preset charges were provided (via `charge_from_molecules`) alongside a force field that includes "
             "virtual site parameters. Note that virtual sites will be applied charges from the force field and "

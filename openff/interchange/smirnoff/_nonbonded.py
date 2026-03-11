@@ -852,7 +852,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         unique_molecule: Molecule,
         molecules_with_preset_charges=list[Molecule] | None,
     ) -> tuple[bool, dict, dict]:
-        if molecules_with_preset_charges is None:
+        if not molecules_with_preset_charges:
             return False, dict(), dict()
 
         for molecule_with_charges in molecules_with_preset_charges:

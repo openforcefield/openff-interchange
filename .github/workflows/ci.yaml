@@ -30,7 +30,7 @@ jobs:
           - py311openeye
           - py311examples
           - py311etc
-          - py311amber
+          - py312amber
           - py312openeye
           - py312examples
           - py312etc

@@ -1,6 +1,7 @@
 """Tests reproducing specific issues that are otherwise uncategorized."""
 
 import random
+import warnings
 
 import numpy
 import pytest
@@ -10,8 +11,9 @@ from openff.utilities import get_data_file_path, has_executable, skip_if_missing
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, needs_gmx, shuffle_topology
 from openff.interchange.components._packmol import UNIT_CUBE, pack_box, solvate_topology
-from openff.interchange.drivers import get_amber_energies, get_openmm_energies
+from openff.interchange.drivers import get_amber_energies, get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import NonperiodicNoCutoffNotSupportedError
+from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
 
 
 def test_issue_723():
@@ -262,6 +264,92 @@ def test_issue_1433_openmm(sage, valence_handler):
     assert abs(original_energy - new_energy) > 0.1
 
 
+@pytest.mark.parametrize("engine", ["openmm", "amber", "gromacs"])
+def test_issue_1450_reassign_vdw(sage, water_dimer, engine):
+    """Sanity check that re-assigning vdW parameters actually changes energies."""
+
+    if engine == "amber" and not has_executable("sander"):
+        pytest.skip(reason="sander not installed")
+
+    pytest.importorskip("openmm")
+
+    original_interchange = sage.create_interchange(water_dimer)
+
+    match engine:
+        case "openmm":
+            original_energy = get_openmm_energies(original_interchange, combine_nonbonded_forces=False).energies["vdW"]
+        case "amber":
+            original_energy = get_amber_energies(original_interchange).energies["vdW"]
+        case "gromacs":
+            original_energy = get_gromacs_energies(original_interchange).energies["vdW"]
+
+    for potential in original_interchange["vdW"].potentials.values():
+        potential.parameters["epsilon"] = potential.parameters["epsilon"] * 100
+
+    match engine:
+        case "openmm":
+            new_energy = get_openmm_energies(original_interchange, combine_nonbonded_forces=False).energies["vdW"]
+        case "amber":
+            new_energy = get_amber_energies(original_interchange).energies["vdW"]
+        case "gromacs":
+            new_energy = get_gromacs_energies(original_interchange).energies["vdW"]
+
+    assert original_energy != new_energy, "Energies should be different after modifying vdW parameters"
+
+
+@pytest.mark.parametrize("engine", ["openmm", "amber", "gromacs"])
+@pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions"])
+def test_issue_1450_reassign_valence(sage, valence_handler, engine):
+    """Sanity check that re-assigning valence parameters actually changes energies."""
+
+    pytest.importorskip("openmm")
+
+    if engine == "amber" and not has_executable("sander"):
+        pytest.skip(reason="sander not installed")
+
+    topology = MoleculeWithConformer.from_smiles(
+        "CC(=O)NC",
+        allow_undefined_stereo=True,
+    ).to_topology()
+
+    topology.box_vectors = Quantity(numpy.eye(3) * 10.0, "nanometer")
+
+    original_interchange = sage.create_interchange(topology)
+
+    match valence_handler:
+        case "Bonds":
+            shorthand = "Bond"
+        case "Angles":
+            shorthand = "Angle"
+        case "ProperTorsions":
+            shorthand = "Torsion"
+
+    match engine:
+        case "openmm":
+            original_energy = get_openmm_energies(original_interchange).energies[shorthand]
+        case "amber":
+            original_energy = get_amber_energies(original_interchange).energies[shorthand]
+        case "gromacs":
+            original_energy = get_gromacs_energies(original_interchange).energies[shorthand]
+
+    for potential in original_interchange[valence_handler].potentials.values():
+        potential.parameters["k"] = potential.parameters["k"] * 100
+
+        if "phase" in potential.parameters:
+            potential.parameters["phase"] = potential.parameters["phase"] + Quantity(20, "degree")
+
+    match engine:
+        case "openmm":
+            new_energy = get_openmm_energies(original_interchange).energies[shorthand]
+        case "amber":
+            new_energy = get_amber_energies(original_interchange).energies[shorthand]
+        case "gromacs":
+            new_energy = get_gromacs_energies(original_interchange).energies[shorthand]
+
+    assert original_energy != new_energy, "Energies should be different after modifying valence parameters"
+
+
+@skip_if_missing("openmm")
 @pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions"])
 def test_issue_1234_openmm(sage, valence_handler):
     """Test that modifications to a `ForceField` object are reflected in re-creating new `Interchange`s."""
@@ -302,7 +390,7 @@ def test_issue_1234_openmm(sage, valence_handler):
 def test_clear_caches_with_dead_weakref_proxy():
     """Reproduce a bug where _clear_caches raises ReferenceError when dead
     weakref proxies exist in gc.get_objects(). See
-    https://github.com/OpenFreeEnergy/ExampleNotebooks/actions/runs/22472512331/job/65092363261
+    https://github.com/openforcefield/openff-interchange/issues/1453
     """
     import gc
     import weakref
@@ -322,3 +410,11 @@ def test_clear_caches_with_dead_weakref_proxy():
 
     # This raised ReferenceError before the fix
     Interchange.from_smirnoff(force_field=force_field, topology=[molecule])
+
+
+def test_issue_1461(sage, opc, ethanol):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PresetChargesAndVirtualSitesWarning)
+
+        sage_opc = sage.combine(opc)
+        sage_opc.create_interchange(ethanol.to_topology(), charge_from_molecules=[])
