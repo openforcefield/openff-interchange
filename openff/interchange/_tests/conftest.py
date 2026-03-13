@@ -83,11 +83,6 @@ def tip3p() -> ForceField:
 
 
 @pytest.fixture
-def opc():
-    return ForceField("opc.offxml")
-
-
-@pytest.fixture
 def tip4p() -> ForceField:
     return ForceField("tip4p_fb.offxml")
 

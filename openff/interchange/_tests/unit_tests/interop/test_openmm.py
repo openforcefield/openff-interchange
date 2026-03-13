@@ -33,7 +33,7 @@ class TestOpenMM:
 
         methane = MoleculeWithConformer.from_smiles("C")
 
-        openmm_system = fresh_sage.create_interchange(methane.to_topology()).to_openmm()
+        openmm_system = Interchange.from_smirnoff(fresh_sage, [methane]).to_openmm()
 
         for force in openmm_system.getForces():
             if isinstance(force, NonbondedForce):
@@ -57,7 +57,7 @@ class TestOpenMM:
         fresh_sage.deregister_parameter_handler("NAGLCharges")
         fresh_sage.deregister_parameter_handler("LibraryCharges")
 
-        system = fresh_sage.create_interchange(topology).to_openmm()
+        system = fresh_sage.create_interchange(topology)
 
         numpy.testing.assert_almost_equal(
             actual=get_14_scaling_factors(system)[1],

@@ -407,7 +407,7 @@ def test_clear_caches_with_dead_weakref_proxy(sage):
     molecule = MoleculeWithConformer.from_smiles("C")
 
     # This raised ReferenceError before the fix
-    Interchange.from_smirnoff(force_field=force_field, topology=[molecule])
+    Interchange.from_smirnoff(force_field=sage, topology=[molecule])
 
 
 def test_issue_1461(sage, opc, ethanol):
