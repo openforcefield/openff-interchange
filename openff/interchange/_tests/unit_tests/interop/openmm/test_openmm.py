@@ -1,31 +1,8 @@
-import pandas
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities.testing import skip_if_missing
 
-from openff.interchange.components.mdconfig import get_intermol_defaults
-from openff.interchange.drivers import get_summary_data
 from openff.interchange.exceptions import UnsupportedExportError
-
-
-def run(smiles: str, constrained: bool) -> pandas.DataFrame:
-    molecule = Molecule.from_smiles(smiles)
-    molecule.generate_conformers(n_conformers=1)
-    topology = molecule.to_topology()
-    topology.box_vectors = Quantity([4, 4, 4], "nanometer")
-
-    if constrained:
-        force_field = ForceField("openff-2.0.0.offxml")
-    else:
-        force_field = ForceField("openff_unconstrained-2.0.0.offxml")
-
-    interchange = force_field.create_interchange(topology)
-    get_intermol_defaults(periodic=True).apply(interchange)
-    return get_summary_data(interchange)
-
-
-def compare(smiles: str) -> float:
-    return run(smiles, True).std()["Bond"] - run(smiles, False).std()["Bond"]
 
 
 @skip_if_missing("openmm")

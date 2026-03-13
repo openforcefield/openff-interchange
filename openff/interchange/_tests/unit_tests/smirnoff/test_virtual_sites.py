@@ -537,12 +537,10 @@ class TestSMIRNOFFVirtualSites:
     def test_virtual_site_type_stored_in_potential_key(
         self,
         ethanol,
+        sage,
         sage_with_bond_charge,
         sage_with_trivalent_nitrogen,
     ):
-        # Can't use a fixture here because of the modified versions
-        sage = ForceField("openff-2.1.0.offxml")
-
         assert {key.virtual_site_type for key in sage.create_interchange(ethanol.to_topology())["vdW"].potentials} == {
             None,
         }

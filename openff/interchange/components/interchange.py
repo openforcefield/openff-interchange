@@ -143,14 +143,14 @@ class Interchange(_BaseModel):
         Examples
         --------
         Generate an Interchange object from a single-molecule (OpenFF) topology and
-        OpenFF 2.0.0 "Sage"
+        OpenFF 2.3.0 "Sage"
 
         .. code-block:: pycon
 
             >>> from openff.toolkit import ForceField, Molecule
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> sage = ForceField("openff-2.0.0.offxml")
+            >>> sage = ForceField("openff-2.3.0.offxml")
             >>> interchange = sage.create_interchange(mol.to_topology())
             >>> interchange
             Interchange with 7 collections, non-periodic topology with 8 atoms.

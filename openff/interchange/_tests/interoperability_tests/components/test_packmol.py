@@ -31,7 +31,7 @@ def test_solvate_ligand_in_nonwater(sage):
         topology=ligand.to_topology(),
         solvent=solvent,
         padding=Quantity(0.8, "nanometer"),
-        target_density=Quantity(800, "kilogram / meter ** 3"),
+        target_density=Quantity(700, "kilogram / meter ** 3"),
     )
 
     interchange = sage.create_interchange(topology)

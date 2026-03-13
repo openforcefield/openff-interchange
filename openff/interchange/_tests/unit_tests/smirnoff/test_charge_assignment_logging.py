@@ -376,8 +376,8 @@ def test_cases4_5(caplog, ligand_and_water_and_ions, preset_on_protein):
             ]
 
 
-def test_case6(caplog, ligand, water):
-    force_field = ForceField("openff-2.0.0.offxml", "opc.offxml")
+def test_case6(caplog, ligand, water, sage_no_nagl, opc):
+    force_field = sage_no_nagl.combine(opc)
 
     topology = Topology.from_molecules([ligand, water, water, water])
 

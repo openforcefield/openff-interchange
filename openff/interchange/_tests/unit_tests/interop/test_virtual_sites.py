@@ -4,7 +4,7 @@ from random import random
 
 import numpy
 import pytest
-from openff.toolkit import ForceField, Quantity
+from openff.toolkit import Quantity
 
 from openff.interchange._tests import MoleculeWithConformer
 from openff.interchange.exceptions import MissingVirtualSitesError
@@ -207,14 +207,13 @@ class TestVirtualSitePositions:
     )
     def test_four_site_water_positions(
         self,
+        tip4p,
         water_tip4p,
         distance_,
         w1,
         w2,
         w3,
     ):
-        tip4p = ForceField("tip4p_fb.offxml")
-
         tip4p["VirtualSites"].get_parameter(
             parameter_attrs={"smirks": "[#1:2]-[#8X2H2+0:1]-[#1:3]"},
         )[0].distance = Quantity(

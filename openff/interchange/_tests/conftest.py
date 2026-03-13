@@ -19,6 +19,11 @@ def _simple_force_field():
 
 
 @pytest.fixture
+def rosemary() -> ForceField:
+    return ForceField("openff_no_water-3.0.0-alpha0.offxml")
+
+
+@pytest.fixture
 def sage() -> ForceField:
     return ForceField("openff-2.3.0.offxml")
 
@@ -52,6 +57,11 @@ def opc():
 @pytest.fixture
 def tip4p() -> ForceField:
     return ForceField("tip4p_fb.offxml")
+
+
+@pytest.fixture
+def opc() -> ForceField:
+    return ForceField("opc.offxml")
 
 
 @pytest.fixture

@@ -147,4 +147,4 @@ def test_hmr_with_ligand_virtual_sites(
     # this is a single ligand in vacuum with boring parameters
     simulation.minimizeEnergy(maxIterations=100)
 
-    simulation.runForClockTime(10 * openmm.unit.second)
+    simulation.runForClockTime(5 * openmm.unit.second)

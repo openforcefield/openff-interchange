@@ -16,21 +16,20 @@ from openff.interchange.exceptions import NonperiodicNoCutoffNotSupportedError
 from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
 
 
-def test_issue_723():
+def test_issue_723(sage):
     parmed = pytest.importorskip("parmed")
-    force_field = ForceField("openff-2.1.0.offxml")
 
     molecule = Molecule.from_smiles("C#N")
     molecule.generate_conformers(n_conformers=1)
 
-    force_field.create_interchange(molecule.to_topology()).to_top("_x.top")
+    sage.create_interchange(molecule.to_topology()).to_top("_x.top")
 
     parmed.load_file("_x.top")
 
 
 @pytest.mark.skipif(not has_executable("packmol"), reason="Packmol is not installed")
 @pytest.mark.parametrize("pack", [True, False])
-def test_issue_1022(pack):
+def test_issue_1022(pack, sage):
     topology = Topology.from_molecules(
         [
             MoleculeWithConformer.from_smiles(smi)
@@ -54,14 +53,14 @@ def test_issue_1022(pack):
             box_vectors=topology.box_vectors,
         )
 
-    force_field = ForceField(
-        "openff-2.0.0.offxml",
-        get_data_file_path(
-            "example-sigma-hole-bromine.offxml",
-            "openff.interchange._tests.data",
+    force_field = sage.combine(
+        ForceField(
+            get_data_file_path(
+                "example-sigma-hole-bromine.offxml",
+                "openff.interchange._tests.data",
+            ),
         ),
     )
-
     interchange = force_field.create_interchange(topology)
 
     interchange.to_top("tmp")
@@ -116,7 +115,7 @@ def test_issue_1031():
         assert atom_name in openff_atom_names
 
 
-def test_issue_1049():
+def test_issue_1049(sage, opc):
     pytest.importorskip("openmm")
 
     topology = Topology.from_molecules(
@@ -127,7 +126,7 @@ def test_issue_1049():
         ],
     )
 
-    interchange = ForceField("openff-2.2.0.offxml", "opc.offxml").create_interchange(topology)
+    interchange = sage.combine(opc).create_interchange(topology)
 
     openmm_topology = interchange.to_openmm_topology()
     openmm_system = interchange.to_openmm_system()
@@ -387,7 +386,7 @@ def test_issue_1234_openmm(sage, valence_handler):
     assert abs(original_energy - new_energy) > 0.1
 
 
-def test_clear_caches_with_dead_weakref_proxy():
+def test_clear_caches_with_dead_weakref_proxy(sage):
     """Reproduce a bug where _clear_caches raises ReferenceError when dead
     weakref proxies exist in gc.get_objects(). See
     https://github.com/openforcefield/openff-interchange/issues/1453
@@ -406,7 +405,6 @@ def test_clear_caches_with_dead_weakref_proxy():
     gc.collect()
 
     molecule = MoleculeWithConformer.from_smiles("C")
-    force_field = ForceField("openff-2.2.0.offxml")
 
     # This raised ReferenceError before the fix
     Interchange.from_smirnoff(force_field=force_field, topology=[molecule])

@@ -195,8 +195,9 @@ class TestEnergies:
     )
     @needs_gmx
     @pytest.mark.slow
-    def test_interpolated_parameters(self, smi):
-        xml_ff_bo_all_heavy_bonds = """<?xml version='1.0' encoding='ASCII'?>
+    def test_interpolated_parameters(self, sage, smi):
+        ff_bo_all_heavy_bonds = ForceField(
+            """<?xml version='1.0' encoding='ASCII'?>
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
             <Bond smirks="[!#1:1]~[!#1:2]" id="bbo1"
@@ -206,14 +207,12 @@ class TestEnergies:
                 length_bondorder2="1.0 * angstrom"/>
           </Bonds>
         </SMIRNOFF>
-        """
+        """,
+        )
 
         molecule = MoleculeWithConformer.from_smiles(smi)
 
-        forcefield = ForceField(
-            "openff-2.0.0.offxml",
-            xml_ff_bo_all_heavy_bonds,
-        )
+        forcefield = sage.combine(ff_bo_all_heavy_bonds)
 
         out = Interchange.from_smirnoff(forcefield, [molecule])
         out.box = Quantity([4, 4, 4], "nanometer")
