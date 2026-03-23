@@ -13,7 +13,7 @@ from typing import Literal
 import numpy
 from numpy.typing import ArrayLike, NDArray
 from openff.toolkit import Molecule, Quantity, RDKitToolkitWrapper, Topology
-from openff.utilities.utilities import requires_package, temporary_cd
+from openff.utilities import requires_package, temporary_cd
 from packaging.version import Version
 
 from openff.interchange.exceptions import PACKMOLRuntimeError, PACKMOLValueError

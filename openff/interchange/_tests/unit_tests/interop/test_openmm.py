@@ -57,7 +57,7 @@ class TestOpenMM:
         fresh_sage.deregister_parameter_handler("NAGLCharges")
         fresh_sage.deregister_parameter_handler("LibraryCharges")
 
-        system = fresh_sage.create_interchange(topology)
+        system = fresh_sage.create_interchange(topology).to_openmm()
 
         numpy.testing.assert_almost_equal(
             actual=get_14_scaling_factors(system)[1],

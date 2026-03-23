@@ -13,11 +13,11 @@ from pydantic import ValidationError
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
-    MoleculeWithConformer,
     get_test_file_path,
     needs_gmx,
     needs_lmp,
     needs_sander,
+    topology_from_smiles,
 )
 from openff.interchange.common._topology import InterchangeTopology
 from openff.interchange.drivers import get_gromacs_energies, get_openmm_energies
@@ -216,8 +216,7 @@ class TestInterchange:
         import openmm
         import openmm.unit
 
-        topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+        topology = topology_from_smiles("CCO")
 
         simulation = sage.create_interchange(topology).to_openmm_simulation(
             integrator=default_integrator,
@@ -399,14 +398,12 @@ class TestInterchangeSerialization:
 class TestWrappedCalls:
     """Test that methods which delegate out to other submodules call them."""
 
-    @pytest.fixture
+    @pytest.fixture(scope="function")
     def simple_interchange(self, sage):
-        mol = Molecule.from_smiles("CCO")
-        mol.generate_conformers(n_conformers=1)
-        top = mol.to_topology()
-        top.box_vectors = Quantity(numpy.eye(3) * 4, "nanometer")
-
-        return Interchange.from_smirnoff(force_field=sage, topology=top)
+        return Interchange.from_smirnoff(
+            force_field=sage,
+            topology=topology_from_smiles("CCO"),
+        )
 
     def test_from_gromacs_error(self):
         with pytest.raises(ExperimentalFeatureException):
@@ -499,11 +496,10 @@ class TestWrappedCalls:
     @needs_gmx
     def test_set_positions_from_gro_wrong_coordinates(self, sage):
         with temporary_cd():
-            eth = sage.create_interchange(MoleculeWithConformer.from_smiles("CCO").to_topology())
-            eth.box = Quantity([4, 4, 4], "nanometer")
+            eth = sage.create_interchange(topology_from_smiles("CCO"))
             eth.to_gromacs(prefix="ethanol")
-            benzene = sage.create_interchange(MoleculeWithConformer.from_smiles("c1ccccc1").to_topology())
-            benzene.box = Quantity([4, 4, 4], "nanometer")
+
+            benzene = sage.create_interchange(topology_from_smiles("c1ccccc1"))
             benzene.to_gromacs(prefix="benzene")
 
             with pytest.raises(InvalidPositionsError, match=r"12.*9"):

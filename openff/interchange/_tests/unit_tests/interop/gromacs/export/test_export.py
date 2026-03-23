@@ -1,12 +1,10 @@
 import random
-from copy import deepcopy
 from importlib import resources
 from math import exp
 
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
-from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.units import ensure_quantity
 from openff.utilities import (
     get_data_file_path,
@@ -782,43 +780,6 @@ class TestMergeAtomTypes(_NeedsGROMACS):
 
 
 class TestGROMACSVirtualSites(_NeedsGROMACS):
-    @pytest.fixture
-    def sigma_hole_type(self, sage):
-        """A handler with a bond charge virtual site on a C-Cl bond."""
-        return VirtualSiteHandler.VirtualSiteBondChargeType(
-            name="EP",
-            smirks="[#6:1]-[#17:2]",
-            distance=Quantity(1.4 * "angstrom"),
-            type="BondCharge",
-            match="once",
-            charge_increment1=Quantity(0.1, "elementary_charge"),
-            charge_increment2=Quantity(0.2, "elementary_charge"),
-        )
-
-    @pytest.fixture(scope="session")
-    def sage_with_monovalent_lone_pair(self, sage):
-        """Fixture that loads an SMIRNOFF XML for argon"""
-        sage = deepcopy(sage)
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        carbonyl_type = VirtualSiteHandler.VirtualSiteType(
-            name="EP",
-            smirks="[O:1]=[C:2]-[*:3]",
-            distance=Quantity(0.3, "angstrom"),
-            type="MonovalentLonePair",
-            match="all_permutations",
-            outOfPlaneAngle=Quantity(0.0, "degree"),
-            inPlaneAngle=Quantity(120.0, "degree"),
-            charge_increment1=Quantity(0.05, "elementary_charge"),
-            charge_increment2=Quantity(0.1, "elementary_charge"),
-            charge_increment3=Quantity(0.15, "elementary_charge"),
-        )
-
-        virtual_site_handler.add_parameter(parameter=carbonyl_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
-
     @pytest.mark.xfail
     @skip_if_missing("parmed")
     def test_sigma_hole_example(self, sage_with_sigma_hole):

@@ -5,7 +5,7 @@ Helper functions for producing `openmm.Force` objects for valence terms.
 import functools
 
 from openff.units.openmm import to_openmm as to_openmm_quantity
-from openff.utilities.utilities import has_package
+from openff.utilities import has_package
 
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.models import BaseVirtualSiteKey, PotentialKey

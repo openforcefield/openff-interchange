@@ -1,4 +1,4 @@
-from openff.utilities.utilities import has_package
+from openff.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError

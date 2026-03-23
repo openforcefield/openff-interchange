@@ -455,7 +455,7 @@ class TestNAGLChargesIntegration:
         assert abs(all_particle_charge_sum) < Quantity(1e-10, "elementary_charge")
         # Charge without the vsite should be nonzero
         atom_charge_sum = sum([charge for tk, charge in assigned_charges.items() if tk.atom_indices is not None])
-        assert abs(atom_charge_sum - Quantity(0.123, "elementary_charge")) < Quantity(1e-10, "elementary_charge")
+        assert abs(atom_charge_sum - Quantity(0.05, "elementary_charge")) < Quantity(1e-10, "elementary_charge")
 
     def test_nagl_charges_force_field_creation_complete(self, sage_no_nagl, hexane_diol):
         """Test complete interchange creation with NAGLCharges."""

@@ -497,7 +497,7 @@ class TestOpenMMVirtualSiteExclusions:
 
             assert sorted(exceptions) == sorted(exclusions)
 
-    def test_dichloroethane_exceptions(self, sage):
+    def test_dichloroethane_exceptions(self, fresh_sage):
         """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
         from openff.toolkit._tests.mocking import VirtualSiteMocking
 
@@ -514,9 +514,9 @@ class TestOpenMMVirtualSiteExclusions:
         handler = VirtualSiteHandler(version="0.3")
         handler.add_parameter(parameter=parameter)
 
-        sage.register_parameter_handler(handler)
+        fresh_sage.register_parameter_handler(handler)
 
-        system = sage.create_openmm_system(dichloroethane.to_topology())
+        system = fresh_sage.create_openmm_system(dichloroethane.to_topology())
 
         assert system.isVirtualSite(8)
         assert system.isVirtualSite(9)

@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING
 
 from openff.toolkit import Quantity
-from openff.utilities.utilities import requires_package
+from openff.utilities import requires_package
 
 from openff.interchange.exceptions import MinimizationError, MissingPositionsError
 

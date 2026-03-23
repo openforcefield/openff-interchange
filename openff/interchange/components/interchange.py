@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union, overload
 
 from openff.toolkit import Molecule, Quantity, Topology
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 from pydantic import Field
 
 from openff.interchange._annotations import (

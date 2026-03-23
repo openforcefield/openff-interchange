@@ -1,8 +1,9 @@
 """Assorted utilities used in tests."""
 
+import functools
+import importlib.resources
 import pathlib
 import random
-from importlib import resources
 
 import numpy
 import pytest
@@ -11,11 +12,11 @@ from openff.toolkit import (
     ForceField,
     Molecule,
     OpenEyeToolkitWrapper,
+    Quantity,
     RDKitToolkitWrapper,
     Topology,
 )
-from openff.utilities import get_data_file_path
-from openff.utilities.utilities import has_executable, has_package
+from openff.utilities import get_data_file_path, has_executable, has_package
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.gromacs import _find_gromacs_executable
@@ -59,7 +60,7 @@ def get_test_file_path(test_file: str) -> pathlib.Path:
 
 def get_test_files_dir_path(dirname: str | None = None) -> pathlib.Path:
     """Given a directory with a collection of test data files, return its full path."""
-    dir_path = resources.files("openff.interchange._tests.data")
+    dir_path = importlib.resources.files("openff.interchange._tests.data")
 
     if dirname:
         test_dir: pathlib.PosixPath = dir_path / dirname  # type: ignore[assignment]
@@ -94,6 +95,16 @@ class MoleculeWithConformer(Molecule):
         molecule.name = name
 
         return molecule
+
+
+@functools.lru_cache
+def topology_from_smiles(smiles: str, periodic=True) -> Topology:
+    topology = MoleculeWithConformer.from_smiles(smiles).to_topology()
+
+    if periodic:
+        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+
+    return topology
 
 
 def get_protein(name: str) -> Molecule:

@@ -1,5 +1,5 @@
 import pytest
-from openff.toolkit import Molecule, Quantity
+from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.exceptions import (
@@ -23,8 +23,8 @@ class TestUnsupportedCases:
 
     @pytest.mark.parametrize("periodic", [True, False])
     @pytest.mark.parametrize("combine", [True, False])
-    def test_hard_cutoff(self, sage, periodic, combine):
-        interchange = sage.create_interchange(Molecule.from_smiles("CC").to_topology())
+    def test_hard_cutoff(self, periodic, combine):
+        interchange = ForceField("openff-2.3.0.offxml").create_interchange(Molecule.from_smiles("CC").to_topology())
 
         if periodic:
             interchange.box = Quantity([4, 4, 4], "nanometer")

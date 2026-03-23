@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
 import numpy
 from numpy.typing import ArrayLike
 from openff.toolkit import Quantity
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 from pydantic import (
     Field,
     PrivateAttr,

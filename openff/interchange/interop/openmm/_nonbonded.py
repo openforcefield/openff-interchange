@@ -9,7 +9,7 @@ from typing import NamedTuple
 
 from openff.toolkit import Molecule, Quantity
 from openff.units.openmm import to_openmm as to_openmm_quantity
-from openff.utilities.utilities import has_package
+from openff.utilities import has_package
 
 from openff.interchange import Interchange
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, _simpler_charges, vdWCollection
@@ -952,7 +952,7 @@ def _set_particle_parameters(
                     parameters = vdw.potentials[pot_key].parameters
 
                     if hasattr(vdw, "modify_parameters"):
-                        # This method stripsopenmm.units ..
+                        # This method strips openmm.units ..
                         parameters = vdw.modify_parameters(parameters)
                     else:
                         # so manually strip them if the method is not present

@@ -3,15 +3,14 @@ import math
 import numpy
 import pytest
 from openff.toolkit import ForceField, Molecule, OpenEyeToolkitWrapper, Quantity, Topology
-from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 from openff.utilities import get_data_file_path, has_package
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import (
-    MoleculeWithConformer,
     get_protein,
     get_test_file_path,
+    topology_from_smiles,
 )
 from openff.interchange._tests.unit_tests.plugins.test_smirnoff_plugins import (
     TestDoubleExponential,
@@ -239,11 +238,10 @@ class TestOpenMM:
     @pytest.mark.slow
     @pytest.mark.parametrize("mol_smi", ["C", "CC", "CCO"])
     def test_openmm_roundtrip(self, sage, mol_smi):
-        topology = MoleculeWithConformer.from_smiles(mol_smi).to_topology()
-
-        interchange = Interchange.from_smirnoff(sage, topology)
-
-        interchange.box = [4, 4, 4]
+        interchange = Interchange.from_smirnoff(
+            sage,
+            topology_from_smiles(mol_smi),
+        )
 
         converted = from_openmm(
             topology=interchange.to_openmm_topology(),
@@ -260,13 +258,10 @@ class TestOpenMM:
     @pytest.mark.xfail(reason="Broken because of splitting non-bonded forces")
     @pytest.mark.slow
     def test_combine_nonbonded_forces(self, sage):
-        topology = MoleculeWithConformer.from_smiles(
-            "ClC#CCl",
-            name="HPER",
-        ).to_topology()
+        topology = topology_from_smiles("ClC#CCl")
+        topology.molecule(0).name = "HPER"
 
         out = Interchange.from_smirnoff(force_field=sage, topology=topology)
-        out.box = [4, 4, 4]
 
         num_forces_combined = out.to_openmm(
             combine_nonbonded_forces=True,
@@ -445,7 +440,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
     def test_nocutoff_when_nonperiodic(self, de_force_field):
         system = Interchange.from_smirnoff(
             de_force_field,
-            MoleculeWithConformer.from_smiles("CCO").to_topology(),
+            topology=topology_from_smiles("CCO", periodic=False),
         ).to_openmm(combine_nonbonded_forces=False)
 
         for force in system.getForces():
@@ -461,8 +456,7 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
         de_force_field,
         default_integrator,
     ):
-        topology = MoleculeWithConformer.from_smiles("CCO").to_topology()
-        topology.box_vectors = Quantity([4, 4, 4], "nanometer")
+        topology = topology_from_smiles("CCO")
 
         out = Interchange.from_smirnoff(
             de_force_field,
@@ -556,49 +550,6 @@ class TestOpenMMWithPlugins(TestDoubleExponential):
 @skip_if_missing("openmm")
 @pytest.mark.slow
 class TestOpenMMVirtualSites:
-    @pytest.fixture
-    def sage_with_sigma_hole(self, sage):
-        """Fixture that loads an SMIRNOFF XML with a C-Cl sigma hole."""
-        # TODO: Move this into BaseTest to that GROMACS and others can access it
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        sigma_type = VirtualSiteHandler.VirtualSiteType(
-            name="EP",
-            smirks="[#6:1]-[#17:2]",
-            distance=Quantity(1.4, "angstrom"),
-            type="BondCharge",
-            match="once",
-            charge_increment1=Quantity(0.1, "elementary_charge"),
-            charge_increment2=Quantity(0.2, "elementary_charge"),
-        )
-
-        virtual_site_handler.add_parameter(parameter=sigma_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
-
-    @pytest.fixture
-    def sage_with_monovalent_lone_pair(self, sage):
-        virtual_site_handler = VirtualSiteHandler(version=0.3)
-
-        carbonyl_type = VirtualSiteHandler.VirtualSiteMonovalentLonePairType(
-            name="EP",
-            smirks="[O:1]=[C:2]-[C:3]",
-            distance=Quantity(0.3, "angstrom"),
-            type="MonovalentLonePair",
-            match="once",
-            outOfPlaneAngle=Quantity(0.0, "degree"),
-            inPlaneAngle=Quantity(120.0, "degree"),
-            charge_increment1=Quantity(0.05, "elementary_charge"),
-            charge_increment2=Quantity(0.1, "elementary_charge"),
-            charge_increment3=Quantity(0.15, "elementary_charge"),
-        )
-
-        virtual_site_handler.add_parameter(parameter=carbonyl_type)
-        sage.register_parameter_handler(virtual_site_handler)
-
-        return sage
-
     def test_valence_term_paticle_index_offsets(self, water, tip5p):
         out = Interchange.from_smirnoff(tip5p, [water, water]).to_openmm(
             combine_nonbonded_forces=True,
@@ -1144,8 +1095,7 @@ class TestGBSA:
     def test_create_gbsa(self, gbsa_force_field):
         interchange = Interchange.from_smirnoff(
             force_field=gbsa_force_field,
-            topology=MoleculeWithConformer.from_smiles("CCO").to_topology(),
-            box=Quantity([4, 4, 4], "nanometer"),
+            topology=topology_from_smiles("CCO"),
         )
 
         assert get_openmm_energies(interchange).total_energy is not None
@@ -1154,15 +1104,13 @@ class TestGBSA:
         with pytest.raises(UnsupportedExportError, match="exactly one"):
             Interchange.from_smirnoff(
                 force_field=gbsa_force_field,
-                topology=MoleculeWithConformer.from_smiles("CCO").to_topology(),
-                box=Quantity([4, 4, 4], "nanometer"),
+                topology=topology_from_smiles("CCO"),
             ).to_openmm(combine_nonbonded_forces=False)
 
     def test_no_cutoff(self, gbsa_force_field):
         system = Interchange.from_smirnoff(
             force_field=gbsa_force_field,
-            topology=MoleculeWithConformer.from_smiles("CCO").to_topology(),
-            box=None,
+            topology=topology_from_smiles("CCO", periodic=False),
         ).to_openmm(combine_nonbonded_forces=True)
 
         for force in system.getForces():

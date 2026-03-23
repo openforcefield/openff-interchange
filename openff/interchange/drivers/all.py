@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-from openff.utilities.utilities import requires_package
+from openff.utilities import requires_package
 
 from openff.interchange import Interchange
 from openff.interchange.drivers.amber import get_amber_energies

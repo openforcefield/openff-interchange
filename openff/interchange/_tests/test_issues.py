@@ -350,17 +350,17 @@ def test_issue_1450_reassign_valence(sage, valence_handler, engine):
 
 @skip_if_missing("openmm")
 @pytest.mark.parametrize("valence_handler", ["Bonds", "Angles", "ProperTorsions", "ImproperTorsions"])
-def test_issue_1234_openmm(sage, valence_handler):
+def test_issue_1234_openmm(fresh_sage, valence_handler):
     """Test that modifications to a `ForceField` object are reflected in re-creating new `Interchange`s."""
     topology = MoleculeWithConformer.from_smiles(
         "CC(=O)NC",
         allow_undefined_stereo=True,
     ).to_topology()
-    original_interchange = sage.create_interchange(topology)
+    original_interchange = fresh_sage.create_interchange(topology)
 
     original_energy = get_openmm_energies(original_interchange).total_energy.m
 
-    for parameter in sage[valence_handler].parameters:
+    for parameter in fresh_sage[valence_handler].parameters:
         if hasattr(parameter, "k"):
             if isinstance(parameter.k, list):
                 parameter.k = [k * 100 for k in parameter.k]
@@ -378,7 +378,7 @@ def test_issue_1234_openmm(sage, valence_handler):
         else:
             raise ValueError(f"Don't know how to modify parameter with k of type {type(parameter.k)}")
 
-    new_interchange = sage.create_interchange(topology)
+    new_interchange = fresh_sage.create_interchange(topology)
 
     new_energy = get_openmm_energies(new_interchange).total_energy.m
 

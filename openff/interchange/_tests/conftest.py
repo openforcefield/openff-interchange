@@ -7,11 +7,17 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondType,
     ChargeIncrementModelHandler,
+    VirtualSiteHandler,
     VirtualSiteType,
 )
 from openff.utilities import get_data_file_path
 
-from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
+from openff.interchange._tests import (
+    MoleculeWithConformer,
+    _rng,
+    get_test_file_path,
+    topology_from_smiles,
+)
 
 fixture_call_counts = {}
 
@@ -117,7 +123,7 @@ def sage_with_bond_charge(sage):
             type="BondCharge",
             match="all_permutations",
             distance="0.8 * angstrom ** 1",
-            charge_increment1="0.123 * elementary_charge ** 1",
+            charge_increment1="0.05 * elementary_charge ** 1",
             charge_increment2="0.0 * elementary_charge ** 1",
         ),
     )
@@ -166,6 +172,29 @@ def sage_with_sigma_hole(sage):
     )
 
     return sage
+
+
+@pytest.fixture
+def sage_with_monovalent_lone_pair(self, fresh_sage):
+    virtual_site_handler = VirtualSiteHandler(version=0.3)
+
+    carbonyl_type = VirtualSiteHandler.VirtualSiteType(
+        name="EP",
+        smirks="[O:1]=[C:2]-[*:3]",
+        distance=Quantity(0.3, "angstrom"),
+        type="MonovalentLonePair",
+        match="all_permutations",
+        outOfPlaneAngle=Quantity(0.0, "degree"),
+        inPlaneAngle=Quantity(120.0, "degree"),
+        charge_increment1=Quantity(0.05, "elementary_charge"),
+        charge_increment2=Quantity(0.1, "elementary_charge"),
+        charge_increment3=Quantity(0.15, "elementary_charge"),
+    )
+
+    virtual_site_handler.add_parameter(parameter=carbonyl_type)
+    fresh_sage.register_parameter_handler(virtual_site_handler)
+
+    return fresh_sage
 
 
 @pytest.fixture(scope="session")
@@ -298,9 +327,7 @@ def caffeine() -> Molecule:
 
 @pytest.fixture(scope="session")
 def basic_top() -> Topology:
-    topology = MoleculeWithConformer.from_smiles("C").to_topology()
-    topology.box_vectors = Quantity([5, 5, 5], "nanometer")
-    return topology
+    return topology_from_smiles("C")
 
 
 @pytest.fixture(scope="session")
@@ -629,29 +656,29 @@ def cb8_host() -> Molecule:
 
 
 @pytest.fixture
-def no_charges(sage) -> ForceField:
-    sage.deregister_parameter_handler("NAGLCharges")
-    sage.register_parameter_handler(
+def no_charges(fresh_sage) -> ForceField:
+    fresh_sage.deregister_parameter_handler("NAGLCharges")
+    fresh_sage.register_parameter_handler(
         ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="formal_charge",
         ),
     )
 
-    return sage
+    return fresh_sage
 
 
 @pytest.fixture
-def sage_charge_increment_handler(sage):
-    sage.deregister_parameter_handler("NAGLCharges")
-    sage.register_parameter_handler(
+def sage_charge_increment_handler(fresh_sage):
+    fresh_sage.deregister_parameter_handler("NAGLCharges")
+    fresh_sage.register_parameter_handler(
         ChargeIncrementModelHandler(
             version=0.3,
             partial_charge_method="gasteiger",
         ),
     )
 
-    return sage
+    return fresh_sage
 
 
 @pytest.fixture

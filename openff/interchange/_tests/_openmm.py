@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities import has_package, requires_package
 
 if TYPE_CHECKING or has_package("openmm"):
     import openmm

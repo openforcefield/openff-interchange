@@ -13,7 +13,7 @@ from openff.interchange.interop.gromacs.models.models import GROMACSAtomType
 from openff.interchange.smirnoff._gromacs import _convert
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def molecule1():
     molecule = MoleculeWithConformer.from_smiles(
         "[H][O][c]1[c]([H])[c]([O][H])[c]([H])[c]([O][H])[c]1[H]",
@@ -24,7 +24,7 @@ def molecule1():
     return molecule
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def molecule2():
     molecule = MoleculeWithConformer.from_smiles("C1=C(C=C(C=C1C(=O)O)C(=O)O)C(=O)O")
     molecule.name = "MOL__2"
@@ -34,21 +34,21 @@ def molecule2():
     return molecule
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def system1(molecule1, sage):
     box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(Interchange.from_smirnoff(sage, [molecule1], box=box))
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def system2(molecule2, sage):
     box = Quantity(5 * numpy.eye(3), "nanometer")
 
     return _convert(Interchange.from_smirnoff(sage, [molecule2], box=box))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def combined_system(molecule1, molecule2, sage):
 
     return _convert(
