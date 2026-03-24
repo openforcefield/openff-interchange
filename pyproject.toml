@@ -44,24 +44,6 @@ pydocstyle.property-decorators = [ "validator" ]
 max_supported_python = "3.13"
 table_format = "long"
 
-[tool.pytest.ini_options]
-markers = [
-  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
-addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/experimental --ignore=examples/amber"
-
-[tool.coverage.report]
-exclude_lines = [
-  "pragma: no cover",
-  "if TYPE_CHECKING:",
-  "raise NotImplementedError",
-  "@overload",
-]
-[tool.coverage.run]
-omit = [
-  "*/*/_tests/*",
-]
-
 [tool.mypy]
 mypy_path = "stubs/"
 python_version = "3.11"
@@ -99,6 +81,24 @@ module = [
   "lammps",
 ]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/experimental --ignore=examples/amber"
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "@overload",
+]
+[tool.coverage.run]
+omit = [
+  "*/*/_tests/*",
+]
 
 [tool.interrogate]
 ignore-init-method = true
