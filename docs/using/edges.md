@@ -46,13 +46,13 @@ Interchange, following the [SMIRNOFF specification](https://openforcefield.githu
 1. **NAGL charges**: Like below, but using the `<NAGLCharges>` section of the force field
 1. **AM1-BCC**: Try to run some variant of AM1-BCC as described by the `<ToolkitAM1BCC>` section of the force field
 
-If charges are successfully assigned using a method, no lower-priority methods in this list are attempted. For example:
+The same charge method is always used for all atoms in a molecule. If charges are successfully assigned to a molecule using a method, no lower-priority methods in this list are attempted. For example:
 
 * If preset or library charges are included in a force field and match a particular molecule(s), NAGL-like charge models like AshGC will not be used to assign charges to that molecule.
-* A force field with library charge parameters for peptides (i.e. a biopolymer force field, covering all appropriate residues) will NOT try to call other charge methods on a biopolymer.
-* If a ligand is successfully assigned preset charges, chemical environment matching of library charges and charge increments will be skipped, as will AM1-BCC (traiditional or NAGL-based).
+* A force field with library charge parameters for peptides (i.e. a biopolymer force field, covering all appropriate residues) will NOT try to call other charge methods on a canonical polypeptide.
+* If a ligand is successfully assigned preset charges, chemical environment matching of library charges and charge increments will be skipped, as will AM1-BCC (traditional or NAGL-based).
 * If a variant of AM1-BCC (i.e. using something other than AM1 and/or using custom BCCs) is encoded in a `<ChargeIncrementModel>` section, other AM1-BCC implementations will not be called.
-* If preset charges are not provided, a force field like OpenFF's Parsley or Sage lines (before 2.3.0), without (many) library charges or charge increments will attempt AM1-BCC on all molecules (except water and monoatomic ions).
+* If preset charges are not provided, OpenFF's Parsley or Sage force fields prior to 2.3.0 will attempt an expensive AM1-BCC calculation on all molecules except water and monoatomic ions, as these force fields include very few library charges or charge increments.
 
 After all of these steps are complete and all heavy atoms given partial charges, virtual sites are assigned charges using the values of `charge_increment`s in the virtual site parameters. Because virtual site charge are only described by the force field, using preset charges with virtual sites is discouraged.
 
