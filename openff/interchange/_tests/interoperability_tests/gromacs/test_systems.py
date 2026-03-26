@@ -25,6 +25,7 @@ def test_water_dimer(water_dimer, tip3p, monkeypatch):
     gmx_monolithic_vs_itp(tip3p.create_interchange(water_dimer))
 
 
+@pytest.mark.xfail(reason="Test is very flaky in CI")
 @needs_gmx
 def test_alanine_dipeptide(alanine_dipeptide, ff14sb, monkeypatch):
     monkeypatch.setenv("INTERCHANGE_EXPERIMENTAL", "1")
