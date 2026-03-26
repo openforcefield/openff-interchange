@@ -52,7 +52,7 @@ The same charge method is always used for all atoms in a molecule. If charges ar
 * A force field with library charge parameters for peptides (i.e. a biopolymer force field, covering all appropriate residues) will NOT try to call other charge methods on a canonical polypeptide.
 * If a ligand is successfully assigned preset charges, chemical environment matching of library charges and charge increments will be skipped, as will AM1-BCC (traditional or NAGL-based).
 * If a variant of AM1-BCC (i.e. using something other than AM1 and/or using custom BCCs) is encoded in a `<ChargeIncrementModel>` section, other AM1-BCC implementations will not be called.
-* If preset charges are not provided, OpenFF's Parsley or Sage force fields prior to 2.3.0 will attempt an expensive AM1-BCC calculation on all molecules except water and monoatomic ions, as these force fields include very few library charges or charge increments.
+* If preset charges are not provided, OpenFF's Parsley or Sage force fields prior to 2.3.0 will attempt an expensive AM1-BCC calculation on all molecules except water and monoatomic ions, as these force fields include very few library charges and no charge increments.
 
 After all of these steps are complete and all heavy atoms given partial charges, virtual sites are assigned charges using the values of `charge_increment`s in the virtual site parameters. Because virtual site charge are only described by the force field, using preset charges with virtual sites is discouraged.
 
