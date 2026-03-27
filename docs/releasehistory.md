@@ -14,6 +14,7 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 ## Current development
 
 * #1452 Better manage some caches by invalidate OpenMM export-specific caches at export time
+* #1468 Update charge assignment documentation to include NAGL-based charge models.
 
 ## 0.5.2 - 2025-03-02
 
