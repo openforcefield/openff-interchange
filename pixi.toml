@@ -14,18 +14,14 @@ rdkit = ">=2024"
 openmm = "8.4.*"
 
 [environments]
-py311amber = [ "py311", "test", "typing", "ambertools", "mosdef" ]
-py311openeye = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ]
-py311examples = [ "py311", "openeye", "test", "engines", "examples" ]
 py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
 py312openeye = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ]
 py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
 py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
 py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
-py311etc = [ "py311", "openeye", "mosdef", "test", "typing", "etc" ]
 py312etc = [ "py312", "openeye", "mosdef", "test", "typing", "etc" ]
 dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
-betas = [ "py311", "test", "typing", "engines", "betas" ]
+betas = [ "py312", "test", "typing", "engines", "betas" ]
 
 [tasks]
 postinstall = "pip install -e . plugins/"
@@ -78,9 +74,6 @@ gromacs = "*"
 
 [feature.openeye.dependencies]
 openeye-toolkits = "*"
-
-[feature.py311.dependencies]
-python = "3.11.*"
 
 [feature.py312.dependencies]
 python = "3.12.*"
