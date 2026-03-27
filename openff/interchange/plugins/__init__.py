@@ -1,12 +1,6 @@
 """
-Collections for custom SMIRNOFF handlers.
+Collections for custom interactions.
 """
-
-from openff.interchange.smirnoff import SMIRNOFFCollection
-
-__all__ = [
-    "SMIRNOFFCollection",
-]
 
 
 def load_smirnoff_plugins() -> list:

@@ -12,7 +12,7 @@ from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
 from openff.interchange import Interchange
-from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection, _simpler_charges
+from openff.interchange.common._nonbonded import ElectrostaticsCollection, _simpler_charges, vdWCollection
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
     CannotSetSwitchingFunctionError,
@@ -64,22 +64,10 @@ def _process_nonbonded_forces(
     This typically involves processing the vdW and Electrostatics sections of an Interchange object
     into a corresponding openmm.NonbondedForce (if `combine_nonbonded_forces=True`) or a
     collection of other forces (NonbondedForce, CustomNonbondedForce, CustomBondForce) if
-    `combine_nonbondoed_forces=False`.
+    `combine_nonbonded_forces=False`.
 
     """
-    from openff.interchange.common._nonbonded import _NonbondedCollection
-
-    for collection in interchange.collections.values():
-        if isinstance(collection, _NonbondedCollection):
-            break
-    else:
-        # If there are no non-bonded collections, assume here that there can be no virtual sites,
-        # so just return an i-i mapping between OpenFF and OpenMM indices
-        return {i: i for i in range(interchange.topology.n_atoms)}
-
-    has_virtual_sites = "VirtualSites" in interchange.collections
-
-    if has_virtual_sites:
+    if "VirtualSites" in interchange.collections:
         from openff.interchange.interop._virtual_sites import (
             _virtual_site_parent_molecule_mapping,
         )
@@ -114,36 +102,12 @@ def _process_nonbonded_forces(
     )
 
     # TODO: Process ElectrostaticsHandler.exception_potential
-    has_vdw = False
-
-    for name, collection in interchange.collections.items():
-        if name == "vdW":
-            has_vdw = True
-            break
-        if collection.is_plugin:
-            # TODO: Here is where to detect an electrostatics plugin, if one ever exists
-            if collection.acts_as == "vdW":  # type: ignore[attr-defined]
-                has_vdw = True
-                break
-
-    if not has_vdw:
-        if has_virtual_sites:
-            raise UnsupportedExportError(
-                "Virtual sites with no vdW handler not currently supported. If this use case is "
-                "important to you, please raise an issue describing the functionality you wish to "
-                "see.",
-            )
-
-        try:
-            interchange["Electrostatics"]
-        except LookupError:
-            raise InternalInconsistencyError(
-                "In a confused state, could not find any vdW interactions but also failed to find "
-                "any electrostatics collection. This is a supported use case but should have been caught "
-                "earlier in this function. Please file an issue with a minimal reproducing example.",
-            )
 
     _data = _prepare_input_data(interchange)
+
+    if _data.vdw_collection is None and _data.electrostatics_collection is None:
+        # Will not make any non-bonded forces, but we have made particles, so just return early
+        return openff_openmm_particle_map
 
     if combine_nonbonded_forces:
         _func = _create_single_nonbonded_force
@@ -542,6 +506,8 @@ def _create_exceptions(
                         existing_exception_index=exception_index,
                         new_p1=virtual_particle_of_p1,
                         new_p2=p2,
+                        charge_scaling=coul_14,
+                        vdw_scaling=vdw_14,
                     )
 
             # If this iterable is not empty, add an exception between p2's virtual
@@ -553,6 +519,8 @@ def _create_exceptions(
                         existing_exception_index=exception_index,
                         new_p1=virtual_particle_of_p2,
                         new_p2=p1,
+                        charge_scaling=coul_14,
+                        vdw_scaling=vdw_14,
                     )
 
             # Adding (child of this parent)-(child of neighbor) exceptions
@@ -565,6 +533,8 @@ def _create_exceptions(
                     existing_exception_index=exception_index,
                     new_p1=v1,
                     new_p2=v2,
+                    charge_scaling=coul_14,
+                    vdw_scaling=vdw_14,
                 )
 
         for (
@@ -681,7 +651,7 @@ def _create_multiple_nonbonded_forces(
 
     coul_14, vdw_14 = _get_14_scaling_factors(data)
 
-    openmm_pairs = list()
+    openmm_pairs = set()
 
     for atom1, atom2 in _get_14_pairs(interchange.topology):
         openff_indices = (
@@ -694,7 +664,7 @@ def _create_multiple_nonbonded_forces(
             openff_openmm_particle_map[openff_indices[1]],
         )
 
-        openmm_pairs.append(openmm_indices)
+        openmm_pairs.add(openmm_indices)
 
     if electrostatics_force is not None:
         for i in range(electrostatics_force.getNumExceptions()):

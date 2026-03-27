@@ -13,6 +13,8 @@ from openff.interchange.models import PotentialKey, TopologyKey
 if has_foyer:
     try:
         from foyer import Forcefield
+        from foyer.atomtyper import find_atomtypes
+        from foyer.topology_graph import TopologyGraph
     except ModuleNotFoundError:
         pass
 
@@ -30,8 +32,6 @@ class FoyerVDWHandler(vdWCollection):
         topology: "Topology",
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
-        from foyer.atomtyper import find_atomtypes
-        from foyer.topology_graph import TopologyGraph
 
         top_graph = TopologyGraph.from_openff_topology(topology)
 
