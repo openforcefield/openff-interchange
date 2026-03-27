@@ -9,9 +9,11 @@ from openff.interchange import Interchange
 from openff.interchange.common._positions import _infer_positions
 from openff.interchange.components.toolkit import _check_electrostatics_handlers
 from openff.interchange.exceptions import (
+    InvalidTopologyError,
     MissingParameterHandlerError,
     PresetChargesError,
     SMIRNOFFHandlersNotImplementedError,
+    UnsupportedExportError,
 )
 from openff.interchange.plugins import load_smirnoff_plugins
 from openff.interchange.smirnoff._base import SMIRNOFFCollection, _check_all_valence_terms_assigned
@@ -19,6 +21,7 @@ from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.smirnoff._nonbonded import (
     SMIRNOFFElectrostaticsCollection,
     SMIRNOFFvdWCollection,
+    _upconvert_vdw_handler,
 )
 from openff.interchange.smirnoff._valence import (
     SMIRNOFFAngleCollection,
@@ -26,6 +29,7 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFConstraintCollection,
     SMIRNOFFImproperTorsionCollection,
     SMIRNOFFProperTorsionCollection,
+    _upconvert_bondhandler,
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
 from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
@@ -80,8 +84,6 @@ def _check_supported_handlers(force_field: ForceField):
 
 def validate_topology(value):
     """Validate a topology-like argument, spliced from a previous validator."""
-    from openff.interchange.exceptions import InvalidTopologyError
-
     if value is None:
         return None
     if isinstance(value, Topology):
@@ -145,7 +147,7 @@ def _create_interchange(
 
     _check_supported_handlers(force_field)
 
-    if molecules_with_preset_charges is not None and "VirtualSites" in force_field.registered_parameter_handlers:
+    if molecules_with_preset_charges and "VirtualSites" in force_field.registered_parameter_handlers:
         warnings.warn(
             "Preset charges were provided (via `charge_from_molecules`) alongside a force field that includes "
             "virtual site parameters. Note that virtual sites will be applied charges from the force field and "
@@ -276,8 +278,6 @@ def _bonds(
         return
 
     if force_field["Bonds"].version == Version("0.3"):
-        from openff.interchange.smirnoff._valence import _upconvert_bondhandler
-
         _upconvert_bondhandler(force_field["Bonds"])
 
     interchange.collections.update(
@@ -364,8 +364,6 @@ def _impropers(interchange, force_field, _topology):
 
 
 def _vdw(interchange: Interchange, force_field: ForceField, topology: Topology):
-    from openff.interchange.smirnoff._nonbonded import _upconvert_vdw_handler
-
     if "vdW" not in force_field.registered_parameter_handlers:
         return
 
@@ -472,7 +470,11 @@ def _virtual_sites(
                     vdw = collection  # type: ignore[assignment]
                     break
         else:
-            vdw = None
+            raise UnsupportedExportError(
+                "Virtual sites with no vdW handler not currently supported. If this use case is "
+                "important to you, please raise an issue describing the functionality you wish to "
+                "see.",
+            )
 
     electrostatics: SMIRNOFFElectrostaticsCollection = interchange["Electrostatics"]  # type: ignore[assignment]
 

@@ -14,3 +14,16 @@ from openff.interchange.smirnoff._valence import (
     SMIRNOFFProperTorsionCollection,
 )
 from openff.interchange.smirnoff._virtual_sites import SMIRNOFFVirtualSiteCollection
+
+__all__ = (
+    "SMIRNOFFAngleCollection",
+    "SMIRNOFFBondCollection",
+    "SMIRNOFFCollection",
+    "SMIRNOFFConstraintCollection",
+    "SMIRNOFFElectrostaticsCollection",
+    "SMIRNOFFGBSACollection",
+    "SMIRNOFFImproperTorsionCollection",
+    "SMIRNOFFProperTorsionCollection",
+    "SMIRNOFFVirtualSiteCollection",
+    "SMIRNOFFvdWCollection",
+)

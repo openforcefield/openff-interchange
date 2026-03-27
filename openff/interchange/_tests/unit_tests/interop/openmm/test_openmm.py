@@ -1,9 +1,11 @@
 import pandas
+import pytest
 from openff.toolkit import ForceField, Molecule, Quantity
 from openff.utilities.testing import skip_if_missing
 
 from openff.interchange.components.mdconfig import get_intermol_defaults
 from openff.interchange.drivers import get_summary_data
+from openff.interchange.exceptions import UnsupportedExportError
 
 
 def run(smiles: str, constrained: bool) -> pandas.DataFrame:
@@ -61,3 +63,65 @@ class TestToOpenMM:
         # epsilon of 1-4 interaction matches either atom's sigma
         scale = sage_unconstrained["vdW"].scale14
         assert epsilon == vdw_force.getParticleParameters(0)[1] * scale
+
+    def test_virtual_sites_no_vdw_error(self, tip4p, water):
+        tip4p.deregister_parameter_handler("vdW")
+        with pytest.raises(
+            UnsupportedExportError,
+            match="Virtual sites with no vdW handler",
+        ):
+            tip4p.create_interchange(water.to_topology()).to_openmm_system()
+
+    def test_particles_exist_without_nonbonded_force(self, sage_unconstrained):
+        import openmm
+
+        valence_ff = ForceField()
+
+        valence_ff.register_parameter_handler(sage_unconstrained["Bonds"])
+        valence_ff.register_parameter_handler(sage_unconstrained["Angles"])
+
+        valence_ff.register_parameter_handler(sage_unconstrained["ProperTorsions"])
+        valence_ff.register_parameter_handler(sage_unconstrained["ImproperTorsions"])
+
+        interchange = valence_ff.create_interchange(Molecule.from_smiles("CCO").to_topology())
+
+        assert "vdW" not in interchange.collections
+        assert "Electrostatics" not in interchange.collections
+
+        openmm_system = interchange.to_openmm()
+
+        # do we want to check the PDB file / OpenMM topology exported fro this state, too?
+
+        assert openmm_system.getNumParticles() == 9
+
+        for force in openmm_system.getForces():
+            assert not isinstance(force, openmm.NonbondedForce | openmm.CustomNonbondedForce)
+            assert isinstance(
+                force,
+                openmm.HarmonicBondForce
+                | openmm.HarmonicAngleForce
+                | openmm.PeriodicTorsionForce
+                | openmm.CMMotionRemover,
+            )
+
+    def test_particles_exist_with_no_forces(self):
+        import openmm
+
+        empty_ff = ForceField()
+
+        assert len(empty_ff.registered_parameter_handlers) == 0
+
+        interchange = empty_ff.create_interchange(Molecule.from_smiles("CCO").to_topology())
+
+        # Interchange creates an empty ConstraintsCollection by default, even with no
+        # constraints handler or other handlers that would populate it
+        assert len(interchange.collections) == 1
+
+        openmm_system = interchange.to_openmm()
+
+        assert openmm_system.getNumParticles() == 9
+
+        # CMMotionRemover is added by default, even with no forces
+        assert openmm_system.getNumForces() == 1
+
+        assert type(openmm_system.getForce(0)) is openmm.CMMotionRemover

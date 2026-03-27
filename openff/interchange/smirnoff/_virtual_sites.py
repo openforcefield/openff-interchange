@@ -436,7 +436,21 @@ def _build_local_coordinate_frames(
         ).reshape(-1, 1)
 
         x_hat = xy_plane_norm[0, :]
-        z_hat = numpy.cross(x_hat, xy_plane[1, :])
+        z_hat = numpy.cross(x_hat, xy_plane_norm[1, :])
+        z_norm = numpy.linalg.norm(z_hat)
+
+        THRESHOLD = 1e-6
+        if z_norm > THRESHOLD:
+            z_hat /= z_norm
+        else:
+            # Degenerate case for co-linear atoms, most likely as BondCharges
+            # Construct an arbitrary perpendicular vector to x_hat
+            if abs(x_hat[0]) < 0.9:  # corresponds to >= ~26 degrees away from x-axis
+                z_hat = numpy.cross(x_hat, numpy.array([1.0, 0.0, 0.0]))
+            else:
+                z_hat = numpy.cross(x_hat, numpy.array([0.0, 1.0, 0.0]))
+            z_hat = z_hat / numpy.linalg.norm(z_hat)
+
         y_hat = numpy.cross(z_hat, x_hat)
 
         stacked_frames[0].append(origin.reshape(1, -1))

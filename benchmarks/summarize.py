@@ -1,6 +1,7 @@
-import polars
-import packaging.version
 import subprocess
+
+import packaging.version
+import polars
 
 from openff.interchange import __version__
 

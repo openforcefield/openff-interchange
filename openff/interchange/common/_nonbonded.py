@@ -1,5 +1,4 @@
 import abc
-from openff.interchange.models import TopologyKey, SingleAtomChargeTopologyKey
 from collections.abc import Iterable
 from typing import Any, Literal
 
@@ -10,6 +9,8 @@ from openff.interchange._annotations import _DistanceQuantity, _ElementaryCharge
 from openff.interchange.components.potentials import Collection
 from openff.interchange.models import (
     LibraryChargeTopologyKey,
+    SingleAtomChargeTopologyKey,
+    TopologyKey,
     VirtualSiteKey,
 )
 
