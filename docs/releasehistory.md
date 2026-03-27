@@ -13,7 +13,34 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
+* #1452 Better manage some caches by invalidate OpenMM export-specific caches at export time
+* #1468 Update charge assignment documentation to include NAGL-based charge models.
+
+## 0.5.2 - 2025-03-02
+
+### Bug fixes
+
+* #1454 Fixes a bug that causes cache operations to error under some circumstances.
+* #1435 Fixes a bug in which `Colletion.set_force_field_parameters` did not update force field parameters upon export to simulation engines.
+
+## 0.5.1 - 2025-02-25
+
+### Breaking changes
+
+* #1424 `SMIRNOFFCollection` is no longer re-exported in `openff.interchange.plugins`, where it is not used. Import it from `openff.interchange.smirnoff` where it is defined.
+
+### Bug fixes
+
+* #1431 Exported OpenMM systems no longer lack particles when no non-bonded handlers are present in the force field.
 * #1418 Fixes issues in which `Interchange.combine` inputs could sometimes not then be exported to OpenMM.
+* #1435 Fixes issues in which re-creating an `Interchange` with a modified SMIRNOFF force field would not use modified parameters.
+* #1440 Fixes issues in which z coordinates of `DivalentLonePair` SMIRNOFF virtual site types were incorrect.
+* #1442 Ensures improper torsions are added to OpenMM systems, even when proper torsions are not present.
+* #1437 Fixes issues in which custom 1-4 scaling factors were not properly applied to some interactions involving virtual sites.
+
+### Performance improvements
+
+* #1446 Improves OpenMM export speed for systems containing very large molecules
 
 ## 0.5.0 - 2025-01-08
 
