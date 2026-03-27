@@ -7,25 +7,25 @@ import re
 
 import numpy
 import pytest
-from openff.toolkit import Molecule, Quantity
-from openff.utilities import has_package, skip_if_missing
-
-from openff.interchange._tests import MoleculeWithConformer
 from openff.packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
     UNIT_CUBE,
+    PACKMOLRuntimeError,
+    PACKMOLValueError,
     pack_box,
     solvate_topology,
     solvate_topology_nonwater,
-    PACKMOLRuntimeError,
-    PACKMOLValueError,
 )
 from openff.packmol._packmol import (
     _compute_brick_from_box_vectors,
     _find_packmol,
     _scale_box,
 )
+from openff.toolkit import Molecule, Quantity
+from openff.utilities import has_package, skip_if_missing
+
+from openff.interchange._tests import MoleculeWithConformer
 
 
 @pytest.fixture(scope="module")
