@@ -168,7 +168,7 @@ numpy = ">=2.3"
 # a separate feature group for things that don't fit nicely into the other categories
 [tool.pixi.feature.etc.dependencies]
 # a Packmol install separate from AmberTools is needed to test PBCs
-packmol = ">=20.15.0"
+openff-packmol = "*"
 smirnoff-plugins = "2025.*"
 
 [tool.pixi.feature.examples.dependencies]
@@ -216,9 +216,6 @@ openff-nagl-models = "*"
 [tool.pixi.feature.typing.dependencies]
 mypy = "*"
 pandas-stubs = "*"
-
-[tool.pixi.pypi-dependencies]
-openff-packmol = { git = "https://github.com/openforcefield/openff-packmol.git" }
 
 [tool.pixi.tasks]
 postinstall = "pip install -e . plugins/"
