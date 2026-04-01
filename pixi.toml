@@ -58,7 +58,7 @@ numpy = ">=2.3"
 # a separate feature group for things that don't fit nicely into the other categories
 [feature.etc.dependencies]
 # a Packmol install separate from AmberTools is needed to test PBCs
-openff-packmol = "*"
+packmol = "*"
 smirnoff-plugins = "2025.*"
 
 [feature.examples.dependencies]
@@ -104,6 +104,7 @@ jax = "*"
 pyedr = "*"
 openff-nagl-base = "*"
 openff-nagl-models = "*"
+openff-packmol = "*"
 
 [feature.typing.dependencies]
 mypy = "*"
