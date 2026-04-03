@@ -101,8 +101,8 @@ pyedr = "*"
 openff-nagl-base = ">=0.5.2"
 openff-nagl-models = "*"
 openff-packmol = "*"
-# smirnoff-plugins = "2025.*"  # https://github.com/conda-forge/smirnoff-plugins-feedstock/pull/23
+smirnoff-plugins = "2025.*"
 
 [feature.typing.dependencies]
-mypy = "*"
+mypy = "1.19.*"
 pandas-stubs = "*"
