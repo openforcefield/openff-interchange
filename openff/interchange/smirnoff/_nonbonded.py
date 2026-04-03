@@ -510,14 +510,14 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         additional_args: tuple[tuple[str, str]],
     ) -> Quantity:
         """Call out to the toolkit's toolkit wrappers to generate partial charges."""
-        additional_args: dict[str, str] = {i: j for i, j in additional_args}  # type: ignore[no-redef]
+        additional_args_as_dict: dict[str, str] = {i: j for i, j in additional_args}
         molecule = copy.deepcopy(molecule)
         GLOBAL_TOOLKIT_REGISTRY.call(
             "assign_partial_charges",
             molecule=molecule,
             partial_charge_method=method,
             raise_exception_types=exception_types_to_raise,
-            **additional_args,
+            **additional_args_as_dict,
         )
 
         return molecule.partial_charges
