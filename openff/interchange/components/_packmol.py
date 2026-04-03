@@ -2,7 +2,7 @@
 A wrapper around PACKMOL. Adapted from OpenFF Evaluator v0.4.3.
 """
 
-from openff.packmol import (
+from openff.packmol._packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
     UNIT_CUBE,
