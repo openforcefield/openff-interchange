@@ -19,6 +19,7 @@ def test_basic_reexport():
 
 @pytest.mark.skipif(
     not has_package("openff.packmol"),
+    reason="openff.packmol is not installed",
 )
 def test_import_error_when_openff_packmol_not_installed():
     with pytest.raises(
