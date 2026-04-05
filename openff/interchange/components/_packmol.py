@@ -2,10 +2,15 @@
 A wrapper around PACKMOL. Adapted from OpenFF Evaluator v0.4.3.
 """
 
-from openff.packmol._packmol import (
+from openff.packmol import (
     RHOMBIC_DODECAHEDRON,
     RHOMBIC_DODECAHEDRON_XYHEX,
     UNIT_CUBE,
+    pack_box,
+    solvate_topology,
+    solvate_topology_nonwater,
+)
+from openff.packmol._packmol import (
     _box_from_density,
     _box_vectors_are_in_reduced_form,
     _build_input_file,
@@ -26,9 +31,6 @@ from openff.packmol._packmol import (
     _validate_inputs,
     _wrap_into,
     _wrap_into_brick,
-    pack_box,
-    solvate_topology,
-    solvate_topology_nonwater,
 )
 
 __all__ = (

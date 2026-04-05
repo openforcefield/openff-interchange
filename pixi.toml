@@ -10,6 +10,7 @@ setuptools_scm = "*"
 pydantic = "=2"
 openff-toolkit-base = "0.18.*"
 openff-interchange-base = "0.5.*"
+openff-packmol = "*"
 rdkit = ">=2024"
 openmm = "8.4.*"
 
@@ -100,7 +101,6 @@ jax = "*"
 pyedr = "*"
 openff-nagl-base = ">=0.5.2"
 openff-nagl-models = "*"
-openff-packmol = "*"
 smirnoff-plugins = "2025.*"
 
 [feature.typing.dependencies]
