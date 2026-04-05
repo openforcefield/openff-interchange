@@ -102,7 +102,7 @@ intermol = "*"
 nglview = "*"
 jax = "*"
 pyedr = "*"
-openff-nagl-base = "*"
+openff-nagl-base = ">=0.5.2"
 openff-nagl-models = "*"
 
 [feature.typing.dependencies]
