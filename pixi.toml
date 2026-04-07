@@ -104,5 +104,5 @@ openff-nagl-models = "*"
 smirnoff-plugins = "2025.*"
 
 [feature.typing.dependencies]
-mypy = "1.19.*"
+mypy = ">=1.20"
 pandas-stubs = "*"
