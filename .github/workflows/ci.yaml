@@ -29,11 +29,9 @@ jobs:
           - py311amber
           - py311openeye
           - py311examples
-          - py311etc
           - py312amber
           - py312openeye
           - py312examples
-          - py312etc
           - py313openeye
           - py313examples
           - betas
@@ -50,6 +48,7 @@ jobs:
       with:
         pixi-version: v0.41.4
         environments: ${{ matrix.environment }}
+        frozen: true
 
     - name: Install and license OpenEye Toolkits
       if: ${{ !contains(matrix.environment, 'amber') }}

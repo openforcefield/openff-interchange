@@ -5,12 +5,12 @@ import warnings
 
 import numpy
 import pytest
+from openff.packmol import UNIT_CUBE, pack_box, solvate_topology
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_executable, skip_if_missing
 
 from openff.interchange import Interchange
 from openff.interchange._tests import MoleculeWithConformer, needs_gmx, shuffle_topology
-from openff.interchange.components._packmol import UNIT_CUBE, pack_box, solvate_topology
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import NonperiodicNoCutoffNotSupportedError
 from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning

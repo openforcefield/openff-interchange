@@ -10,22 +10,21 @@ setuptools_scm = "*"
 pydantic = "=2"
 openff-toolkit-base = "0.18.*"
 openff-interchange-base = "0.5.*"
+openff-packmol = "*"
 rdkit = ">=2024"
 openmm = "8.4.*"
 
 [environments]
 py311amber = [ "py311", "test", "typing", "ambertools", "mosdef" ]
-py311openeye = [ "py311", "openeye", "test", "typing", "regression_tests", "engines" ]
-py311examples = [ "py311", "openeye", "test", "engines", "examples" ]
+py311openeye = [ "py311", "openeye", "packmol", "test", "typing", "regression_tests", "engines" ]
+py311examples = [ "py311", "openeye", "packmol", "test", "engines", "examples" ]
 py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
-py312openeye = [ "py312", "openeye", "test", "typing", "regression_tests", "engines" ]
-py312examples = [ "py312", "openeye", "test", "engines", "examples" ]
+py312openeye = [ "py312", "openeye", "packmol", "test", "typing", "regression_tests", "engines" ]
+py312examples = [ "py312", "openeye", "packmol", "test", "engines", "examples" ]
 py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
-py313examples = [ "py313", "openeye", "test", "engines", "examples" ]
-py311etc = [ "py311", "openeye", "mosdef", "test", "typing", "etc" ]
-py312etc = [ "py312", "openeye", "mosdef", "test", "typing", "etc" ]
-dev = [ "py312", "openeye", "test", "typing", "dev", "engines" ]
-betas = [ "py311", "test", "typing", "engines", "betas" ]
+py313examples = [ "py313", "openeye", "packmol", "test", "engines", "examples" ]
+dev = [ "py312", "openeye", "test", "typing", "dev", "engines", "packmol" ]
+betas = [ "py311", "test", "typing", "engines", "betas", "packmol" ]
 
 [tasks]
 postinstall = "pip install -e . plugins/"
@@ -55,11 +54,9 @@ gromacs = "*"
 lammps = ">=2024.08.29"
 numpy = ">=2.3"
 
-# a separate feature group for things that don't fit nicely into the other categories
-[feature.etc.dependencies]
+[feature.packmol.dependencies]
 # a Packmol install separate from AmberTools is needed to test PBCs
-packmol = ">=20.15.0"
-smirnoff-plugins = "2025.*"
+packmol = "*"
 
 [feature.examples.dependencies]
 nbval = "*"
@@ -104,6 +101,7 @@ jax = "*"
 pyedr = "*"
 openff-nagl-base = ">=0.5.2"
 openff-nagl-models = "*"
+smirnoff-plugins = "2025.*"
 
 [feature.typing.dependencies]
 mypy = ">=1.20"
