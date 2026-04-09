@@ -68,6 +68,7 @@ module = [
   "openff.utilities.*",
   "openff.recharge.*",
   "openff.nagl_models.*",
+  "openff.packmol.*",
   "parmed",
   "parmed.amber",
   "pmdtest.utils",
