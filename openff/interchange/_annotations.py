@@ -204,6 +204,8 @@ def _duck_to_nanometer(value: Any):
     """Cast list or ndarray without units to Quantity[ndarray] of nanometer."""
     if isinstance(value, list | numpy.ndarray):
         return Quantity(value, "nanometer")
+    elif isinstance(value, Quantity):
+        return value.to("nanometer")
     else:
         return value
 
