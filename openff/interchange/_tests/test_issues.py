@@ -437,3 +437,13 @@ def test_issue_1480(sage, ethanol, attribute):
             )
 
     assert str(getattr(out, attribute).units) == "nanometer"
+
+    if attribute == "box":
+        box = out.box
+
+        assert box[0][0] == box[1][1] == box[2][2]
+
+        assert str(box[0][0].units) == "nanometer"
+        assert box[0][0].m == pytest.approx(3.5)
+        assert str(box[1][0].units) == "nanometer"
+        assert box[1][0].m == pytest.approx(0.0)
