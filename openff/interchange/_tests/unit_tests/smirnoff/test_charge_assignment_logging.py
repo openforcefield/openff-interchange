@@ -282,7 +282,7 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 
 
 def test_case0(caplog, sage_no_nagl, ligand):
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage_no_nagl.create_interchange(ligand.to_topology())
 
         info = map_methods_to_atom_indices(caplog)
@@ -292,7 +292,7 @@ def test_case0(caplog, sage_no_nagl, ligand):
 
 
 def test_case1(caplog, sage_no_nagl, ligand_and_water_and_ions):
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage_no_nagl.create_interchange(ligand_and_water_and_ions)
 
         info = map_methods_to_atom_indices(caplog)
@@ -307,7 +307,7 @@ def test_case1(caplog, sage_no_nagl, ligand_and_water_and_ions):
 def test_case2(caplog, sage_no_nagl, ligand, solvent):
     topology = Topology.from_molecules([ligand, solvent, solvent, solvent])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage_no_nagl.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
@@ -322,7 +322,7 @@ def test_case3(caplog, sage_no_nagl, ligand_and_water_and_ions, solvent):
 
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage_no_nagl.create_interchange(
             ligand_and_water_and_ions,
         )
@@ -350,7 +350,7 @@ def test_cases4_5(caplog, ligand_and_water_and_ions, preset_on_protein):
     if preset_on_protein:
         complex.molecule(0).assign_partial_charges(partial_charge_method="zeros")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         if preset_on_protein:
             ff.create_interchange(complex, charge_from_molecules=[complex.molecule(0)])
         else:
@@ -381,7 +381,7 @@ def test_case6(caplog, ligand, water):
 
     topology = Topology.from_molecules([ligand, water, water, water])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         force_field.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
@@ -403,7 +403,7 @@ def test_case6(caplog, ligand, water):
 def test_case7(caplog, sage_no_nagl, ligand_and_water_and_ions):
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage_no_nagl.create_interchange(
             ligand_and_water_and_ions,
             charge_from_molecules=[ligand_and_water_and_ions.molecule(0)],
@@ -421,7 +421,7 @@ def test_case7(caplog, sage_no_nagl, ligand_and_water_and_ions):
 def test_case8(caplog, sage_no_nagl, water_and_ions):
     water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage_no_nagl.create_interchange(
             water_and_ions,
             charge_from_molecules=[water_and_ions.molecule(0)],
@@ -437,7 +437,7 @@ def test_case8(caplog, sage_no_nagl, water_and_ions):
 
 
 def test_case9(caplog, sage_with_bond_charge):
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         _ensure_pre_nagl_sage(sage_with_bond_charge).create_interchange(
             Molecule.from_mapped_smiles(
                 "[H:3][C:1]([H:4])([H:5])[Cl:2]",
@@ -457,7 +457,7 @@ def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
     pytest.importorskip("openff.nagl")
     pytest.importorskip("rdkit")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         with toolkit_registry_manager(
             toolkit_registry=ToolkitRegistry(
                 toolkit_precedence=[NAGLToolkitWrapper, RDKitToolkitWrapper],
@@ -486,7 +486,7 @@ def test_case11(caplog, sage, ligand):
     """Test that NAGL charge assignment is properly logged."""
     pytest.importorskip("openff.nagl")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage.create_interchange(ligand.to_topology())
 
         info = map_methods_to_atom_indices(caplog)
@@ -502,7 +502,7 @@ def test_case12(caplog, sage, water):
 
     topology = Topology.from_molecules([water, water])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
@@ -518,7 +518,7 @@ def test_case13(caplog, sage, ligand, water):
 
     topology = Topology.from_molecules([ligand, water])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage.create_interchange(topology)
 
         info = map_methods_to_atom_indices(caplog)
@@ -536,7 +536,7 @@ def test_case14(caplog, sage, ligand):
 
     ligand.assign_partial_charges("gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         sage.create_interchange(
             ligand.to_topology(),
             charge_from_molecules=[ligand],

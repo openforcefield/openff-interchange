@@ -417,7 +417,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         parameter_value.m,
                     )
 
-                    logger.info(
+                    logger.debug(
                         "Charge section ChargeIncrementModel, applying charge increment from atom "
                         f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
                     )
@@ -953,27 +953,27 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
                             if type(new_key) is LibraryChargeTopologyKey:
-                                logger.info(
+                                logger.debug(
                                     "Charge section LibraryCharges applied to topology atom index "
                                     f"{topology_atom_index}",
                                 )
 
                             elif type(new_key) is SingleAtomChargeTopologyKey:
                                 if new_key.extras["handler"] == "ToolkitAM1BCCHandler":
-                                    logger.info(
+                                    logger.debug(
                                         "Charge section ToolkitAM1BCC, using charge method "
                                         f"{new_key.extras['partial_charge_method']}, "
                                         f"applied to topology atom index {topology_atom_index}",
                                     )
                                 elif new_key.extras["handler"] == "NAGLChargesHandler":
-                                    logger.info(
+                                    logger.debug(
                                         "Charge section NAGLCharges, using NAGL model "
                                         f"{new_key.extras['partial_charge_method']}, "
                                         f"applied to topology atom index {topology_atom_index}",
                                     )
 
                                 elif new_key.extras["handler"] == "preset":
-                                    logger.info(
+                                    logger.debug(
                                         f"Preset charges applied to atom index {topology_atom_index}",
                                     )
 
@@ -981,7 +981,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                                     raise ValueError(f"Unhandled handler {new_key.extras['handler']}")
 
                             elif type(new_key) is ChargeModelTopologyKey:
-                                logger.info(
+                                logger.debug(
                                     "Charge section ChargeIncrementModel, using charge method "
                                     f"{new_key.partial_charge_method}, "
                                     f"applied to topology atom index {new_key.this_atom_index}",
