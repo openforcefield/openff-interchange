@@ -124,7 +124,7 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
     for record in caplog.records:
         # skip logged warnings from upstreams/other packages
         if record.name.startswith("openff.interchange"):
-            assert record.levelname == "INFO", "Only INFO logs are expected."
+            assert record.levelname == "DEBUG", "Only DEBUG logs are expected."
         else:
             continue
 
