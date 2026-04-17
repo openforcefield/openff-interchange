@@ -952,49 +952,10 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             # Have this new key (on a duplicate molecule) point to the same potential
                             # as the old key (on a unique/reference molecule)
-                            if type(new_key) is LibraryChargeTopologyKey:
-                                logger.info(
-                                    "Charge section LibraryCharges applied to topology atom index "
-                                    f"{topology_atom_index}",
-                                )
-
-                            elif type(new_key) is SingleAtomChargeTopologyKey:
-                                if new_key.extras["handler"] == "ToolkitAM1BCCHandler":
-                                    logger.info(
-                                        "Charge section ToolkitAM1BCC, using charge method "
-                                        f"{new_key.extras['partial_charge_method']}, "
-                                        f"applied to topology atom index {topology_atom_index}",
-                                    )
-                                elif new_key.extras["handler"] == "NAGLChargesHandler":
-                                    logger.info(
-                                        "Charge section NAGLCharges, using NAGL model "
-                                        f"{new_key.extras['partial_charge_method']}, "
-                                        f"applied to topology atom index {topology_atom_index}",
-                                    )
-
-                                elif new_key.extras["handler"] == "preset":
-                                    logger.info(
-                                        f"Preset charges applied to atom index {topology_atom_index}",
-                                    )
-
-                                else:
-                                    raise ValueError(f"Unhandled handler {new_key.extras['handler']}")
-
-                            elif type(new_key) is ChargeModelTopologyKey:
-                                logger.info(
-                                    "Charge section ChargeIncrementModel, using charge method "
-                                    f"{new_key.partial_charge_method}, "
-                                    f"applied to topology atom index {new_key.this_atom_index}",
-                                )
-
-                            elif type(new_key) is ChargeIncrementTopologyKey:
-                                # here is where the actual increments could be logged
-                                pass
-
-                            else:
-                                raise ValueError(f"Unhandled key type {type(new_key)}")
 
                             self.key_map[new_key] = matches[key]
+
+            self._log_charge_provenance(unique_molecule, new_key)
 
         # this logic is all only to satisfy the allow_nonintegral_charges argument - could be more performant
         # to do it while assignment is happening
@@ -1024,6 +985,54 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         f"a net charge of {charge_sum} compared to a total formal charge of "
                         f"{formal_sum}.",
                     )
+
+    @staticmethod
+    def _log_charge_provenance(
+        unique_molecule: Molecule,
+        key: ChargeModelTopologyKey | ChargeModelTopologyKey | SingleAtomChargeTopologyKey | LibraryChargeTopologyKey,
+    ):
+        inchi = unique_molecule.to_inchi()
+
+        if type(key) is LibraryChargeTopologyKey:
+            logger.info(
+                f"Charge section LibraryCharges applied to molecule with InChI {inchi}",
+            )
+
+        elif type(key) is SingleAtomChargeTopologyKey:
+            if key.extras["handler"] == "ToolkitAM1BCCHandler":
+                logger.info(
+                    "Charge section ToolkitAM1BCC, using charge method "
+                    f"{key.extras['partial_charge_method']}, "
+                    f"applied to molecule with InChI {inchi}",
+                )
+            elif key.extras["handler"] == "NAGLChargesHandler":
+                logger.info(
+                    "Charge section NAGLCharges, using NAGL model "
+                    f"{key.extras['partial_charge_method']}, "
+                    f"applied to molecule with InChI {inchi}",
+                )
+
+            elif key.extras["handler"] == "preset":
+                logger.info(
+                    f"Preset charges applied to molecule with InChI {inchi}",
+                )
+
+            else:
+                raise ValueError(f"Unhandled handler {key.extras['handler']}")
+
+        elif type(key) is ChargeModelTopologyKey:
+            logger.info(
+                "Charge section ChargeIncrementModel, using charge method "
+                f"{key.partial_charge_method}, "
+                f"applied to topology atom index {key.this_atom_index}",
+            )
+
+        elif type(key) is ChargeIncrementTopologyKey:
+            # here is where the actual increments could be logged
+            pass
+
+        else:
+            raise ValueError(f"Unhandled key type {type(key)}")
 
     def store_potentials(
         self,
