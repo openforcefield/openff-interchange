@@ -995,7 +995,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
         if type(key) is LibraryChargeTopologyKey:
             logger.info(
-                f"Charge section LibraryCharges applied to molecule with InChI {inchi}",
+                f"Charge section LibraryCharges, applied to molecule with InChI {inchi}",
             )
 
         elif type(key) is SingleAtomChargeTopologyKey:
@@ -1024,11 +1024,12 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
             logger.info(
                 "Charge section ChargeIncrementModel, using charge method "
                 f"{key.partial_charge_method}, "
-                f"applied to topology atom index {key.this_atom_index}",
+                f"applied to molecule with InChI {inchi}",
             )
 
         elif type(key) is ChargeIncrementTopologyKey:
-            # here is where the actual increments could be logged
+            # here is where the individual increments could be logged at creation time, but they're
+            # also logged in _get_charges
             pass
 
         else:

@@ -115,7 +115,7 @@ AM1BCC_KEY = "am1bccelf10" if OPENEYE_AVAILABLE else "am1bcc"
 NAGL_KEY = "openff-gnn-am1bcc-1.0.0.pt"
 
 
-def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
+def map_methods_to_inchi(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
     """
     Map partial charge assignment methods to (sorted) atom indices.
     """
@@ -131,13 +131,21 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
         message = record.msg
 
         if message.startswith("Charge section LibraryCharges"):
-            info["library"].append(int(message.split("atom index ")[-1]))
+            _, molecule = message.split(", ")
+
+            info["library"].append(molecule.split("InChI ")[-1])
 
         elif message.startswith("Charge section ToolkitAM1BCC"):
-            info[message.split(", ")[1].split(" ")[-1]].append(int(message.split("atom index ")[-1]))
+            _, method, molecule = message.split(", ")
+
+            assert method.split()[-1] == AM1BCC_KEY, f"Expected method {AM1BCC_KEY} but got {method.split()[-1]}"
+
+            info[method.split()[-1]].append(molecule.split("InChI ")[-1])
 
         elif message.startswith("Charge section NAGLCharges"):
-            info["NAGLChargesHandler"].append(int(message.split("atom index ")[-1]))
+            _, _, molecule = message.split(", ")
+
+            info["NAGL"].append(molecule.split("InChI ")[-1])
 
         # without also pulling the virtual site - particle mapping (which is different for each engine)
         # it's hard to store more information than the orientation atoms that are affected by each
@@ -151,12 +159,13 @@ def map_methods_to_atom_indices(caplog: pytest.LogCaptureFixture) -> dict[str, l
                 info["orientation"].append(atom)
 
         elif message.startswith("Preset charges"):
-            info["preset"].append(int(message.split("atom index")[-1]))
+            info["preset"].append(message.split("InChI ")[-1])
 
         elif message.startswith("Charge section ChargeIncrementModel"):
             if "using charge method" in message:
-                info[f"chargeincrements_{message.split(',')[1].split(' ')[-1]}"].append(
-                    int(message.split("atom index ")[-1]),
+                _, method, molecule = message.split(", ")
+                info[f"chargeincrements_{method.split()[-1]}"].append(
+                    molecule.split("InChI ")[-1],
                 )
 
             elif "applying charge increment" in message:
@@ -285,23 +294,27 @@ def test_case0(caplog, sage_no_nagl, ligand):
     with caplog.at_level(logging.INFO):
         sage_no_nagl.create_interchange(ligand.to_topology())
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC
-        assert info[AM1BCC_KEY] == [*range(0, 9)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
 
 def test_case1(caplog, sage_no_nagl, ligand_and_water_and_ions):
     with caplog.at_level(logging.INFO):
         sage_no_nagl.create_interchange(ligand_and_water_and_ions)
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC
-        assert info[AM1BCC_KEY] == [*range(0, 9)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert info["library"] == [*range(9, 22)]
+        assert info["library"] == [
+            "InChI=1S/ClH/h1H/p-1",
+            "InChI=1S/H2O/h1H2",
+            "InChI=1S/Na/q+1",
+        ]
 
 
 def test_case2(caplog, sage_no_nagl, ligand, solvent):
@@ -310,10 +323,10 @@ def test_case2(caplog, sage_no_nagl, ligand, solvent):
     with caplog.at_level(logging.INFO):
         sage_no_nagl.create_interchange(topology)
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # everything should get AM1-BCC charges
-        assert info[AM1BCC_KEY] == [*range(0, topology.n_atoms)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", "InChI=1S/CH5N/c1-2/h2H2,1H3"]
 
 
 def test_case3(caplog, sage_no_nagl, ligand_and_water_and_ions, solvent):
@@ -327,14 +340,18 @@ def test_case3(caplog, sage_no_nagl, ligand_and_water_and_ions, solvent):
             ligand_and_water_and_ions,
         )
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC,
         # and also solvent molecules (starting at index 22)
-        assert info[AM1BCC_KEY] == [*range(0, 9), *range(22, 22 + 3 * 7)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", "InChI=1S/CH5N/c1-2/h2H2,1H3"]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert info["library"] == [*range(9, 22)]
+        assert info["library"] == [
+            "InChI=1S/ClH/h1H/p-1",
+            "InChI=1S/H2O/h1H2",
+            "InChI=1S/Na/q+1",
+        ]
 
 
 @pytest.mark.slow
@@ -356,23 +373,29 @@ def test_cases4_5(caplog, ligand_and_water_and_ions, preset_on_protein):
         else:
             ff.create_interchange(complex)
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
-        assert info[AM1BCC_KEY] == [*range(complex.molecule(0).n_atoms, complex.molecule(0).n_atoms + 9)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
         if preset_on_protein:
             # protein gets preset charges
-            assert info["preset"] == [*range(0, complex.molecule(0).n_atoms)]
+            assert info["preset"] == [
+                "InChI=1S/C9H17N3O3/c1-5(8(14)10-4)12-9(15)6(2)11-7(3)13/h5-6H,1-4H3,(H,10,14)(H,11,13)(H,12,15)/t5-,6-/m0/s1",
+            ]
 
             # everything after the protein and ligand should get library charges
             assert info["library"] == [
-                *range(complex.molecule(0).n_atoms + 9, complex.n_atoms),
+                "InChI=1S/ClH/h1H/p-1",
+                "InChI=1S/H2O/h1H2",
+                "InChI=1S/Na/q+1",
             ]
         else:
             # the protein and everything after the ligand should get library charges
             assert info["library"] == [
-                *range(0, complex.molecule(0).n_atoms),
-                *range(complex.molecule(0).n_atoms + 9, complex.n_atoms),
+                "InChI=1S/C9H17N3O3/c1-5(8(14)10-4)12-9(15)6(2)11-7(3)13/h5-6H,1-4H3,(H,10,14)(H,11,13)(H,12,15)/t5-,6-/m0/s1",
+                "InChI=1S/ClH/h1H/p-1",
+                "InChI=1S/H2O/h1H2",
+                "InChI=1S/Na/q+1",
             ]
 
 
@@ -384,13 +407,13 @@ def test_case6(caplog, ligand, water):
     with caplog.at_level(logging.INFO):
         force_field.create_interchange(topology)
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC charges
-        assert info[AM1BCC_KEY] == [*range(0, 9)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
         # atoms 9 through 17 are water atoms, getting library charges
-        assert info["library"] == [*range(9, 18)]
+        assert info["library"] == ["InChI=1S/H2O/h1H2"]
 
         # particles 18 through 20 are water virtual sites, but the current logging strategy
         # makes it hard to match these up (and the particle indices are different OpenMM/GROMACS/etc)
@@ -409,13 +432,17 @@ def test_case7(caplog, sage_no_nagl, ligand_and_water_and_ions):
             charge_from_molecules=[ligand_and_water_and_ions.molecule(0)],
         )
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 8 are ethanol, getting preset charges
-        assert info["preset"] == [*range(0, 9)]
+        assert info["preset"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert info["library"] == [*range(9, 22)]
+        assert info["library"] == [
+            "InChI=1S/ClH/h1H/p-1",
+            "InChI=1S/H2O/h1H2",
+            "InChI=1S/Na/q+1",
+        ]
 
 
 def test_case8(caplog, sage_no_nagl, water_and_ions):
@@ -427,13 +454,13 @@ def test_case8(caplog, sage_no_nagl, water_and_ions):
             charge_from_molecules=[water_and_ions.molecule(0)],
         )
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 8 are water, getting preset charges
-        assert info["preset"] == [*range(0, 9)]
+        assert info["preset"] == ["InChI=1S/H2O/h1H2"]
 
         # atoms 9 through 12 are ions, getting library charges
-        assert info["library"] == [*range(9, 13)]
+        assert info["library"] == ["InChI=1S/ClH/h1H/p-1", "InChI=1S/Na/q+1"]
 
 
 def test_case9(caplog, sage_with_bond_charge):
@@ -444,10 +471,10 @@ def test_case9(caplog, sage_with_bond_charge):
             ).to_topology(),
         )
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # atoms 0 through 5 are ligand, getting AM1-BCC charges
-        assert info[AM1BCC_KEY] == [*range(0, 5)]
+        assert info[AM1BCC_KEY] == ["InChI=1S/CH3Cl/c1-2/h1H3"]
 
         # atoms 0 and 1 are the orientation atoms of the sigma hole virtual site
         assert info["orientation"] == [0, 1]
@@ -467,10 +494,10 @@ def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
                 ligand.to_topology(),
             )
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
-        # atoms 0 through 5 are ligand, getting NAGL charges
-        assert info[f"chargeincrements_{NAGL_KEY}"] == [*range(0, 9)]
+        # atoms 0 through 8 are ligand, getting NAGL charges
+        assert info[f"chargeincrements_{NAGL_KEY}"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
         # TODO: These are logged symmetrically (i.e. hydrogens are listed)
         # even though the charges appear to be correct, assert should
@@ -489,11 +516,11 @@ def test_case11(caplog, sage, ligand):
     with caplog.at_level(logging.INFO):
         sage.create_interchange(ligand.to_topology())
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # Should log NAGL charges for all atoms
-        assert "NAGLChargesHandler" in info
-        assert info["NAGLChargesHandler"] == [*range(0, ligand.n_atoms)]
+        assert "NAGL" in info
+        assert info["NAGL"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
 
 def test_case12(caplog, sage, water):
@@ -505,11 +532,11 @@ def test_case12(caplog, sage, water):
     with caplog.at_level(logging.INFO):
         sage.create_interchange(topology)
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # Water should get library charges, not NAGL
-        assert info["library"] == [*range(0, 6)]  # 2 water molecules, 3 atoms each
-        assert "NAGLChargesHandler" not in info
+        assert info["library"] == ["InChI=1S/H2O/h1H2"]  # 2 water molecules
+        assert "NAGL" not in info
 
 
 def test_case13(caplog, sage, ligand, water):
@@ -521,13 +548,13 @@ def test_case13(caplog, sage, ligand, water):
     with caplog.at_level(logging.INFO):
         sage.create_interchange(topology)
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # Ligand should get NAGL charges
-        assert info["NAGLChargesHandler"] == [*range(0, ligand.n_atoms)]
+        assert info["NAGL"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
 
         # Water should get library charges
-        assert info["library"] == [*range(ligand.n_atoms, ligand.n_atoms + water.n_atoms)]
+        assert info["library"] == ["InChI=1S/H2O/h1H2"]
 
 
 def test_case14(caplog, sage, ligand):
@@ -542,8 +569,8 @@ def test_case14(caplog, sage, ligand):
             charge_from_molecules=[ligand],
         )
 
-        info = map_methods_to_atom_indices(caplog)
+        info = map_methods_to_inchi(caplog)
 
         # Should use preset charges, not NAGL
-        assert info["preset"] == [*range(0, ligand.n_atoms)]
-        assert "NAGLChargesHandler" not in info
+        assert info["preset"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert "NAGL" not in info
