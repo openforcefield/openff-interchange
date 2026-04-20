@@ -955,7 +955,9 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
 
                             self.key_map[new_key] = matches[key]
 
-            self._log_charge_provenance(unique_molecule, new_key)
+            # don't bother going through logging machinery if it's not opted-in to
+            if logger.isEnabledFor(logging.INFO):
+                self._log_charge_provenance(unique_molecule, new_key)
 
         # this logic is all only to satisfy the allow_nonintegral_charges argument - could be more performant
         # to do it while assignment is happening
@@ -991,7 +993,15 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         unique_molecule: Molecule,
         key: ChargeModelTopologyKey | ChargeModelTopologyKey | SingleAtomChargeTopologyKey | LibraryChargeTopologyKey,
     ):
-        inchi = unique_molecule.to_inchi()
+        try:
+            inchi = unique_molecule.to_inchi()
+        except Exception as error:
+            logger.warning(
+                f"Could not generate InChI for molecule with Hill formula {unique_molecule.to_hill_formula()}. "
+                "This molecule's charge provenance will be logged without a valid InChI. "
+                f"Error was {error}",
+            )
+            inchi = "UNKNOWN_INCHI"
 
         if type(key) is LibraryChargeTopologyKey:
             logger.info(
