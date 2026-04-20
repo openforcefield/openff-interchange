@@ -574,3 +574,13 @@ def test_case14(caplog, sage, ligand):
         # Should use preset charges, not NAGL
         assert info["preset"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
         assert "NAGL" not in info
+
+
+def test_inchi_fallback(caplog, sage):
+    """Test that molecules that fail InChI generation are still logged in some way."""
+
+    # TODO: Might be a toolkit bug that needs to be worked around
+    with caplog.at_level(logging.INFO):
+        sage.create_interchange(
+            Molecule.from_smiles(342 * "C").to_topology(),
+        )
