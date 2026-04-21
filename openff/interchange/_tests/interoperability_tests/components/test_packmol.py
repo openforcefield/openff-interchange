@@ -1,11 +1,9 @@
 import pytest
+from openff.packmol import solvate_topology_nonwater
+from openff.packmol._packmol import _find_packmol
 from openff.toolkit import Quantity
 
 from openff.interchange._tests import MoleculeWithConformer
-from openff.interchange.components._packmol import (
-    _find_packmol,
-    solvate_topology_nonwater,
-)
 from openff.interchange.drivers import get_openmm_energies
 
 
