@@ -117,15 +117,18 @@ NAGL_KEY = "openff-gnn-am1bcc-1.0.0.pt"
 
 def map_methods_to_inchi(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
     """
-    Map partial charge assignment methods to (sorted) atom indices.
+    Map partial charge assignment methods to (sorted) molecule InChI.
     """
     info = defaultdict(list)
 
     for record in caplog.records:
-        # skip logged warnings from upstreams/other packages
         if record.name.startswith("openff.interchange"):
+            # This is a specific one-off logging event not relevant to this function
+            if "Could not generate InChI for molecule with Hill formula" in record.msg:
+                continue
             assert record.levelname == "INFO", "Only INFO logs are expected."
         else:
+            # skip logged warnings from upstreams/other packages
             continue
 
         message = record.msg
@@ -578,9 +581,19 @@ def test_case14(caplog, sage, ligand):
 
 def test_inchi_fallback(caplog, sage):
     """Test that molecules that fail InChI generation are still logged in some way."""
+    from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper
 
     # TODO: Might be a toolkit bug that needs to be worked around
     with caplog.at_level(logging.INFO):
         sage.create_interchange(
             Molecule.from_smiles(342 * "C").to_topology(),
         )
+
+        info = map_methods_to_inchi(caplog)
+
+        if OpenEyeToolkitWrapper.is_available():
+            assert info["NAGL"] == ["UNKNOWN_INCHI"]
+        else:
+            # RDKit can generate an InChI for this molecule, but it's very long
+            assert len(info["NAGL"]) == 1
+            assert info["NAGL"][0].startswith("InChI=1S/C342H686/c1-3-5")

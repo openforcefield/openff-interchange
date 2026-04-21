@@ -991,12 +991,13 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
     @staticmethod
     def _log_charge_provenance(
         unique_molecule: Molecule,
-        key: ChargeModelTopologyKey | ChargeModelTopologyKey | SingleAtomChargeTopologyKey | LibraryChargeTopologyKey,
+        key: ChargeModelTopologyKey | SingleAtomChargeTopologyKey | LibraryChargeTopologyKey,
     ):
         try:
             inchi = unique_molecule.to_inchi()
         except Exception as error:
-            logger.warning(
+            # In principle this is more like a warning, but the context is already logging.INFO, so why not?
+            logger.info(
                 f"Could not generate InChI for molecule with Hill formula {unique_molecule.to_hill_formula()}. "
                 "This molecule's charge provenance will be logged without a valid InChI. "
                 f"Error was {error}",
