@@ -36,6 +36,8 @@ You may also wish to make the vdW cut-off distance longer. This is typically acc
 
 ## Quirks of charge assignment
 
+(smirnoff-charge-assignment-hierarchy)=
+
 ### Charge assignment hierarchy
 
 Interchange, following the [SMIRNOFF specification](https://openforcefield.github.io/standards/standards/smirnoff/#partial-charge-and-electrostatics-models), assigns charges to (heavy) atoms with the following priority:
