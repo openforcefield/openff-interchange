@@ -1,7 +1,6 @@
 import itertools
 import re
 from collections import defaultdict
-from typing import TypeAlias
 
 from openff.toolkit import Molecule, Quantity
 from openff.toolkit.topology import Atom
@@ -47,7 +46,7 @@ from openff.interchange.smirnoff._virtual_sites import (
     _create_virtual_site_object,
 )
 
-MoleculeLike: TypeAlias = Molecule | _SimpleMolecule
+type MoleculeLike = Molecule | _SimpleMolecule
 
 _WATER = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 _SIMPLE_WATER = _SimpleMolecule.from_molecule(_WATER)
