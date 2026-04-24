@@ -6,7 +6,7 @@ For topics or details not specified, refer to the [development guidelines]( http
 
 ## Supported Python versions
 
-Generally, follow [SPEC 0](https://scientific-python.org/specs/spec-0000/). This means that currently Python 3.12-3.13 are supported as of the last update of this document (January 2026). No effort needs to be made to support older versions (Python 2 or 3.11 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
+Generally, follow [SPEC 0](https://scientific-python.org/specs/spec-0000/). This means that currently Python 3.12-3.13 are supported. No effort needs to be made to support older versions (Python 2 or 3.11 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
 
 ## Style
 
@@ -174,7 +174,7 @@ $ pixi run -e py312examples run_examples
 ...
 ```
 
-or run unit tests with Python 3.11 as
+or run unit tests with Python 3.12 as
 
 ```console
 $ pixi run -e py312amber run_tests
