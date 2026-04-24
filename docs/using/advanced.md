@@ -21,7 +21,7 @@ import logging
 from openff.toolkit import ForceField, Molecule
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("openff.interchange").setLevel(logging.DEBUG)
+logging.getLogger("openff.interchange").setLevel(logging.DEBUG)
 
 ForceField("openff-2.2.0.offxml").create_interchange(
     Molecule.from_smiles("CCO").to_topology()
