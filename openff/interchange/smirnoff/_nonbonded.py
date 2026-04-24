@@ -47,14 +47,6 @@ from openff.interchange.warnings import ForceFieldModificationWarning
 
 logger = logging.getLogger(__name__)
 
-"""
-    type ListOrSet[T] = list[T] | set[T]
-
-    T = TypeVar("T")
-    ListOrSet = TypeAliasType("ListOrSet", list[T] | set[T], type_params=(T,))
-
-"""
-
 type ElectrostaticsHandlerType = (
     ElectrostaticsHandler
     | ToolkitAM1BCCHandler
