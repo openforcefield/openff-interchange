@@ -41,7 +41,7 @@ channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "cond
 openeye-toolkits = "*"
 openmm = "*"
 
-[feature.dev.dependencies]
+[feature.dev.pypi-dependencies]
 pre-commit = "*"
 
 [feature.engines.dependencies]
