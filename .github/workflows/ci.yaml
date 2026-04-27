@@ -26,9 +26,6 @@ jobs:
           - ubuntu-latest
           - macos-latest
         environment:
-          - py311amber
-          - py311openeye
-          - py311examples
           - py312amber
           - py312openeye
           - py312examples

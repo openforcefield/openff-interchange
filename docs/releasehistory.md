@@ -15,6 +15,8 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 * #1452 Better manage some caches by invalidate OpenMM export-specific caches at export time
 * #1468 Update charge assignment documentation to include NAGL-based charge models.
+* #1481 Ensured box vectors and positions were stored internally in nanometers if passed in as other compatible units such as Angstroms.
+* #1487 Change charge logging level to `logging.DEBUG`
 
 ## 0.5.2 - 2025-03-02
 

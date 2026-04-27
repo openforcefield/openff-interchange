@@ -10,10 +10,9 @@ name = "openff-interchange"
 description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
@@ -46,7 +45,7 @@ table_format = "long"
 
 [tool.mypy]
 mypy_path = "stubs/"
-python_version = "3.11"
+python_version = "3.12"
 plugins = "pydantic.mypy"
 warn_unused_configs = true
 warn_unused_ignores = true
