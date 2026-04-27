@@ -13,14 +13,15 @@ If a molecule gets charges from one method, attempts to match charges for later 
 
 After all (mass-bearing) atoms have partial charges assigned, virtual sites are given charges by transferring charge from the atoms they are associated with ("orientation" atoms) according to the parameters of the force field. (The value of these parameters can be 0.0.)
 
-Given this complexity, it may be useful to track how each atom actually got charges assigned. Interchange has opt-in logging to track this behavior. This uses the [standard library `logging` module](https://docs.python.org/3/library/logging.html) at the `INFO` level. The easiest way to get started is by adding something like `logging.basicConfig(level=logging.INFO)` to the beginning of a script or program. For example, this script:
+Given this complexity, it may be useful to track how each atom actually got charges assigned. Interchange has opt-in logging to track this behavior. This uses the [standard library `logging` module](https://docs.python.org/3/library/logging.html) at the `logging.DEBUG` level. The easiest way to get started is by adding something like `logging.getLogger("openff.interchange").setLevel(logging.DEBUG)` to the beginning of a script or program. For example, this script:
 
 ```python
 import logging
 
 from openff.toolkit import ForceField, Molecule
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig()
+logging.getLogger("openff.interchange").setLevel(logging.DEBUG)
 
 ForceField("openff-2.2.0.offxml").create_interchange(
     Molecule.from_smiles("CCO").to_topology()
@@ -30,15 +31,15 @@ ForceField("openff-2.2.0.offxml").create_interchange(
 will produce output including something like
 
 ```shell
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 0
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 1
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 2
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 3
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 4
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 5
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 6
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 7
-INFO:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bcc, applied to (topology) atom index 8
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 0
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 1
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 2
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 3
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 4
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 5
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 6
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 7
+DEBUG:openff.interchange.smirnoff._nonbonded:Charge section ToolkitAM1BCC, using charge method am1bccelf10, applied to topology atom index 8
 ```
 
 This functionality is only available with SMIRNOFF force fields.
