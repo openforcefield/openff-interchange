@@ -19,7 +19,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.utils.exceptions import MissingPackageError, SMIRNOFFSpecError
 from packaging.version import Version
 from pydantic import Field, PrivateAttr, computed_field
-from typing_extensions import TypeAliasType, TypeVar
 
 from openff.interchange._annotations import _ElementaryChargeQuantity
 from openff.interchange.common._nonbonded import (
@@ -48,26 +47,12 @@ from openff.interchange.warnings import ForceFieldModificationWarning
 
 logger = logging.getLogger(__name__)
 
-"""
-    type ListOrSet[T] = list[T] | set[T]
-
-    T = TypeVar("T")
-    ListOrSet = TypeAliasType("ListOrSet", list[T] | set[T], type_params=(T,))
-
-"""
-
-# would be much simpler with Python 3.12+
-# type ElectrostaticsHandlerType = ...
-# https://docs.python.org/3/library/typing.html#type-aliases
-EHT = TypeVar("EHT")
-ElectrostaticsHandlerType = TypeAliasType(
-    "ElectrostaticsHandlerType",
+type ElectrostaticsHandlerType = (
     ElectrostaticsHandler
     | ToolkitAM1BCCHandler
     | ChargeIncrementModelHandler
     | LibraryChargeHandler
-    | NAGLChargesHandler,
-    type_params=(EHT,),
+    | NAGLChargesHandler
 )
 
 
@@ -417,7 +402,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                         parameter_value.m,
                     )
 
-                    logger.info(
+                    logger.debug(
                         "Charge section ChargeIncrementModel, applying charge increment from atom "
                         f"{topology_key.this_atom_index} to atoms {topology_key.other_atom_indices}",
                     )
@@ -956,7 +941,7 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
                             self.key_map[new_key] = matches[key]
 
             # don't bother going through logging machinery if it's not opted-in to
-            if logger.isEnabledFor(logging.INFO):
+            if logger.isEnabledFor(logging.DEBUG):
                 self._log_charge_provenance(unique_molecule, new_key)
 
         # this logic is all only to satisfy the allow_nonintegral_charges argument - could be more performant

@@ -6,7 +6,7 @@ import ast
 import functools
 import gc
 import json
-from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
+from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy
 from numpy.typing import ArrayLike
@@ -34,9 +34,9 @@ if TYPE_CHECKING:
     if has_package("jax"):
         from jax import Array
     else:
-        Array: TypeAlias = Any  # type: ignore[no-redef]
+        type Array = Any  # type: ignore[no-redef]
 else:
-    Array: TypeAlias = ArrayLike
+    type Array = ArrayLike
 
 
 class Potential(_BaseModel):
