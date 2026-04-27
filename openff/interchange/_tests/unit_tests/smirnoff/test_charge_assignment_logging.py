@@ -601,7 +601,7 @@ def test_inchi_fallback(caplog, sage):
         debug = map_methods_to_inchikey(caplog)
 
         if OpenEyeToolkitWrapper.is_available():
-            assert debug["NAGL"] == ["UNKNOWN_INCHI"]
+            assert debug["NAGL"] == ["UNKNOWN_INCHIKEY"]
         else:
             # but RDKit can generate an InChIKey
             assert debug["NAGL"] == ["FGIJOQKVOYCTPJ-UHFFFAOYSA-N"]
