@@ -114,19 +114,28 @@ Other details
 AM1BCC_KEY = "am1bccelf10" if OPENEYE_AVAILABLE else "am1bcc"
 NAGL_KEY = "openff-gnn-am1bcc-1.0.0.pt"
 
+INCHI_KEYS = {
+    "ethanol": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N",
+    "water": "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+    "sodium": "FKNQFGJONOIPTF-UHFFFAOYSA-N",
+    "chloride": "VEXZGXHMUGYJMC-UHFFFAOYSA-M",
+    "methylamine": "BAVYZALUXZFZLV-UHFFFAOYSA-N",
+    "protein": "QIVKPXNXCAPCCO-WDSKDSINSA-N",
+}
 
-def map_methods_to_inchi(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
+
+def map_methods_to_inchikey(caplog: pytest.LogCaptureFixture) -> dict[str, list[int]]:
     """
     Map partial charge assignment methods to (sorted) molecule InChI.
     """
-    info = defaultdict(list)
+    debug = defaultdict(list)
 
     for record in caplog.records:
         if record.name.startswith("openff.interchange"):
             # This is a specific one-off logging event not relevant to this function
-            if "Could not generate InChI for molecule with Hill formula" in record.msg:
+            if "Could not generate InChIKey for molecule with Hill formula" in record.msg:
                 continue
-            assert record.levelname == "INFO", "Only INFO logs are expected."
+            assert record.levelname == "DEBUG", "Only DEBUG logs are expected."
         else:
             # skip logged warnings from upstreams/other packages
             continue
@@ -136,22 +145,22 @@ def map_methods_to_inchi(caplog: pytest.LogCaptureFixture) -> dict[str, list[int
         if message.startswith("Charge section LibraryCharges"):
             _, molecule = message.split(", ")
 
-            info["library"].append(molecule.split("InChI ")[-1])
+            debug["library"].append(molecule.split("InChIKey ")[-1])
 
         elif message.startswith("Charge section ToolkitAM1BCC"):
             _, method, molecule = message.split(", ")
 
             assert method.split()[-1] == AM1BCC_KEY, f"Expected method {AM1BCC_KEY} but got {method.split()[-1]}"
 
-            info[method.split()[-1]].append(molecule.split("InChI ")[-1])
+            debug[method.split()[-1]].append(molecule.split("InChIKey ")[-1])
 
         elif message.startswith("Charge section NAGLCharges"):
             _, _, molecule = message.split(", ")
 
-            info["NAGL"].append(molecule.split("InChI ")[-1])
+            debug["NAGL"].append(molecule.split("InChIKey ")[-1])
 
         # without also pulling the virtual site - particle mapping (which is different for each engine)
-        # it's hard to store more information than the orientation atoms that are affected by each
+        # it's hard to store more debugrmation than the orientation atoms that are affected by each
         # virtual site's charges
         elif message.startswith("Charge section VirtualSites"):
             orientation_atoms: list[int] = [
@@ -159,26 +168,26 @@ def map_methods_to_inchi(caplog: pytest.LogCaptureFixture) -> dict[str, list[int
             ]
 
             for atom in orientation_atoms:
-                info["orientation"].append(atom)
+                debug["orientation"].append(atom)
 
         elif message.startswith("Preset charges"):
-            info["preset"].append(message.split("InChI ")[-1])
+            debug["preset"].append(message.split("InChIKey ")[-1])
 
         elif message.startswith("Charge section ChargeIncrementModel"):
             if "using charge method" in message:
                 _, method, molecule = message.split(", ")
-                info[f"chargeincrements_{method.split()[-1]}"].append(
-                    molecule.split("InChI ")[-1],
+                debug[f"chargeincrements_{method.split()[-1]}"].append(
+                    molecule.split("InChIKey ")[-1],
                 )
 
             elif "applying charge increment" in message:
                 # TODO: Store the "other" atoms?
-                info["chargeincrements"].append(int(message.split("atom ")[1].split(" ")[0]))
+                debug["chargeincrements"].append(int(message.split("atom ")[1].split(" ")[0]))
 
         else:
             raise ValueError(f"Unexpected log message {message}")
 
-    return {key: sorted(val) for key, val in info.items()}
+    return {key: sorted(val) for key, val in debug.items()}
 
 
 def _ensure_pre_nagl_sage(sage: ForceField) -> ForceField:
@@ -294,42 +303,42 @@ def ligand_and_water_and_ions(ligand, water_and_ions) -> Topology:
 
 
 def test_case0(caplog, sage_no_nagl, ligand):
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage_no_nagl.create_interchange(ligand.to_topology())
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC
-        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug[AM1BCC_KEY] == [INCHI_KEYS["ethanol"]]
 
 
 def test_case1(caplog, sage_no_nagl, ligand_and_water_and_ions):
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage_no_nagl.create_interchange(ligand_and_water_and_ions)
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC
-        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug[AM1BCC_KEY] == [INCHI_KEYS["ethanol"]]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert info["library"] == [
-            "InChI=1S/ClH/h1H/p-1",
-            "InChI=1S/H2O/h1H2",
-            "InChI=1S/Na/q+1",
+        assert debug["library"] == [
+            INCHI_KEYS["sodium"],
+            INCHI_KEYS["chloride"],
+            INCHI_KEYS["water"],
         ]
 
 
 def test_case2(caplog, sage_no_nagl, ligand, solvent):
     topology = Topology.from_molecules([ligand, solvent, solvent, solvent])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage_no_nagl.create_interchange(topology)
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # everything should get AM1-BCC charges
-        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", "InChI=1S/CH5N/c1-2/h2H2,1H3"]
+        assert debug[AM1BCC_KEY] == [INCHI_KEYS["methylamine"], INCHI_KEYS["ethanol"]]
 
 
 def test_case3(caplog, sage_no_nagl, ligand_and_water_and_ions, solvent):
@@ -338,22 +347,22 @@ def test_case3(caplog, sage_no_nagl, ligand_and_water_and_ions, solvent):
 
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage_no_nagl.create_interchange(
             ligand_and_water_and_ions,
         )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC,
         # and also solvent molecules (starting at index 22)
-        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", "InChI=1S/CH5N/c1-2/h2H2,1H3"]
+        assert debug[AM1BCC_KEY] == [INCHI_KEYS["methylamine"], INCHI_KEYS["ethanol"]]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert info["library"] == [
-            "InChI=1S/ClH/h1H/p-1",
-            "InChI=1S/H2O/h1H2",
-            "InChI=1S/Na/q+1",
+        assert debug["library"] == [
+            INCHI_KEYS["sodium"],
+            INCHI_KEYS["chloride"],
+            INCHI_KEYS["water"],
         ]
 
 
@@ -370,35 +379,35 @@ def test_cases4_5(caplog, ligand_and_water_and_ions, preset_on_protein):
     if preset_on_protein:
         complex.molecule(0).assign_partial_charges(partial_charge_method="zeros")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         if preset_on_protein:
             ff.create_interchange(complex, charge_from_molecules=[complex.molecule(0)])
         else:
             ff.create_interchange(complex)
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
-        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug[AM1BCC_KEY] == [INCHI_KEYS["ethanol"]]
 
         if preset_on_protein:
             # protein gets preset charges
-            assert info["preset"] == [
-                "InChI=1S/C9H17N3O3/c1-5(8(14)10-4)12-9(15)6(2)11-7(3)13/h5-6H,1-4H3,(H,10,14)(H,11,13)(H,12,15)/t5-,6-/m0/s1",
+            assert debug["preset"] == [
+                INCHI_KEYS["protein"],
             ]
 
             # everything after the protein and ligand should get library charges
-            assert info["library"] == [
-                "InChI=1S/ClH/h1H/p-1",
-                "InChI=1S/H2O/h1H2",
-                "InChI=1S/Na/q+1",
+            assert debug["library"] == [
+                INCHI_KEYS["sodium"],
+                INCHI_KEYS["chloride"],
+                INCHI_KEYS["water"],
             ]
         else:
             # the protein and everything after the ligand should get library charges
-            assert info["library"] == [
-                "InChI=1S/C9H17N3O3/c1-5(8(14)10-4)12-9(15)6(2)11-7(3)13/h5-6H,1-4H3,(H,10,14)(H,11,13)(H,12,15)/t5-,6-/m0/s1",
-                "InChI=1S/ClH/h1H/p-1",
-                "InChI=1S/H2O/h1H2",
-                "InChI=1S/Na/q+1",
+            assert debug["library"] == [
+                INCHI_KEYS["sodium"],
+                INCHI_KEYS["protein"],
+                INCHI_KEYS["chloride"],
+                INCHI_KEYS["water"],
             ]
 
 
@@ -407,87 +416,87 @@ def test_case6(caplog, ligand, water):
 
     topology = Topology.from_molecules([ligand, water, water, water])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         force_field.create_interchange(topology)
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are ethanol, getting AM1-BCC charges
-        assert info[AM1BCC_KEY] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug[AM1BCC_KEY] == [INCHI_KEYS["ethanol"]]
 
         # atoms 9 through 17 are water atoms, getting library charges
-        assert info["library"] == ["InChI=1S/H2O/h1H2"]
+        assert debug["library"] == [INCHI_KEYS["water"]]
 
         # particles 18 through 20 are water virtual sites, but the current logging strategy
         # makes it hard to match these up (and the particle indices are different OpenMM/GROMACS/etc)
 
         # can still check that orientation atoms are subject to virtual site
         # charge increments (even if the increment is +0.0 e)
-        assert info["orientation"] == [*range(9, 18)]
+        assert debug["orientation"] == [*range(9, 18)]
 
 
 def test_case7(caplog, sage_no_nagl, ligand_and_water_and_ions):
     ligand_and_water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage_no_nagl.create_interchange(
             ligand_and_water_and_ions,
             charge_from_molecules=[ligand_and_water_and_ions.molecule(0)],
         )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are ethanol, getting preset charges
-        assert info["preset"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug["preset"] == [INCHI_KEYS["ethanol"]]
 
         # atoms 9 through 21 are water + ions, getting library charges
-        assert info["library"] == [
-            "InChI=1S/ClH/h1H/p-1",
-            "InChI=1S/H2O/h1H2",
-            "InChI=1S/Na/q+1",
+        assert debug["library"] == [
+            INCHI_KEYS["sodium"],
+            INCHI_KEYS["chloride"],
+            INCHI_KEYS["water"],
         ]
 
 
 def test_case8(caplog, sage_no_nagl, water_and_ions):
     water_and_ions.molecule(0).assign_partial_charges(partial_charge_method="gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage_no_nagl.create_interchange(
             water_and_ions,
             charge_from_molecules=[water_and_ions.molecule(0)],
         )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are water, getting preset charges
-        assert info["preset"] == ["InChI=1S/H2O/h1H2"]
+        assert debug["preset"] == [INCHI_KEYS["water"]]
 
         # atoms 9 through 12 are ions, getting library charges
-        assert info["library"] == ["InChI=1S/ClH/h1H/p-1", "InChI=1S/Na/q+1"]
+        assert debug["library"] == [INCHI_KEYS["sodium"], INCHI_KEYS["chloride"]]
 
 
 def test_case9(caplog, sage_with_bond_charge):
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         _ensure_pre_nagl_sage(sage_with_bond_charge).create_interchange(
             Molecule.from_mapped_smiles(
                 "[H:3][C:1]([H:4])([H:5])[Cl:2]",
             ).to_topology(),
         )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 5 are ligand, getting AM1-BCC charges
-        assert info[AM1BCC_KEY] == ["InChI=1S/CH3Cl/c1-2/h1H3"]
+        assert debug[AM1BCC_KEY] == ["NEHMKBQYUWJMIP-UHFFFAOYSA-N"]
 
         # atoms 0 and 1 are the orientation atoms of the sigma hole virtual site
-        assert info["orientation"] == [0, 1]
+        assert debug["orientation"] == [0, 1]
 
 
 def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
     pytest.importorskip("openff.nagl")
     pytest.importorskip("rdkit")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         with toolkit_registry_manager(
             toolkit_registry=ToolkitRegistry(
                 toolkit_precedence=[NAGLToolkitWrapper, RDKitToolkitWrapper],
@@ -497,33 +506,33 @@ def test_case10(caplog, sage_with_nagl_chargeincrements, ligand):
                 ligand.to_topology(),
             )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # atoms 0 through 8 are ligand, getting NAGL charges
-        assert info[f"chargeincrements_{NAGL_KEY}"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug[f"chargeincrements_{NAGL_KEY}"] == ["LFQSCWFLJHTTHZ-UHFFFAOYSA-N"]
 
         # TODO: These are logged symmetrically (i.e. hydrogens are listed)
         # even though the charges appear to be correct, assert should
         # simply by == [0, 1] since the hydrogens shouldn't be caught
-        assert 0 in info["chargeincrements"]
-        assert 1 in info["chargeincrements"]
+        assert 0 in debug["chargeincrements"]
+        assert 1 in debug["chargeincrements"]
 
         # the standard AM1-BCC should not have ran
-        assert AM1BCC_KEY not in info
+        assert AM1BCC_KEY not in debug
 
 
 def test_case11(caplog, sage, ligand):
     """Test that NAGL charge assignment is properly logged."""
     pytest.importorskip("openff.nagl")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage.create_interchange(ligand.to_topology())
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # Should log NAGL charges for all atoms
-        assert "NAGL" in info
-        assert info["NAGL"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert "NAGL" in debug
+        assert debug["NAGL"] == [INCHI_KEYS["ethanol"]]
 
 
 def test_case12(caplog, sage, water):
@@ -532,14 +541,14 @@ def test_case12(caplog, sage, water):
 
     topology = Topology.from_molecules([water, water])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage.create_interchange(topology)
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # Water should get library charges, not NAGL
-        assert info["library"] == ["InChI=1S/H2O/h1H2"]  # 2 water molecules
-        assert "NAGL" not in info
+        assert debug["library"] == [INCHI_KEYS["water"]]  # 2 water molecules
+        assert "NAGL" not in debug
 
 
 def test_case13(caplog, sage, ligand, water):
@@ -548,16 +557,16 @@ def test_case13(caplog, sage, ligand, water):
 
     topology = Topology.from_molecules([ligand, water])
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage.create_interchange(topology)
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # Ligand should get NAGL charges
-        assert info["NAGL"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
+        assert debug["NAGL"] == [INCHI_KEYS["ethanol"]]
 
         # Water should get library charges
-        assert info["library"] == ["InChI=1S/H2O/h1H2"]
+        assert debug["library"] == [INCHI_KEYS["water"]]
 
 
 def test_case14(caplog, sage, ligand):
@@ -566,34 +575,33 @@ def test_case14(caplog, sage, ligand):
 
     ligand.assign_partial_charges("gasteiger")
 
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage.create_interchange(
             ligand.to_topology(),
             charge_from_molecules=[ligand],
         )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         # Should use preset charges, not NAGL
-        assert info["preset"] == ["InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"]
-        assert "NAGL" not in info
+        assert debug["preset"] == [INCHI_KEYS["ethanol"]]
+        assert "NAGL" not in debug
 
 
 def test_inchi_fallback(caplog, sage):
-    """Test that molecules that fail InChI generation are still logged in some way."""
+    """Test that molecules that fail InChIKey generation are still logged in some way."""
     from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper
 
     # TODO: Might be a toolkit bug that needs to be worked around
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG, logger="openff.interchange"):
         sage.create_interchange(
             Molecule.from_smiles(342 * "C").to_topology(),
         )
 
-        info = map_methods_to_inchi(caplog)
+        debug = map_methods_to_inchikey(caplog)
 
         if OpenEyeToolkitWrapper.is_available():
-            assert info["NAGL"] == ["UNKNOWN_INCHI"]
+            assert debug["NAGL"] == ["UNKNOWN_INCHI"]
         else:
-            # RDKit can generate an InChI for this molecule, but it's very long
-            assert len(info["NAGL"]) == 1
-            assert info["NAGL"][0].startswith("InChI=1S/C342H686/c1-3-5")
+            # but RDKit can generate an InChIKey
+            assert debug["NAGL"] == ["FGIJOQKVOYCTPJ-UHFFFAOYSA-N"]

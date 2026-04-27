@@ -978,49 +978,53 @@ class SMIRNOFFElectrostaticsCollection(ElectrostaticsCollection, SMIRNOFFCollect
         unique_molecule: Molecule,
         key: ChargeModelTopologyKey | SingleAtomChargeTopologyKey | LibraryChargeTopologyKey,
     ):
+        hill_formaula = unique_molecule.to_hill_formula()
+
         try:
-            inchi = unique_molecule.to_inchi()
+            inchikey = unique_molecule.to_inchikey()
         except Exception as error:
-            # In principle this is more like a warning, but the context is already logging.INFO, so why not?
-            logger.info(
-                f"Could not generate InChI for molecule with Hill formula {unique_molecule.to_hill_formula()}. "
-                "This molecule's charge provenance will be logged without a valid InChI. "
+            # In principle this is more like a warning, but the context is already logging.DEBUG, so why not?
+            logger.debug(
+                f"Could not generate InChIKey for molecule with Hill formula {hill_formaula}. "
+                "This molecule's charge provenance will be logged without a valid InChIKey. "
                 f"Error was {error}",
             )
-            inchi = "UNKNOWN_INCHI"
+            inchikey = "UNKNOWN_INCHIKEY"
+
+        id_string = f"molecule with Hill formula {hill_formaula} and InChIKey {inchikey}"
 
         if type(key) is LibraryChargeTopologyKey:
-            logger.info(
-                f"Charge section LibraryCharges, applied to molecule with InChI {inchi}",
+            logger.debug(
+                "Charge section LibraryCharges, applied to " + id_string,
             )
 
         elif type(key) is SingleAtomChargeTopologyKey:
             if key.extras["handler"] == "ToolkitAM1BCCHandler":
-                logger.info(
+                logger.debug(
                     "Charge section ToolkitAM1BCC, using charge method "
                     f"{key.extras['partial_charge_method']}, "
-                    f"applied to molecule with InChI {inchi}",
+                    f"applied to " + id_string,
                 )
             elif key.extras["handler"] == "NAGLChargesHandler":
-                logger.info(
+                logger.debug(
                     "Charge section NAGLCharges, using NAGL model "
                     f"{key.extras['partial_charge_method']}, "
-                    f"applied to molecule with InChI {inchi}",
+                    f"applied to " + id_string,
                 )
 
             elif key.extras["handler"] == "preset":
-                logger.info(
-                    f"Preset charges applied to molecule with InChI {inchi}",
+                logger.debug(
+                    "Preset charges applied to " + id_string,
                 )
 
             else:
                 raise ValueError(f"Unhandled handler {key.extras['handler']}")
 
         elif type(key) is ChargeModelTopologyKey:
-            logger.info(
+            logger.debug(
                 "Charge section ChargeIncrementModel, using charge method "
                 f"{key.partial_charge_method}, "
-                f"applied to molecule with InChI {inchi}",
+                f"applied to " + id_string,
             )
 
         elif type(key) is ChargeIncrementTopologyKey:
