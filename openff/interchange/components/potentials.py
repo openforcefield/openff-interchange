@@ -448,7 +448,20 @@ def validate_collections(
         raise ValueError(f"Validation mode {info.mode} not implemented.")
 
 
+def serialize_collections(v: Any, handler: Any, info: Any) -> dict:
+    """Serialize collections using each collection's actual type schema.
+
+    Without this, pydantic uses the declared Collection base class schema and
+    drops subclass-specific fields (e.g. scale_14, cutoff, periodic_potential).
+    """
+    if info.mode == "json":
+        return {name: json.loads(collection.model_dump_json()) for name, collection in v.items()}
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
+
+
 _AnnotatedCollections = Annotated[
     dict[str, Collection],
     WrapValidator(validate_collections),
+    WrapSerializer(serialize_collections),
 ]
