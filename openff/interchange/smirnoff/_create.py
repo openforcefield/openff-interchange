@@ -136,7 +136,7 @@ def _preprocess_preset_charges(
 
 def _clear_smirnoff_creation_caches():
     """
-    Due to bugs in the toolkit, these caches can be invalid of a force field is modified and then
+    Due to bugs in the toolkit, these caches can be invalid if a force field is modified and then
     sent to (SMIRNOFF) creation pathways again. This function clears those caches - call it whenever
     `Interchange.from_smirnoff` may be called multiple times on the same force field object
     (including possible modifications).
