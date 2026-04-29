@@ -63,6 +63,9 @@ jobs:
       if: ${{ !contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} run_tests
 
+    - name: Run doctests
+      run: pixi run -e ${{ matrix.environment }} pytest --doctest-glob="*.md" docs/using/construction.md
+
     - name: Run examples
       if: ${{ contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} run_examples

@@ -170,45 +170,45 @@ Positions and velocities are optional, though any conversions requiring them
 will fail if they are missing.
 
 ```pycon
->>> from openff.interchange import Interchange
->>> from openff.units import unit
->>> from openff.toolkit.topology import Molecule
+>>> from openff.toolkit import Molecule, Quantity, ForceField
+>>> sage = ForceField("openff-2.3.0.offxml")
 >>> molecule = Molecule.from_smiles("CCO")
+>>> model = sage.create_interchange(molecule.to_topology())
+>>> molecule.n_conformers == 0, model.positions is None
+(True, True)
 >>> molecule.generate_conformers(n_conformers=1)
 >>> molecule.conformers[0]
-Quantity(value=array([[ 0.88165321, -0.04478118, -0.01474324],
-       [-0.58171004, -0.37572459,  0.05098497],
-       [-1.35004062,  0.75806983,  0.17615782],
-       [ 1.26504668,  0.17421359,  1.01224746],
-       [ 1.01649295,  0.87054063, -0.60898906],
-       [ 1.47635802, -0.89454965, -0.39185017],
-       [-0.78535559, -0.99682774,  0.96832828],
-       [-0.83550563, -1.00354494, -0.81588946],
-       [-1.08693898,  1.51260405, -0.3762466 ]]), unit=angstrom)
->>> model = Interchange()
->>> model.positions is None
-True
->>> model.positions = molecule.conformers[0]
+<Quantity([[ 0.88165321 -0.04478118 -0.01474324]
+ [-0.58159753 -0.3761451   0.05108011]
+ [-1.34839371  0.75203739  0.18067008]
+ [ 1.26504668  0.17421359  1.01224746]
+ [ 1.01649295  0.87054063 -0.60898906]
+ [ 1.47680397 -0.89482714 -0.39192779]
+ [-0.78791391 -0.98893872  0.96478502]
+ [-0.83504017 -1.00512403 -0.81678084]
+ [-1.08705149  1.51302455 -0.37634174]], 'angstrom')>
+>>> model = sage.create_interchange(molecule.to_topology())
 >>> model.positions
 <Quantity([[ 0.08816532 -0.00447812 -0.00147432]
- [-0.058171   -0.03757246  0.0050985 ]
- [-0.13500406  0.07580698  0.01761578]
+ [-0.05815975 -0.03761451  0.00510801]
+ [-0.13483937  0.07520374  0.01806701]
  [ 0.12650467  0.01742136  0.10122475]
  [ 0.10164929  0.08705406 -0.06089891]
- [ 0.1476358  -0.08945496 -0.03918502]
- [-0.07853556 -0.09968277  0.09683283]
- [-0.08355056 -0.10035449 -0.08158895]
- [-0.1086939   0.1512604  -0.03762466]], 'nanometer')>
->>> model.positions.m_as(unit.angstrom)
+ [ 0.1476804  -0.08948271 -0.03919278]
+ [-0.07879139 -0.09889387  0.0964785 ]
+ [-0.08350402 -0.1005124  -0.08167808]
+ [-0.10870515  0.15130246 -0.03763417]], 'nanometer')>
+>>> model.positions.m_as("angstrom")
 array([[ 0.88165321, -0.04478118, -0.01474324],
-       [-0.58171004, -0.37572459,  0.05098497],
-       [-1.35004062,  0.75806983,  0.17615782],
+       [-0.58159753, -0.3761451 ,  0.05108011],
+       [-1.34839371,  0.75203739,  0.18067008],
        [ 1.26504668,  0.17421359,  1.01224746],
        [ 1.01649295,  0.87054063, -0.60898906],
-       [ 1.47635802, -0.89454965, -0.39185017],
-       [-0.78535559, -0.99682774,  0.96832828],
-       [-0.83550563, -1.00354494, -0.81588946],
-       [-1.08693898,  1.51260405, -0.3762466 ]])
+       [ 1.47680397, -0.89482714, -0.39192779],
+       [-0.78791391, -0.98893872,  0.96478502],
+       [-0.83504017, -1.00512403, -0.81678084],
+       [-1.08705149,  1.51302455, -0.37634174]])
+
 ```
 
 ### Box vectors
@@ -216,6 +216,10 @@ array([[ 0.88165321, -0.04478118, -0.01474324],
 Information about the periodic box of a system is stored as a unit-tagged $3×3$
 matrix, following conventional periodic box vectors and the implementation in
 [`OpenMM`](http://docs.openmm.org/latest/userguide/theory/05_other_features.html#periodic-boundary-conditions).
+
+Box vectors will first be defined by the corresponding attribute on the `topology`
+argument used during construction. They can be modified post-construction by passing
+box vectors to the `Interchange.box` setter.
 
 Box vectors are represented with nanometers internally and when reported.
 However, they can be set with box vectors of other units, and can also be
@@ -229,33 +233,30 @@ If a $1×3$ matrix (array) is passed to the setter, it is assumed that these
 values correspond to the lengths of a rectangular unit cell ($a_x$, $b_y$,
 $c_z$).
 
-Box vectors are optional; if it is `None` it is implied that the `Interchange`
-object represents a non-periodic system. However, note that passing `None` to
-the `box` argument of `Interchange.from_smirnoff()` may produce a periodic
-`Interchange` if box vectors are present in the `Topology`.
-
 ```pycon
-
->>> from openff.interchange import Interchange
->>> from openff.units import unit
->>> import numpy as np
->>> model = Interchange()
+>>> from openff.toolkit import Molecule, Quantity, ForceField
+>>> import numpy
+>>> sage = ForceField("openff-2.3.0.offxml")
+>>> molecule = Molecule.from_smiles("CCO")
+>>> model = sage.create_interchange(molecule.to_topology())
 >>> model.box is None
 True
->>> model.box = np.eye(3) * 4 * unit.nanometer
+>>> model.box = Quantity(4 * numpy.eye(3), "nanometer")
 >>> model.box
 <Quantity([[4. 0. 0.]
  [0. 4. 0.]
  [0. 0. 4.]], 'nanometer')>
 >>> model.box = [3, 4, 5]
+>>> model.box
 <Quantity([[3. 0. 0.]
  [0. 4. 0.]
  [0. 0. 5.]], 'nanometer')>
->>> model.box = [28, 28, 28] * unit.angstrom
-<Quantity([[2.8 0. 0.]
- [0. 2.8 0.]
- [0. 0. 2.8]], 'nanometer')>
->>> model.box.m_as(unit.angstrom)
+>>> model.box = Quantity([28, 28, 28], "angstrom")
+>>> model.box
+<Quantity([[2.8  0.  0.]
+ [0.  2.8  0.]
+ [0.  0.  2.8]], 'nanometer')>
+>>> model.box.m_as("angstrom")
 array([[28.,  0.,  0.],
        [ 0., 28.,  0.],
        [ 0.,  0., 28.]])
