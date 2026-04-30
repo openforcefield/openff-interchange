@@ -11,12 +11,24 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
-## Current development
+## 0.5.3 - 2025-04-30
 
-* #1452 Better manage some caches by invalidate OpenMM export-specific caches at export time
-* #1468 Update charge assignment documentation to include NAGL-based charge models.
-* #1481 Ensured box vectors and positions were stored internally in nanometers if passed in as other compatible units such as Angstroms.
+### Breaking changes
+
+* #1474 Drop support for Python 3.11.
 * #1487 Change charge logging level to `logging.DEBUG`
+* #1488 Make charge logging more compact with many and/or large molecules.
+
+### Bug fixes
+
+* #1452 Better manage some caches by invalidating OpenMM export-specific caches at export time
+* #1456 More efficiently clear caches.
+* #1481 Ensured box vectors and positions were stored internally in nanometers if passed in as other compatible units such as Angstroms.
+
+### Documentation improvements
+
+* #1468 Update charge assignment documentation to include NAGL-based charge models.
+* #1470 Update citation guidelines.
 
 ## 0.5.2 - 2025-03-02
 
