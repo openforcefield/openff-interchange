@@ -8,7 +8,7 @@ dependencies:
   - setuptools !=76.0.0
   - pip
   - numpy =2
-  - pydantic >=2,<2.12
+  - pydantic >=2
   - openff-toolkit-base =0.17
   - openmm
   - mbuild-base =1

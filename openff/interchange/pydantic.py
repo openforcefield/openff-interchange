@@ -17,4 +17,7 @@ class _BaseModel(BaseModel):
         return super().model_dump(serialize_as_any=True, **kwargs)
 
     def model_dump_json(self, **kwargs) -> str:
-        return super().model_dump_json(serialize_as_any=True, **kwargs)
+        # serialize_as_any=True breaks pint.Quantity serialization in pydantic >=2.12
+        # (pydantic/pydantic#12348); the Annotated WrapSerializer on _Quantity handles
+        # JSON serialization correctly without it
+        return super().model_dump_json(**kwargs)

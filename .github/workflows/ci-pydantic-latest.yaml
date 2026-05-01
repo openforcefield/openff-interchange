@@ -1,0 +1,44 @@
+name: ci-pydantic-latest
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: pixi run -e py312amber bash -e {0}
+
+jobs:
+  test:
+    name: Test with latest pydantic on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up virtual environment
+      uses: prefix-dev/setup-pixi@v0.9.5
+      with:
+        pixi-version: v0.41.4
+        environments: py312amber
+        frozen: true
+
+    - name: Upgrade pydantic to latest
+      run: pip install "pydantic>=2.12"
+
+    - name: Run mypy
+      run: pixi run -e py312amber run_mypy
+
+    - name: Run tests
+      run: pixi run -e py312amber run_tests
