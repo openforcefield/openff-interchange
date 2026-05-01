@@ -134,6 +134,24 @@ def _preprocess_preset_charges(
     return molecules_with_preset_charges
 
 
+def _clear_smirnoff_creation_caches():
+    """
+    Due to bugs in the toolkit, these caches can be invalid if a force field is modified and then
+    sent to (SMIRNOFF) creation pathways again. This function clears those caches - call it whenever
+    `Interchange.from_smirnoff` may be called multiple times on the same force field object
+    (including possible modifications).
+
+    https://github.com/openforcefield/openff-toolkit/issues/2065
+    """
+    from openff.interchange.components.toolkit import _cache_angle_parameter_lookup, _cache_torsion_parameter_lookup
+
+    for obj in [
+        _cache_angle_parameter_lookup,
+        _cache_torsion_parameter_lookup,
+    ]:
+        obj.cache_clear()
+
+
 def _create_interchange(
     force_field: ForceField,
     topology: Topology | list[Molecule],
@@ -146,6 +164,8 @@ def _create_interchange(
     molecules_with_preset_charges = _preprocess_preset_charges(molecules_with_preset_charges)
 
     _check_supported_handlers(force_field)
+
+    _clear_smirnoff_creation_caches()
 
     if molecules_with_preset_charges and "VirtualSites" in force_field.registered_parameter_handlers:
         warnings.warn(
