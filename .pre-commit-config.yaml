@@ -33,6 +33,6 @@ repos:
     - id: nbstripout
       files: ^examples
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.21.1
+  rev: v2.21.2
   hooks:
     - id: pyproject-fmt
