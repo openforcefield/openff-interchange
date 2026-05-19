@@ -43,7 +43,7 @@ jobs:
     - name: Set up virtual environment
       uses: prefix-dev/setup-pixi@v0.9.5
       with:
-        pixi-version: v0.62.2
+        pixi-version: v0.68.1
         environments: ${{ matrix.environment }}
         frozen: true
 
