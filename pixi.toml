@@ -1,13 +1,13 @@
 [workspace]
 name = "openff-interchange"
-channels = [ "conda-forge", "openeye" ]
+channels = [ "conda-forge/label/openff-interchange-dev", "conda-forge", "openeye" ]
 platforms = [ "linux-64", "osx-arm64" ]
 
 [dependencies]
 pip = "*"
 numpy = ">=2.2"
 setuptools_scm = "*"
-pydantic = "=2"
+pydantic = ">=2.12"
 openff-toolkit-base = "0.18.*"
 openff-interchange-base = "0.5.*"
 openff-packmol = "*"

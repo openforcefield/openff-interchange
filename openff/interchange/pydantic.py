@@ -17,4 +17,4 @@ class _BaseModel(BaseModel):
         return super().model_dump(serialize_as_any=True, **kwargs)
 
     def model_dump_json(self, **kwargs) -> str:
-        return super().model_dump_json(serialize_as_any=True, **kwargs)
+        return super().model_dump_json(**kwargs)
