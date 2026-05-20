@@ -845,7 +845,7 @@ def _create_electrostatics_force(
     molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
     openff_openmm_particle_map,
-) -> openmm.NonbondedForce | None:
+) -> tuple[openmm.NonbondedForce | None, defaultdict[int, list[int]]]:
     if data.electrostatics_collection is None:
         return None, defaultdict(list)
 
