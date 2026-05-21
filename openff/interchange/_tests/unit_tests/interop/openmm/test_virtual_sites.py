@@ -503,7 +503,6 @@ class TestOpenMMVirtualSiteExclusions:
         In this case, the virtual site is 1-4 to some of the parent atoms, so we need to make sure those
         exceptions are included in the nonbonded force and not just the custom vdW force.
         """
-        from openff.interchange.drivers import get_openmm_energies
 
         pyridine.generate_conformers(n_conformers=1)
 
