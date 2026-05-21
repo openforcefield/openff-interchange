@@ -12,6 +12,11 @@ from openff.utilities import get_data_file_path
 from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
 
 
+@pytest.fixture(autouse=True)
+def _initdir(tmpdir):
+    tmpdir.chdir()
+
+
 @pytest.fixture
 def _simple_force_field():
     # TODO: Create a minimal force field for faster tests
@@ -485,11 +490,6 @@ def cyclohexane() -> Molecule:
     return cyclohexane
 
 
-@pytest.fixture(autouse=True)
-def _initdir(tmpdir):
-    tmpdir.chdir()
-
-
 @pytest.fixture
 def ethanol_top(ethanol):
     """Fixture that builds a simple four ethanol topology."""
@@ -613,6 +613,11 @@ def acetaldehyde():
     return Molecule.from_mapped_smiles(
         "[C:1]([C:2](=[O:3])[H:7])([H:4])([H:5])[H:6]",
     )
+
+
+@pytest.fixture
+def pyridine():
+    return Molecule.from_smiles("c1ccncc1")
 
 
 @pytest.fixture
