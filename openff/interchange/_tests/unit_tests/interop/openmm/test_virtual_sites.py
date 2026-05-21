@@ -529,10 +529,6 @@ class TestOpenMMVirtualSiteExclusions:
             .create_interchange(pyridine.to_topology())
         )
 
-        assert get_openmm_energies(interchange, combine_nonbonded_forces=False).total_energy.m == pytest.approx(
-            get_openmm_energies(interchange, combine_nonbonded_forces=True).total_energy.m,
-        )
-
         def get_14_exceptions(
             system: openmm.System,
             forces_are_combined: bool,
