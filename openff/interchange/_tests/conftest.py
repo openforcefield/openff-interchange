@@ -616,11 +616,6 @@ def acetaldehyde():
 
 
 @pytest.fixture
-def pyridine():
-    return Molecule.from_smiles("c1ccncc1")
-
-
-@pytest.fixture
 def methane_with_conformer(methane):
     methane.add_conformer(
         Quantity(

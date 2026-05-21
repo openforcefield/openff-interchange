@@ -497,7 +497,8 @@ class TestOpenMMVirtualSiteExclusions:
 
             assert sorted(exceptions) == sorted(exclusions)
 
-    def test_14_exceptions_split_nonbonded_forces(self, sage, pyridine):
+    @pytest.mark.parametrize("smiles", ["c1cnccc1", "c1cnccn1"])
+    def test_14_exceptions_split_nonbonded_forces(self, sage, smiles):
         """
         Test that 1-4 exceptions are properly "imported" when nonbonded forces are split.
         In this case, the virtual site is 1-4 to some of the parent atoms, so we need to make sure those
@@ -505,7 +506,7 @@ class TestOpenMMVirtualSiteExclusions:
         """
         from openff.interchange.drivers import get_openmm_energies
 
-        pyridine.generate_conformers(n_conformers=1)
+        molecule = MoleculeWithConformer.from_smiles(smiles)
 
         interchange = (
             ForceField("openff-2.3.0.offxml")
@@ -526,7 +527,7 @@ class TestOpenMMVirtualSiteExclusions:
 </SMIRNOFF>
 """),
             )
-            .create_interchange(pyridine.to_topology())
+            .create_interchange(molecule.to_topology())
         )
 
         assert get_openmm_energies(interchange, combine_nonbonded_forces=False).total_energy.m == pytest.approx(
