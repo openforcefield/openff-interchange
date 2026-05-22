@@ -43,6 +43,7 @@ openmm = "*"
 
 [feature.dev.pypi-dependencies]
 pre-commit = "*"
+ipdb = "*"
 
 [feature.engines.dependencies]
 # this conflicts with AmberTools because of NumPy 2.3,

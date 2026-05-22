@@ -11,6 +11,12 @@ Dates are given in YYYY-MM-DD format.
 
 Please note that all releases prior to a version 1.0.0 are considered pre-releases and many API changes will come before a stable release.
 
+## Current development
+
+### Bugfixes
+
+* #1502 Fix 1-4 exceptions with virtual sites and split non-bonded forces
+
 ## 0.5.3 - 2025-04-30
 
 ### Breaking changes

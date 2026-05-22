@@ -580,7 +580,7 @@ def _create_multiple_nonbonded_forces(
         has_virtual_sites,
     )
 
-    electrostatics_force: openmm.NonbondedForce = _create_electrostatics_force(
+    electrostatics_force, parent_virtual_particle_mapping = _create_electrostatics_force(
         data,
         interchange,
         ewald_tolerance,
@@ -651,6 +651,12 @@ def _create_multiple_nonbonded_forces(
 
     coul_14, vdw_14 = _get_14_scaling_factors(data)
 
+    if has_virtual_sites and "VirtualSites" in interchange.collections:
+        assert interchange["VirtualSites"].exclusion_policy == "parents", (
+            "Virtual site exceptions handling in combine_nonbonded_forces=False assumes the 'parents' "
+            "exclusion policy; other policies are not supported."
+        )
+
     openmm_pairs = set()
 
     for atom1, atom2 in _get_14_pairs(interchange.topology):
@@ -665,6 +671,16 @@ def _create_multiple_nonbonded_forces(
         )
 
         openmm_pairs.add(openmm_indices)
+
+        if has_virtual_sites:
+            # Virtual sites inherit the topology of their parent atom
+            for v in parent_virtual_particle_mapping[openmm_indices[0]]:
+                openmm_pairs.add((v, openmm_indices[1]))
+            for v in parent_virtual_particle_mapping[openmm_indices[1]]:
+                openmm_pairs.add((openmm_indices[0], v))
+            for v1 in parent_virtual_particle_mapping[openmm_indices[0]]:
+                for v2 in parent_virtual_particle_mapping[openmm_indices[1]]:
+                    openmm_pairs.add((v1, v2))
 
     if electrostatics_force is not None:
         for i in range(electrostatics_force.getNumExceptions()):
@@ -829,9 +845,9 @@ def _create_electrostatics_force(
     molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
     openff_openmm_particle_map,
-) -> openmm.NonbondedForce | None:
+) -> tuple[openmm.NonbondedForce | None, defaultdict[int, list[int]]]:
     if data.electrostatics_collection is None:
-        return None
+        return None, defaultdict(list)
 
     electrostatics_force = openmm.NonbondedForce()
     electrostatics_force.setName("Electrostatics force")
@@ -915,7 +931,7 @@ def _create_electrostatics_force(
         parent_virtual_particle_mapping,
     )
 
-    return electrostatics_force
+    return electrostatics_force, parent_virtual_particle_mapping
 
 
 def _set_particle_parameters(
