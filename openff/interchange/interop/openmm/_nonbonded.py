@@ -672,15 +672,15 @@ def _create_multiple_nonbonded_forces(
 
         openmm_pairs.add(openmm_indices)
 
-        # Extend to virtual sites
-        # Virtual sites inherit the topology of their parent atom
-        for v in parent_virtual_particle_mapping[openmm_indices[0]]:
-            openmm_pairs.add((v, openmm_indices[1]))
-        for v in parent_virtual_particle_mapping[openmm_indices[1]]:
-            openmm_pairs.add((openmm_indices[0], v))
-        for v1 in parent_virtual_particle_mapping[openmm_indices[0]]:
-            for v2 in parent_virtual_particle_mapping[openmm_indices[1]]:
-                openmm_pairs.add((v1, v2))
+        if has_virtual_sites:
+            # Virtual sites inherit the topology of their parent atom
+            for v in parent_virtual_particle_mapping[openmm_indices[0]]:
+                openmm_pairs.add((v, openmm_indices[1]))
+            for v in parent_virtual_particle_mapping[openmm_indices[1]]:
+                openmm_pairs.add((openmm_indices[0], v))
+            for v1 in parent_virtual_particle_mapping[openmm_indices[0]]:
+                for v2 in parent_virtual_particle_mapping[openmm_indices[1]]:
+                    openmm_pairs.add((v1, v2))
 
     if electrostatics_force is not None:
         for i in range(electrostatics_force.getNumExceptions()):
