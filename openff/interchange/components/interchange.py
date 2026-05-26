@@ -82,7 +82,7 @@ class Interchange(_BaseModel):
 
     """
 
-    collections: _AnnotatedCollections = Field(dict())
+    collections: _AnnotatedCollections = Field(default_factory=dict)
     topology: _AnnotatedTopology
     mdconfig: MDConfig | None = Field(None)
     box: _BoxQuantity | None = Field(None)  # Needs shape/OpenMM validation

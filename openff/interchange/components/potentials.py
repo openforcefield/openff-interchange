@@ -40,7 +40,7 @@ else:
 class Potential(_BaseModel):
     """Base class for storing applied parameters."""
 
-    parameters: dict[str, _Quantity] = Field(dict())
+    parameters: dict[str, _Quantity] = Field(default_factory=dict)
     map_key: int | None = None
 
     def __hash__(self) -> int:
