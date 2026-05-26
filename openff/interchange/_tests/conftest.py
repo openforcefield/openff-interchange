@@ -12,6 +12,11 @@ from openff.utilities import get_data_file_path
 from openff.interchange._tests import MoleculeWithConformer, _rng, get_test_file_path
 
 
+@pytest.fixture(autouse=True)
+def _initdir(tmpdir):
+    tmpdir.chdir()
+
+
 @pytest.fixture
 def _simple_force_field():
     # TODO: Create a minimal force field for faster tests
@@ -483,11 +488,6 @@ def cyclohexane() -> Molecule:
     cyclohexane.add_bond(5, 17, 1, False)
 
     return cyclohexane
-
-
-@pytest.fixture(autouse=True)
-def _initdir(tmpdir):
-    tmpdir.chdir()
 
 
 @pytest.fixture
