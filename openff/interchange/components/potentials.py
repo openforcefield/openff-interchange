@@ -454,4 +454,5 @@ def serialize_collections(v: Any, handler: Any, info: Any) -> dict:
 _AnnotatedCollections = Annotated[
     dict[str, Collection],
     WrapValidator(validate_collections),
+    WrapSerializer(serialize_collections),
 ]
