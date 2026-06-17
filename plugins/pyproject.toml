@@ -34,9 +34,9 @@ lint.ignore = [ "D105", "D107", "D200", "D203", "D212", "E721" ]
 lint.isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units", "openff.interchange" ]
 
 [tool.mypy]
-plugins = "numpy.typing.mypy_plugin,pydantic.mypy"
 python_version = "3.11"
-warn_unused_configs = true
 warn_unused_ignores = true
+plugins = "numpy.typing.mypy_plugin,pydantic.mypy"
 warn_incomplete_stub = true
+warn_unused_configs = true
 show_error_codes = true
