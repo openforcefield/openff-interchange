@@ -394,6 +394,15 @@ class TestInterchangeSerialization:
             get_openmm_energies(roundtripped, combine_nonbonded_forces=False),
         )
 
+    def test_json_roundtrip_nondefault_scale_14(self, sage, ethanol):
+        sage["Electrostatics"].scale14 = 0.123456789
+
+        original = sage.create_interchange(ethanol.to_topology())
+
+        roundtripped = Interchange.model_validate_json(original.model_dump_json())
+
+        assert roundtripped["Electrostatics"].scale_14 == 0.123456789
+
 
 class TestWrappedCalls:
     """Test that methods which delegate out to other submodules call them."""
