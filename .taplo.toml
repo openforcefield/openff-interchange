@@ -1,0 +1,6 @@
+include = [ "pixi.toml", ".taplo.toml" ]
+
+[formatting]
+array_auto_expand = false
+compact_arrays = false
+column_width = 100
