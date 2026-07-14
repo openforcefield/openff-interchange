@@ -13,9 +13,10 @@ Please note that all releases prior to a version 1.0.0 are considered pre-releas
 
 ## Current development
 
-### Bugfixes
+### 0.5.4beta1 - 2025-07-14
 
 * #1502 Fix 1-4 exceptions with virtual sites and split non-bonded forces
+* #1501 Add compatibility with Pydantic 2.13 and newer
 
 ## 0.5.3 - 2025-04-30
 
