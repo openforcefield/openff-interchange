@@ -66,9 +66,9 @@ def to_lammps(interchange: Interchange, file_path: Path | str, include_type_labe
         # write types section
 
         x_min, y_min, z_min = numpy.min(
-            interchange.positions.to("angstrom"),  # type: ignore[union-attr]
+            interchange.positions.m_as("angstrom"),  # type: ignore[union-attr]
             axis=0,
-        ).magnitude
+        )
         if interchange.box is None:
             L_x, L_y, L_z = 100, 100, 100
         elif (interchange.box.m == numpy.diag(numpy.diagonal(interchange.box.m))).all():
