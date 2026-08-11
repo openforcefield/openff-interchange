@@ -10,7 +10,7 @@ from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.utilities import get_data_file_path, has_executable, skip_if_missing
 
 from openff.interchange import Interchange
-from openff.interchange._tests import MoleculeWithConformer, needs_gmx, shuffle_topology
+from openff.interchange._tests import MoleculeWithConformer, _rng, needs_gmx, shuffle_topology
 from openff.interchange.drivers import get_amber_energies, get_gromacs_energies, get_openmm_energies
 from openff.interchange.exceptions import NonperiodicNoCutoffNotSupportedError
 from openff.interchange.warnings import PresetChargesAndVirtualSitesWarning
@@ -418,3 +418,32 @@ def test_issue_1461(sage, opc, ethanol):
 
         sage_opc = sage.combine(opc)
         sage_opc.create_interchange(ethanol.to_topology(), charge_from_molecules=[])
+
+
+@pytest.mark.parametrize("attribute", ["box", "positions"])
+def test_issue_1480(sage, ethanol, attribute):
+    """Test that positions and box vectors are stored in nm after being set with non-nm length units."""
+    out = sage.create_interchange(ethanol.to_topology())
+
+    match attribute:
+        case "box":
+            out.box = Quantity(numpy.eye(3) * 35, "angstrom")
+        case "positions":
+            out.positions = Quantity(
+                _rng.random(
+                    (out.topology.n_atoms, 3),
+                ),
+                "angstrom",
+            )
+
+    assert str(getattr(out, attribute).units) == "nanometer"
+
+    if attribute == "box":
+        box = out.box
+
+        assert box[0][0] == box[1][1] == box[2][2]
+
+        assert str(box[0][0].units) == "nanometer"
+        assert box[0][0].m == pytest.approx(3.5)
+        assert str(box[1][0].units) == "nanometer"
+        assert box[1][0].m == pytest.approx(0.0)

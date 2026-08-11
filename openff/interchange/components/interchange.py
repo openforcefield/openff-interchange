@@ -82,7 +82,7 @@ class Interchange(_BaseModel):
 
     """
 
-    collections: _AnnotatedCollections = Field(dict())
+    collections: _AnnotatedCollections = Field(default_factory=dict)
     topology: _AnnotatedTopology
     mdconfig: MDConfig | None = Field(None)
     box: _BoxQuantity | None = Field(None)  # Needs shape/OpenMM validation
@@ -157,8 +157,6 @@ class Interchange(_BaseModel):
 
         """
         from openff.interchange.smirnoff._create import _create_interchange
-
-        _clear_caches()
 
         return _create_interchange(
             force_field=force_field,
@@ -845,8 +843,6 @@ class Interchange(_BaseModel):
         """
         from openff.interchange.foyer._create import _create_interchange
 
-        _clear_caches()
-
         return _create_interchange(
             force_field=force_field,
             topology=topology,
@@ -1108,15 +1104,3 @@ class Interchange(_BaseModel):
             f"Interchange with {len(self.collections)} collections, "
             f"{'' if periodic else 'non-'}periodic topology with {n_atoms} atoms."
         )
-
-
-def _clear_caches():
-    import functools
-    import gc
-
-    for obj in gc.get_objects():
-        try:
-            if isinstance(obj, functools._lru_cache_wrapper) and obj.__module__.startswith("openff.interchange"):
-                obj.cache_clear()
-        except ReferenceError:
-            continue

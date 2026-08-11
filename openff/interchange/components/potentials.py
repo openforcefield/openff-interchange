@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import ast
-import functools
-import gc
 import json
-from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
+from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy
 from numpy.typing import ArrayLike
@@ -34,15 +32,15 @@ if TYPE_CHECKING:
     if has_package("jax"):
         from jax import Array
     else:
-        Array: TypeAlias = Any  # type: ignore[no-redef]
+        type Array = Any  # type: ignore[no-redef]
 else:
-    Array: TypeAlias = ArrayLike
+    type Array = ArrayLike
 
 
 class Potential(_BaseModel):
     """Base class for storing applied parameters."""
 
-    parameters: dict[str, _Quantity] = Field(dict())
+    parameters: dict[str, _Quantity] = Field(default_factory=dict)
     map_key: int | None = None
 
     def __hash__(self) -> int:
@@ -291,13 +289,6 @@ class Collection(_BaseModel):
     def set_force_field_parameters(self, new_p: ArrayLike) -> None:
         """Set the force field parameters from a flattened representation."""
 
-        # Clear cache of all methods that are wrapped by functools.lru_cache
-        # A better solution might be at the level of parameter re-assignment
-        # See issue #1234
-        for obj in gc.get_objects():
-            if isinstance(obj, functools._lru_cache_wrapper) and obj.__module__.startswith("openff.interchange"):
-                obj.cache_clear()
-
         mapping = self.get_mapping()
         if new_p.shape[0] != len(mapping):  # type: ignore
             raise RuntimeError
@@ -448,7 +439,20 @@ def validate_collections(
         raise ValueError(f"Validation mode {info.mode} not implemented.")
 
 
+def serialize_collections(v: Any, handler: Any, info: Any) -> dict:
+    """Serialize collections using each collection's actual type schema.
+
+    Without this, pydantic uses the declared Collection base class schema and
+    drops subclass-specific fields (e.g. scale_14, cutoff, periodic_potential).
+    """
+    if info.mode == "json":
+        return {name: json.loads(collection.model_dump_json()) for name, collection in v.items()}
+    else:
+        raise NotImplementedError(f"Serialization mode {info.mode} not implemented.")
+
+
 _AnnotatedCollections = Annotated[
     dict[str, Collection],
     WrapValidator(validate_collections),
+    WrapSerializer(serialize_collections, when_used="json"),
 ]

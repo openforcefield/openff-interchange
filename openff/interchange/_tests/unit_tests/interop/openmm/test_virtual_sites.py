@@ -497,6 +497,118 @@ class TestOpenMMVirtualSiteExclusions:
 
             assert sorted(exceptions) == sorted(exclusions)
 
+    @pytest.mark.parametrize("smiles", ["c1cnccc1", "c1cnccn1"])
+    def test_14_exceptions_split_nonbonded_forces(self, sage, smiles):
+        """
+        Test that 1-4 exceptions are properly "imported" when nonbonded forces are split.
+        In this case, the virtual site is 1-4 to some of the parent atoms, so we need to make sure those
+        exceptions are included in the nonbonded force and not just the custom vdW force.
+        """
+        from openff.interchange.drivers import get_openmm_energies
+
+        molecule = MoleculeWithConformer.from_smiles(smiles)
+
+        interchange = (
+            ForceField("openff-2.3.0.offxml")
+            .combine(
+                ForceField("""\
+<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <VirtualSites version="0.3" exclusion_policy="parents">
+    <VirtualSite
+      smirks="[*:2]~[#7X2r6:1]~[*:3]" type="DivalentLonePair"
+      match="once" name="N_lp"
+      distance="-0.5 * angstrom" outOfPlaneAngle="0.0 * degree" inPlaneAngle="None"
+      epsilon="0.3 * kilocalories_per_mole" sigma="3.0 * angstrom"
+      charge_increment1="-0.1 * elementary_charge"
+      charge_increment2="0.0 * elementary_charge"
+      charge_increment3="0.0 * elementary_charge" />
+  </VirtualSites>
+</SMIRNOFF>
+"""),
+            )
+            .create_interchange(molecule.to_topology())
+        )
+
+        assert get_openmm_energies(interchange, combine_nonbonded_forces=False).total_energy.m == pytest.approx(
+            get_openmm_energies(interchange, combine_nonbonded_forces=True).total_energy.m,
+        )
+
+        def get_14_exceptions(
+            system: openmm.System,
+            forces_are_combined: bool,
+        ) -> dict[tuple[int, int], tuple[float, float, float]]:
+
+            exceptions = dict()
+
+            if forces_are_combined:
+                force_with_14_exceptions = next(
+                    force for force in system.getForces() if force.getName() == "Nonbonded force"
+                )
+
+                for index in range(force_with_14_exceptions.getNumExceptions()):
+                    p1, p2, q, sigma, epsilon = force_with_14_exceptions.getExceptionParameters(
+                        index,
+                    )
+
+                    # since zeroed-out exceptions are not added in split forces case, we need to
+                    # filter them out here to make the comparison more straightforward
+                    if q._value == 0 and epsilon._value == 0:
+                        continue
+
+                    exceptions[tuple(sorted((p1, p2)))] = (q._value, sigma._value, epsilon._value)
+
+            else:
+                electrostatics_14_force = next(
+                    force for force in system.getForces() if force.getName() == "Electrostatics 1-4 force"
+                )
+                vdw_14_force = next(force for force in system.getForces() if force.getName() == "vdW 1-4 force")
+
+                assert electrostatics_14_force.getNumBonds() == vdw_14_force.getNumBonds()
+
+                for index in range(electrostatics_14_force.getNumBonds()):
+                    p1_elec, p2_elec, (q,) = electrostatics_14_force.getBondParameters(
+                        index,
+                    )
+                    p1_vdw, p2_vdw, (sigma, epsilon) = vdw_14_force.getBondParameters(
+                        index,
+                    )
+
+                    assert p1_elec == p1_vdw
+                    assert p2_elec == p2_vdw
+
+                    exceptions[tuple(sorted((p1_elec, p2_elec)))] = (q, sigma, epsilon)
+
+            return exceptions
+
+        combined_exceptions = get_14_exceptions(
+            interchange.to_openmm_system(combine_nonbonded_forces=True),
+            forces_are_combined=True,
+        )
+        split_exceptions = get_14_exceptions(
+            interchange.to_openmm_system(combine_nonbonded_forces=False),
+            forces_are_combined=False,
+        )
+
+        def compare_exception_dicts(
+            dict1: dict[tuple[int, int], tuple[float, float, float]],
+            dict2: dict[tuple[int, int], tuple[float, float, float]],
+        ):
+
+            assert len(dict1) == len(dict2)
+
+            for key1 in dict1:
+                assert key1 in dict2
+
+                q1, sigma1, epsilon1 = dict1[key1]
+                q2, sigma2, epsilon2 = dict2[key1]
+
+                assert q1 == pytest.approx(q2, abs=1e-10)
+                assert sigma1 == pytest.approx(sigma2, abs=1e-10)
+                assert epsilon1 == pytest.approx(epsilon2, abs=1e-10)
+
+        compare_exception_dicts(combined_exceptions, split_exceptions)
+
     def test_dichloroethane_exceptions(self, sage):
         """Test a case in which a parent's 1-4 exceptions must be 'imported'."""
         from openff.toolkit._tests.mocking import VirtualSiteMocking

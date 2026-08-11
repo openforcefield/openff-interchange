@@ -6,7 +6,7 @@ For topics or details not specified, refer to the [development guidelines]( http
 
 ## Supported Python versions
 
-Generally, follow [SPEC 0](https://scientific-python.org/specs/spec-0000/). This means that currently Python 3.11-3.13 are supported as of the last update of this document (January 2026). No effort needs to be made to support older versions (Python 2 or 3.10 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
+Generally, follow [SPEC 0](https://scientific-python.org/specs/spec-0000/). This means that currently Python 3.12-3.13 are supported. No effort needs to be made to support older versions (Python 2 or 3.11 or earlier) or newer versions that are not well-supported by the [PyData](https://pydata.org) stack.
 
 ## Style
 
@@ -95,12 +95,6 @@ $ pixi workspace environment list
 Environments:
 - default:
     features: default
-- py311amber:
-    features: py311, test, typing, ambertools, mosdef, default
-- py311openeye:
-    features: py311, openeye, test, typing, regression_tests, engines, default
-- py311examples:
-    features: py311, openeye, test, engines, examples, default
 - py312amber:
     features: py312, test, typing, ambertools, mosdef, default
 - py312openeye:
@@ -116,7 +110,7 @@ Environments:
 - dev:
     features: py312, openeye, test, typing, dev, engines, default
 - betas:
-    features: py311, test, typing, engines, betas, default
+    features: py312, test, typing, engines, betas, default
 ```
 
 Each environment can be thought of as a combination of features. Each feature can be thought of as a collection of dependencies neccessary for a particular use case. For example, the feature named `typing` defines `mypy` and `pandas-stubs` as dependencies. Any environment that lists `typing` as a feature will include these packages. List all included features with `pixi workspace feature list`:
@@ -147,8 +141,6 @@ Features:
     dependencies: mbuild-base, foyer, numpy
 - betas:
     dependencies: openeye-toolkits, openmm
-- py311:
-    dependencies: python
 - py312:
     dependencies: python
 - py313:
@@ -182,10 +174,10 @@ $ pixi run -e py312examples run_examples
 ...
 ```
 
-or run unit tests with Python 3.11 as
+or run unit tests with Python 3.12 as
 
 ```console
-$ pixi run -e py311amber run_tests
+$ pixi run -e py312amber run_tests
 ...
 ```
 

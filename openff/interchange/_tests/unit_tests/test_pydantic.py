@@ -10,7 +10,7 @@ class Person(_BaseModel):
 
 
 class Roster(_BaseModel):
-    people: dict[str, Person] = Field(dict())
+    people: dict[str, Person] = Field(default_factory=dict)
 
     foo: _Quantity = Field()
 

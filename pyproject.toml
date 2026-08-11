@@ -10,10 +10,9 @@ name = "openff-interchange"
 description = "A project (and object) for storing, manipulating, and converting molecular mechanics data."
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
@@ -40,46 +39,60 @@ isort.known-first-party = [ "openff.interchange" ]
 isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
 pydocstyle.property-decorators = [ "validator" ]
 
+[tool.interrogate]
+fail-under = 90
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = true
+ignore-semiprivate = false
+ignore-private = true
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = false
+ignore-nested-classes = true
+ignore-setters = true
+ignore-regex = [ "^_.*", "^Test.*", "test_.*" ]
+
 [tool.pyproject-fmt]
 max_supported_python = "3.13"
 table_format = "long"
 
 [tool.mypy]
 mypy_path = "stubs/"
-python_version = "3.11"
-plugins = "pydantic.mypy"
-warn_unused_configs = true
-warn_unused_ignores = true
-warn_incomplete_stub = true
-show_error_codes = true
 exclude = "openff/interchange/_tests"
+python_version = "3.12"
+warn_unused_ignores = true
+plugins = "pydantic.mypy"
+warn_incomplete_stub = true
+warn_unused_configs = true
+show_error_codes = true
 [[tool.mypy.overrides]]
 module = [
-  "pyedr",
+  "intermol.*",
+  "jax",
+  "lammps",
   "networkx",
+  "nonbonded_plugins.*",
+  "openeye",
+  "openff.nagl_models.*",
+  "openff.packmol.*",
+  "openff.recharge.*",
+  "openff.toolkit.*",
+  "openff.units.*",
+  "openff.utilities.*",
   "openmm",
   "openmm.app",
   "openmm.app.element",
   "openmm.unit",
-  "intermol.*",
-  "rdkit",
-  "openff.toolkit.*",
-  "openff.units.*",
-  "openff.utilities.*",
-  "openff.recharge.*",
-  "openff.nagl_models.*",
-  "openff.packmol.*",
   "parmed",
   "parmed.amber",
-  "pmdtest.utils",
-  "pytest",
   "pint",
-  "unyt",
-  "openeye",
-  "jax",
+  "pmdtest.utils",
+  "pyedr",
+  "pytest",
+  "rdkit",
   "scipy.spatial",
-  "nonbonded_plugins.*",
-  "lammps",
+  "unyt",
 ]
 ignore_missing_imports = true
 
@@ -87,7 +100,13 @@ ignore_missing_imports = true
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
-addopts = "--cov=openff/interchange --cov-report=xml --ignore=examples/experimental --ignore=examples/amber"
+addopts = [
+  "-W error::FutureWarning",
+  "--cov=openff/interchange",
+  "--cov-report=xml",
+  "--ignore=examples/experimental",
+  "--ignore=examples/amber",
+]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -100,17 +119,3 @@ exclude_lines = [
 omit = [
   "*/*/_tests/*",
 ]
-
-[tool.interrogate]
-ignore-init-method = true
-ignore-init-module = true
-ignore-magic = true
-ignore-semiprivate = false
-ignore-private = true
-ignore-property-decorators = false
-ignore-module = false
-ignore-nested-functions = false
-ignore-nested-classes = true
-ignore-setters = true
-ignore-regex = [ "^Test.*", "test_.*", "^_.*" ]
-fail-under = 90
