@@ -88,7 +88,7 @@ import numpy as np
 
 mol = Molecule.from_smiles("CC")
 mol.generate_conformers()
-sage = ForceField("openff-2.0.0.offxml")
+sage = ForceField("openff-2.3.0.offxml")
 cubic_box = unit.Quantity(30 * np.eye(3), unit.angstrom)
 
 interchange = Interchange.from_smirnoff(topology=[mol], force_field=sage, box=cubic_box)
