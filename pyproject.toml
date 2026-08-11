@@ -102,6 +102,7 @@ markers = [
 ]
 addopts = [
   "-W error::FutureWarning",
+  "--cov-append",
   "--cov=openff/interchange",
   "--cov-report=xml",
   "--ignore=examples/experimental",
