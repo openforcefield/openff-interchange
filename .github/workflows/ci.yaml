@@ -62,6 +62,10 @@ jobs:
       if: ${{ !contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} run_tests
 
+    - name: Run doctests
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.environment == 'py312amber' }}
+      run: pixi run -e ${{ matrix.environment }} pytest --cov-append --doctest-glob="*.md" docs/using/
+
     - name: Run examples
       if: ${{ contains(matrix.environment, 'examples') }}
       run: pixi run -e ${{ matrix.environment }} run_examples
