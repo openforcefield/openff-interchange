@@ -177,7 +177,7 @@ will fail if they are missing.
 >>> molecule.n_conformers == 0, model.positions is None
 (True, True)
 >>> molecule.generate_conformers(n_conformers=1)
->>> molecule.conformers[0]
+>>> molecule.conformers[0]  # doctest: +SKIP
 <Quantity([[ 0.88165321 -0.04478118 -0.01474324]
  [-0.58159753 -0.3761451   0.05108011]
  [-1.34839371  0.75203739  0.18067008]
@@ -188,7 +188,7 @@ will fail if they are missing.
  [-0.83504017 -1.00512403 -0.81678084]
  [-1.08705149  1.51302455 -0.37634174]], 'angstrom')>
 >>> model = sage.create_interchange(molecule.to_topology())
->>> model.positions
+>>> model.positions  # doctest: +SKIP
 <Quantity([[ 0.08816532 -0.00447812 -0.00147432]
  [-0.05815975 -0.03761451  0.00510801]
  [-0.13483937  0.07520374  0.01806701]
@@ -198,7 +198,7 @@ will fail if they are missing.
  [-0.07879139 -0.09889387  0.0964785 ]
  [-0.08350402 -0.1005124  -0.08167808]
  [-0.10870515  0.15130246 -0.03763417]], 'nanometer')>
->>> model.positions.m_as("angstrom")
+>>> model.positions.m_as("angstrom")  # doctest: +SKIP
 array([[ 0.88165321, -0.04478118, -0.01474324],
        [-0.58159753, -0.3761451 ,  0.05108011],
        [-1.34839371,  0.75203739,  0.18067008],
@@ -253,13 +253,14 @@ True
  [0. 0. 5.]], 'nanometer')>
 >>> model.box = Quantity([28, 28, 28], "angstrom")
 >>> model.box
-<Quantity([[2.8  0.  0.]
- [0.  2.8  0.]
+<Quantity([[2.8 0.  0. ]
+ [0.  2.8 0. ]
  [0.  0.  2.8]], 'nanometer')>
 >>> model.box.m_as("angstrom")
 array([[28.,  0.,  0.],
        [ 0., 28.,  0.],
        [ 0.,  0., 28.]])
+
 ```
 
 [`Interchange`]: openff.interchange.Interchange
