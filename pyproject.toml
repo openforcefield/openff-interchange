@@ -108,14 +108,14 @@ addopts = [
   "--ignore=examples/amber",
 ]
 
+[tool.coverage.run]
+omit = [
+  "*/*/_tests/*",
+]
 [tool.coverage.report]
 exclude_lines = [
   "pragma: no cover",
   "if TYPE_CHECKING:",
   "raise NotImplementedError",
   "@overload",
-]
-[tool.coverage.run]
-omit = [
-  "*/*/_tests/*",
 ]
