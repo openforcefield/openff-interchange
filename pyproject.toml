@@ -104,6 +104,7 @@ addopts = [
   "-W error::FutureWarning",
   "--cov=openff/interchange",
   "--cov-report=xml",
+  "--cov-append",
   "--ignore=examples/experimental",
   "--ignore=examples/amber",
 ]

@@ -35,7 +35,6 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      COV: --cov=openff/interchange --cov-report=xml --cov-config=pyproject.toml --cov-append
 
     steps:
     - uses: actions/checkout@v7
@@ -64,7 +63,7 @@ jobs:
 
     - name: Run doctests
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.environment == 'py312amber' }}
-      run: pixi run -e ${{ matrix.environment }} pytest --cov-append --doctest-glob="*.md" docs/using/
+      run: pixi run -e ${{ matrix.environment }} pytest --doctest-glob="*.md" docs/using/
 
     - name: Run examples
       if: ${{ contains(matrix.environment, 'examples') }}
