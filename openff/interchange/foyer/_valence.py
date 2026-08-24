@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from openff.toolkit import Topology
 from pydantic import Field
 
 from openff.interchange.common._valence import (
@@ -18,6 +17,9 @@ from openff.interchange.foyer._base import (
     _get_potential_key_id,
 )
 from openff.interchange.models import PotentialKey, TopologyKey
+
+if TYPE_CHECKING:
+    from openff.toolkit import Topology
 
 
 class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):

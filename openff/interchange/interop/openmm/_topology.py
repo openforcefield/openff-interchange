@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING
 from openff.toolkit import Topology
 from openff.utilities import has_package
 
-from openff.interchange import Interchange
 from openff.interchange.models import BaseVirtualSiteKey
+
+if TYPE_CHECKING:
+    from openff.interchange import Interchange
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm.app

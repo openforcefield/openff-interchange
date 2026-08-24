@@ -5,7 +5,6 @@ from __future__ import annotations
 import pathlib
 import tempfile
 import warnings
-from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, overload
 
@@ -14,21 +13,13 @@ from openff.utilities.utilities import has_package, requires_package
 from pydantic import Field
 
 from openff.interchange._annotations import (
-    PositiveFloat,
     _BoxQuantity,
     _PositionsQuantity,
     _VelocityQuantity,
 )
 from openff.interchange._experimental import experimental
-from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
-from openff.interchange.common._valence import (
-    AngleCollection,
-    BondCollection,
-    ImproperTorsionCollection,
-    ProperTorsionCollection,
-)
 from openff.interchange.components.mdconfig import MDConfig
-from openff.interchange.components.potentials import Collection, _AnnotatedCollections
+from openff.interchange.components.potentials import _AnnotatedCollections
 from openff.interchange.exceptions import (
     InvalidPositionsError,
     MissingParameterHandlerError,
@@ -40,19 +31,32 @@ from openff.interchange.operations.minimize import (
 )
 from openff.interchange.pydantic import _BaseModel
 from openff.interchange.serialization import _AnnotatedTopology
-from openff.interchange.smirnoff import (
-    SMIRNOFFConstraintCollection,
-    SMIRNOFFVirtualSiteCollection,
-)
-from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 from openff.interchange.warnings import InterchangeDeprecationWarning
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     import openmm
     import openmm.app
     from openff.toolkit import ForceField
 
+    from openff.interchange._annotations import (
+        PositiveFloat,
+    )
+    from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
+    from openff.interchange.common._valence import (
+        AngleCollection,
+        BondCollection,
+        ImproperTorsionCollection,
+        ProperTorsionCollection,
+    )
+    from openff.interchange.components.potentials import Collection
     from openff.interchange.foyer._guard import has_foyer
+    from openff.interchange.smirnoff import (
+        SMIRNOFFConstraintCollection,
+        SMIRNOFFVirtualSiteCollection,
+    )
+    from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 
     if has_foyer:
         try:

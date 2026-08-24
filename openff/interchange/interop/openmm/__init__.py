@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, TextIO
 from openff.toolkit import Molecule
 from openff.utilities.utilities import has_package, requires_package
 
-from openff.interchange._annotations import PositiveFloat
 from openff.interchange.exceptions import (
     NegativeMassError,
     PluginCompatibilityError,
@@ -25,6 +24,7 @@ if has_package("openmm"):
 
 if TYPE_CHECKING:
     from openff.interchange import Interchange
+    from openff.interchange._annotations import PositiveFloat
 
 __all__ = [
     "from_openmm",

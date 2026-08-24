@@ -11,15 +11,12 @@ import numpy
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler, VirtualSiteHandler
-from openff.toolkit.utils.collections import ValidatedList
-from openff.utilities.utilities import has_package
 
 from openff.interchange.models import ImportedVirtualSiteKey, PotentialKey
 
-if has_package("openmm") or TYPE_CHECKING:
+if TYPE_CHECKING:
     import openmm
-    import openmm.app
-
+    from openff.toolkit.utils.collections import ValidatedList
 
 _IDIVF_1 = Quantity(1.0, "dimensionless")
 _PERIODICITIES = {

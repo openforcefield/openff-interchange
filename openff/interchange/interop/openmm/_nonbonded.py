@@ -7,13 +7,11 @@ from __future__ import annotations
 import itertools
 import warnings
 from collections import defaultdict
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
-from openff.toolkit import Molecule, Quantity
 from openff.units.openmm import to_openmm as to_openmm_quantity
 from openff.utilities.utilities import has_package
 
-from openff.interchange import Interchange
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, _simpler_charges, vdWCollection
 from openff.interchange.constants import _PME
 from openff.interchange.exceptions import (
@@ -30,6 +28,11 @@ from openff.interchange.models import (
     TopologyKey,
 )
 from openff.interchange.warnings import NonbondedSettingsWarning
+
+if TYPE_CHECKING:
+    from openff.toolkit import Molecule, Quantity
+
+    from openff.interchange import Interchange
 
 if has_package("openmm"):
     import openmm

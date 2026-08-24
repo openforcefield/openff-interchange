@@ -1,10 +1,12 @@
 from collections.abc import Iterable
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from openff.toolkit.topology import Atom
 from pydantic import Field
 
 from openff.interchange.components.potentials import Collection
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Atom
 
 
 class ConstraintCollection(Collection):

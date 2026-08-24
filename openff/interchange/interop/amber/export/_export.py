@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import textwrap
 from collections import defaultdict
-from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy
-from openff.toolkit import Topology
 
-from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import (
     _PME,
@@ -24,7 +22,14 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
     UnsupportedMixingRuleError,
 )
-from openff.interchange.models import PotentialKey
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from openff.toolkit import Topology
+
+    from openff.interchange import Interchange
+    from openff.interchange.models import PotentialKey
 
 
 def _write_text_blob(file, blob):

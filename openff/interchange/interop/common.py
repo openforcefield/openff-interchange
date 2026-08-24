@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from openff.toolkit import Quantity
+from typing import TYPE_CHECKING
 
-from openff.interchange import Interchange
 from openff.interchange.exceptions import (
     MissingPositionsError,
     MissingVirtualSitesError,
     UnsupportedExportError,
 )
-from openff.interchange.models import BaseVirtualSiteKey
-from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
+
+if TYPE_CHECKING:
+    from openff.toolkit import Quantity
+
+    from openff.interchange import Interchange
+    from openff.interchange.models import BaseVirtualSiteKey
+    from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
 
 
 def _to_positions(

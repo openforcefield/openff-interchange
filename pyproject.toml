@@ -32,12 +32,14 @@ fallback_version = "0.0.0"
 line-length = 119
 namespace-packages = [ "openff/interchange/" ]
 [tool.ruff.lint]
-select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+select = [ "E", "F", "I", "NPY", "RUF", "UP", "W", "TC" ]
 per-file-ignores."plugins/*" = [ "INP001" ]
 isort.known-first-party = [ "openff.interchange" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 isort.known-third-party = [ "openff.toolkit", "openff.utilities", "openff.units" ]
 pydocstyle.property-decorators = [ "validator" ]
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [ "openff.interchange.pydantic._BaseModel" ]
 
 [tool.interrogate]
 fail-under = 90

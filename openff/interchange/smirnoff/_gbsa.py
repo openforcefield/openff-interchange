@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from openff.toolkit import Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
@@ -22,6 +21,9 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 _KcalMolA2 = Annotated[
     Quantity,

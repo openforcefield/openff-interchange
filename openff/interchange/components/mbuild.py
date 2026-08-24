@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Molecule, Topology
 from openff.utilities.utilities import has_package, requires_package
+
+if TYPE_CHECKING:
+    from openff.toolkit import Molecule, Topology
 
 if has_package("mbuild") or TYPE_CHECKING:
     import mbuild

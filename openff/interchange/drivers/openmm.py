@@ -6,14 +6,17 @@ import warnings
 from typing import TYPE_CHECKING
 
 import numpy
-from openff.toolkit import Quantity
 from openff.units import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
-from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 from openff.interchange.interop.openmm._positions import to_openmm_positions
+
+if TYPE_CHECKING:
+    from openff.toolkit import Quantity
+
+    from openff.interchange import Interchange
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm

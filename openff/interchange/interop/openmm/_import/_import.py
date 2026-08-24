@@ -2,6 +2,9 @@ import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, Union
 
+import openmm
+import openmm.app
+import openmm.unit
 from openff.toolkit import Quantity, Topology
 from openff.units import ensure_quantity
 from openff.units.openmm import from_openmm as from_openmm_
@@ -28,10 +31,6 @@ if has_package("openmm"):
     import openmm.unit
 
 if TYPE_CHECKING:
-    import openmm
-    import openmm.app
-    import openmm.unit
-
     from openff.interchange import Interchange
 
 
