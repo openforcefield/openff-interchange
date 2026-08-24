@@ -1,11 +1,13 @@
 """An object for storing, manipulating, and converting molecular mechanics data."""
 
+from __future__ import annotations
+
 import pathlib
 import tempfile
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Union, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 from openff.toolkit import Molecule, Quantity, Topology
 from openff.utilities.utilities import has_package, requires_package
@@ -92,14 +94,14 @@ class Interchange(_BaseModel):
     @classmethod
     def from_smirnoff(
         cls,
-        force_field: "ForceField",
+        force_field: ForceField,
         topology: Topology | list[Molecule],
         box: Quantity | None = None,
         positions: Quantity | None = None,
         charge_from_molecules: list[Molecule] | None = None,
         partial_bond_orders_from_molecules: list[Molecule] | None = None,
         allow_nonintegral_charges: bool = False,
-    ) -> "Interchange":
+    ) -> Interchange:
         """
         Create a new object by parameterizing a topology with a SMIRNOFF force field.
 
@@ -172,7 +174,7 @@ class Interchange(_BaseModel):
         self,
         backend: str = "nglview",
         include_virtual_sites: bool = False,
-    ) -> "nglview.NGLWidget":
+    ) -> nglview.NGLWidget:
         """
         Visualize this Interchange.
 
@@ -222,7 +224,7 @@ class Interchange(_BaseModel):
     def _visualize_nglview(
         self,
         include_virtual_sites: bool = False,
-    ) -> "nglview.NGLWidget":
+    ) -> nglview.NGLWidget:
         """
         Visualize the system using NGLView via a PDB file.
 
@@ -603,14 +605,14 @@ class Interchange(_BaseModel):
 
     def to_openmm_simulation(
         self,
-        integrator: "openmm.Integrator",
+        integrator: openmm.Integrator,
         combine_nonbonded_forces: bool = True,
         add_constrained_forces: bool = False,
         ewald_tolerance: float = 1e-4,
         hydrogen_mass: PositiveFloat = 1.007947,
-        additional_forces: Iterable["openmm.Force"] = tuple(),
+        additional_forces: Iterable[openmm.Force] = tuple(),
         **kwargs,
-    ) -> "openmm.app.simulation.Simulation":
+    ) -> openmm.app.simulation.Simulation:
         """
         Export this Interchange to an OpenMM ``Simulation`` object.
 
@@ -813,12 +815,12 @@ class Interchange(_BaseModel):
     @requires_package("foyer")
     def from_foyer(
         cls,
-        force_field: "FoyerForcefield",
+        force_field: FoyerForcefield,
         topology: Topology,
         box=None,
         positions=None,
         **kwargs,
-    ) -> "Interchange":
+    ) -> Interchange:
         """
         Create an Interchange object from a Foyer force field and an OpenFF topology.
 
@@ -856,7 +858,7 @@ class Interchange(_BaseModel):
         cls,
         topology_file: Path | str,
         gro_file: Path | str,
-    ) -> "Interchange":
+    ) -> Interchange:
         """
         Create an Interchange object from GROMACS files.
 
@@ -918,11 +920,11 @@ class Interchange(_BaseModel):
     @classmethod
     def from_openmm(
         cls,
-        system: "openmm.System",
-        topology: Union["openmm.app.Topology", Topology],
+        system: openmm.System,
+        topology: openmm.app.Topology | Topology,
         positions: Quantity | None = None,
         box_vectors: Quantity | None = None,
-    ) -> "Interchange":
+    ) -> Interchange:
         """
         Create an Interchange object from OpenMM objects.
 
@@ -985,58 +987,58 @@ class Interchange(_BaseModel):
         )
 
     @overload
-    def __getitem__(self, item: Literal["Bonds"]) -> "BondCollection": ...
+    def __getitem__(self, item: Literal["Bonds"]) -> BondCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["Constraints"],
-    ) -> "SMIRNOFFConstraintCollection": ...
+    ) -> SMIRNOFFConstraintCollection: ...
 
     @overload
-    def __getitem__(self, item: Literal["Angles"]) -> "AngleCollection": ...
+    def __getitem__(self, item: Literal["Angles"]) -> AngleCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["vdW"],
-    ) -> "vdWCollection": ...
+    ) -> vdWCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ProperTorsions"],
-    ) -> "ProperTorsionCollection": ...
+    ) -> ProperTorsionCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["ImproperTorsions"],
-    ) -> "ImproperTorsionCollection": ...
+    ) -> ImproperTorsionCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["VirtualSites"],
-    ) -> "SMIRNOFFVirtualSiteCollection": ...
+    ) -> SMIRNOFFVirtualSiteCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["Electrostatics"],
-    ) -> "ElectrostaticsCollection": ...
+    ) -> ElectrostaticsCollection: ...
 
     @overload
     def __getitem__(
         self,
         item: Literal["GBSA"],
-    ) -> "SMIRNOFFGBSACollection": ...
+    ) -> SMIRNOFFGBSACollection: ...
 
     @overload
     def __getitem__(
         self,
         item: str,
-    ) -> "Collection": ...
+    ) -> Collection: ...
 
     def __getitem__(self, item: str):
         """Syntax sugar for looking up collections or other components."""
@@ -1056,7 +1058,7 @@ class Interchange(_BaseModel):
                 f"collections registered:\n\t{[*self.collections.keys()]}",
             )
 
-    def __add__(self, other: "Interchange") -> "Interchange":
+    def __add__(self, other: Interchange) -> Interchange:
         """Combine two Interchange objects."""
         warnings.warn(
             "The `+` operator is deprecated. Use `Interchange.combine` instead.",
@@ -1065,7 +1067,7 @@ class Interchange(_BaseModel):
 
         return self.combine(other)
 
-    def combine(self, other: "Interchange") -> "Interchange":
+    def combine(self, other: Interchange) -> Interchange:
         """
         Combine two Interchange objects.
 

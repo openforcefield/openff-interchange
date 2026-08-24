@@ -121,7 +121,7 @@ def _downconvert_vdw_handler(vdw_handler: vdWHandler):
 
 
 def library_charge_from_molecule(
-    molecule: "Molecule",
+    molecule: Molecule,
 ) -> LibraryChargeHandler.LibraryChargeType:
     """Given an OpenFF Molecule with charges, generate a corresponding LibraryChargeType."""
     if molecule.partial_charges is None:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING
@@ -51,7 +53,7 @@ class FoyerConnectedAtomsHandler(Collection):
     def store_matches(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for connection in getattr(topology, self.connection_attribute):
@@ -68,7 +70,7 @@ class FoyerConnectedAtomsHandler(Collection):
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
-    def store_potentials(self, force_field: "Forcefield") -> None:
+    def store_potentials(self, force_field: Forcefield) -> None:
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         from foyer.exceptions import MissingForceError, MissingParametersError
 

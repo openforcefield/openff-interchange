@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy
 from numpy.typing import NDArray
 from openff.toolkit import Quantity, Topology
@@ -44,7 +46,7 @@ def get_handlers_callable() -> dict[str, _CollectionAlias]:
 
 
 def _create_interchange(
-    force_field: "Forcefield",
+    force_field: Forcefield,
     topology: Topology,
     box: Quantity | None = None,
     positions: Quantity | None = None,

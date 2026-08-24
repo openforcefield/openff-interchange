@@ -1,5 +1,7 @@
 """Runtime settings for MD simulations."""
 
+from __future__ import annotations
+
 import warnings
 from io import StringIO
 from pathlib import Path
@@ -78,7 +80,7 @@ class MDConfig(_BaseModel):
     )
 
     @classmethod
-    def from_interchange(cls, interchange: "Interchange") -> "MDConfig":
+    def from_interchange(cls, interchange: Interchange) -> MDConfig:
         """Generate a MDConfig object from an Interchange object."""
         mdconfig = cls(
             periodic=interchange.box is not None,
@@ -113,7 +115,7 @@ class MDConfig(_BaseModel):
 
         return mdconfig
 
-    def apply(self, interchange: "Interchange"):
+    def apply(self, interchange: Interchange):
         """Attempt to apply these settings to an Interchange object."""
         if self.periodic:
             if interchange.box is None:
@@ -220,7 +222,7 @@ class MDConfig(_BaseModel):
 
     def write_lammps_input(
         self,
-        interchange: "Interchange",
+        interchange: Interchange,
         input_file: str = "run.in",
         data_file: str = "out.lmp",
     ) -> None:
@@ -240,7 +242,7 @@ class MDConfig(_BaseModel):
         # TODO: Process rigid water
 
         def _get_coeffs_of_constrained_bonds_and_angles(
-            interchange: "Interchange",
+            interchange: Interchange,
         ) -> tuple[set[int], set[int]]:
             """
             Get coefficients of bonds and angles that appear to be constrained.
@@ -473,7 +475,7 @@ class MDConfig(_BaseModel):
             Path(input_file).write_text(sander.getvalue())
 
 
-def _infer_constraints(interchange: "Interchange") -> str:
+def _infer_constraints(interchange: Interchange) -> str:
     if "Constraints" not in interchange.collections:
         return "none"
     elif "Bonds" not in interchange.collections:

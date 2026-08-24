@@ -1,5 +1,7 @@
 """Utilities for interoperability with multiple packages."""
 
+from __future__ import annotations
+
 from openff.toolkit import Quantity
 
 from openff.interchange import Interchange
@@ -13,7 +15,7 @@ from openff.interchange.smirnoff import SMIRNOFFVirtualSiteCollection
 
 
 def _to_positions(
-    interchange: "Interchange",
+    interchange: Interchange,
     include_virtual_sites: bool = True,
 ) -> Quantity:
     """Generate an array of positions of all particles, optionally excluding virtual sites."""
@@ -38,7 +40,7 @@ def _to_positions(
         return interchange.positions
 
 
-def _check_virtual_site_exclusion_policy(handler: "SMIRNOFFVirtualSiteCollection"):
+def _check_virtual_site_exclusion_policy(handler: SMIRNOFFVirtualSiteCollection):
     _SUPPORTED_EXCLUSION_POLICIES = ("parents",)
 
     if handler.exclusion_policy not in _SUPPORTED_EXCLUSION_POLICIES:

@@ -2,6 +2,8 @@
 Helper functions for exporting virutal sites to GROMACS.
 """
 
+from __future__ import annotations
+
 import numpy
 from openff.toolkit import Quantity
 
@@ -24,7 +26,7 @@ from openff.interchange.smirnoff._virtual_sites import (
 
 def _create_gromacs_virtual_site(
     interchange: Interchange,
-    virtual_site: "_VirtualSite",
+    virtual_site: _VirtualSite,
     virtual_site_key: BaseVirtualSiteKey,
     particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> GROMACSVirtualSite:

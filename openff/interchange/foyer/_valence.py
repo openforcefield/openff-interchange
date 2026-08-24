@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal
 
 from openff.toolkit import Topology
@@ -36,7 +38,7 @@ class FoyerHarmonicBondHandler(FoyerConnectedAtomsHandler, BondCollection):
     def store_matches(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for bond in topology.bonds:
@@ -74,7 +76,7 @@ class FoyerHarmonicAngleHandler(FoyerConnectedAtomsHandler, AngleCollection):
     def store_matches(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for angle in topology.angles:
@@ -116,7 +118,7 @@ class FoyerRBProperHandler(
     def store_matches(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for proper in topology.propers:

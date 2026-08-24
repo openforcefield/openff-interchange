@@ -1,5 +1,7 @@
 """Interfaces with OpenMM."""
 
+from __future__ import annotations
+
 from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, TextIO
@@ -34,12 +36,12 @@ __all__ = [
 
 @requires_package("openmm")
 def to_openmm_system(
-    interchange: "Interchange",
+    interchange: Interchange,
     combine_nonbonded_forces: bool = False,
     add_constrained_forces: bool = False,
     ewald_tolerance: float = 1e-4,
     hydrogen_mass: PositiveFloat = 1.007947,
-) -> "openmm.System":
+) -> openmm.System:
     """
     Convert an Interchange to an OpenmM System.
 
@@ -156,7 +158,7 @@ to_openmm = to_openmm_system
 @requires_package("openmm")
 def _to_pdb(
     file_path: Path | str | TextIO,
-    topology: "openmm.app.Topology",
+    topology: openmm.app.Topology,
     positions,
 ):
     from openff.units import ensure_quantity
@@ -178,8 +180,8 @@ def _to_pdb(
 
 @requires_package("openmm")
 def _apply_hmr(
-    system: "openmm.System",
-    interchange: "Interchange",
+    system: openmm.System,
+    interchange: Interchange,
     hydrogen_mass: PositiveFloat,
 ):
     if abs(hydrogen_mass - 1.008) < 1e-3:

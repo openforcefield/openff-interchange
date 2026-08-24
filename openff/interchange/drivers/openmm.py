@@ -1,7 +1,9 @@
 """Functions for running energy evluations with OpenMM."""
 
+from __future__ import annotations
+
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy
 from openff.toolkit import Quantity
@@ -98,12 +100,12 @@ def get_openmm_energies(
 
 
 def _get_openmm_energies(
-    system: "openmm.System",
-    box_vectors: Optional["openmm.unit.Quantity"],
-    positions: "openmm.unit.Quantity",
+    system: openmm.System,
+    box_vectors: openmm.unit.Quantity | None,
+    positions: openmm.unit.Quantity,
     round_positions: int | None,
     platform: str,
-) -> dict[int, "openmm.unit.Quantity"]:
+) -> dict[int, openmm.unit.Quantity]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)
@@ -141,8 +143,8 @@ def _get_openmm_energies(
 
 
 def _process(
-    raw_energies: dict[int, "openmm.unit.Quantity"],
-    system: "openmm.System",
+    raw_energies: dict[int, openmm.unit.Quantity],
+    system: openmm.System,
     combine_nonbonded_forces: bool,
     detailed: bool,
 ) -> EnergyReport:

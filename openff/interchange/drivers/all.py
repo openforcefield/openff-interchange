@@ -1,5 +1,7 @@
 """Functions for running energy evluations with all available engines."""
 
+from __future__ import annotations
+
 import warnings
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def get_all_energies(
-    interchange: "Interchange",
+    interchange: Interchange,
     combine_nonbonded_forces: bool = False,
     _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
 ) -> dict[str, EnergyReport]:
@@ -64,10 +66,10 @@ def get_all_energies(
 
 @requires_package("pandas")
 def get_summary_data(
-    interchange: "Interchange",
+    interchange: Interchange,
     combine_nonbonded_forces: bool = False,
     _engines: Iterable[str] = ("OpenMM", "Amber", "GROMACS", "LAMMPS"),
-) -> "pandas.DataFrame":
+) -> pandas.DataFrame:
     """Return a pandas DataFrame with summaries of energies from all available engines."""
     from pandas import DataFrame
 

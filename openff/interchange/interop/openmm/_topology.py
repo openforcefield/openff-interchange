@@ -2,6 +2,8 @@
 Helper functions for exporting the topology to OpenMM.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from openff.toolkit import Topology
@@ -15,10 +17,10 @@ if has_package("openmm") or TYPE_CHECKING:
 
 
 def to_openmm_topology(
-    interchange: "Interchange",
+    interchange: Interchange,
     collate: bool = False,
     ensure_unique_atom_names: str | bool = "residues",
-) -> "openmm.app.Topology":
+) -> openmm.app.Topology:
     """
     Create an OpenMM Topology containing some virtual site information (if appropriate).
 

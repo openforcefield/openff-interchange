@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Iterable
 from typing import Literal
 
@@ -85,7 +87,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
     def create(
         cls,
         parameter_handler: GBSAHandler,
-        topology: "Topology",
+        topology: Topology,
     ):
         """Instantiate a `SMIRNOFFGBSACollection` from a parameter handler and a topology."""
         if type(parameter_handler) not in cls.allowed_parameter_handlers():

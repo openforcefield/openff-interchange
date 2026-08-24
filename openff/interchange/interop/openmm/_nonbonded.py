@@ -2,6 +2,8 @@
 Helper functions for producing `openmm.Force` objects for non-bonded terms.
 """
 
+from __future__ import annotations
+
 import itertools
 import warnings
 from collections import defaultdict
@@ -53,7 +55,7 @@ class _NonbondedData(NamedTuple):
 
 
 def _process_nonbonded_forces(
-    interchange: "Interchange",
+    interchange: Interchange,
     system: openmm.System,
     combine_nonbonded_forces: bool = False,
     ewald_tolerance: float = 1e-4,
@@ -127,7 +129,7 @@ def _process_nonbonded_forces(
 
 
 def _add_particles_to_system(
-    interchange: "Interchange",
+    interchange: Interchange,
     system: openmm.System,
     molecule_virtual_site_map,
 ) -> dict[int | BaseVirtualSiteKey, int]:
@@ -183,7 +185,7 @@ def _add_particles_to_system(
     return particle_map
 
 
-def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
+def _prepare_input_data(interchange: Interchange) -> _NonbondedData:
     try:
         vdw: vdWCollection = interchange["vdW"]
     except LookupError:
@@ -243,10 +245,10 @@ def _prepare_input_data(interchange: "Interchange") -> _NonbondedData:
 
 def _create_single_nonbonded_force(
     data: _NonbondedData,
-    interchange: "Interchange",
+    interchange: Interchange,
     system: openmm.System,
     ewald_tolerance: float,
-    molecule_virtual_site_map: dict["Molecule", list[BaseVirtualSiteKey]],
+    molecule_virtual_site_map: dict[Molecule, list[BaseVirtualSiteKey]],
     openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
 ):
     """Create a single openmm.NonbondedForce from vdW/electrostatics/virtual site collections."""
@@ -466,7 +468,7 @@ def _create_single_nonbonded_force(
 def _create_exceptions(
     data: _NonbondedData,
     non_bonded_force: openmm.NonbondedForce,
-    interchange: "Interchange",
+    interchange: Interchange,
     openff_openmm_particle_map: dict,
     parent_virtual_particle_mapping: defaultdict[int, list[int]],
 ):
@@ -558,7 +560,7 @@ def _create_exceptions(
 
 def _create_multiple_nonbonded_forces(
     data: _NonbondedData,
-    interchange: "Interchange",
+    interchange: Interchange,
     system: openmm.System,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict,
@@ -750,7 +752,7 @@ def _create_multiple_nonbonded_forces(
 
 def _create_vdw_force(
     data: _NonbondedData,
-    interchange: "Interchange",
+    interchange: Interchange,
     molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
 ) -> openmm.CustomNonbondedForce | None:
@@ -840,7 +842,7 @@ def _create_vdw_force(
 
 def _create_electrostatics_force(
     data: _NonbondedData,
-    interchange: "Interchange",
+    interchange: Interchange,
     ewald_tolerance: float,
     molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     has_virtual_sites: bool,
@@ -938,7 +940,7 @@ def _set_particle_parameters(
     data: _NonbondedData,
     vdw_force: openmm.CustomNonbondedForce,
     electrostatics_force: openmm.NonbondedForce,
-    interchange: "Interchange",
+    interchange: Interchange,
     has_virtual_sites: bool,
     molecule_virtual_site_map: dict[int, list[BaseVirtualSiteKey]],
     openff_openmm_particle_map: dict[int | BaseVirtualSiteKey, int],
@@ -1081,7 +1083,7 @@ def _get_14_scaling_factors(data: _NonbondedData) -> tuple[float, float]:
 
 
 def _apply_switching_function(
-    vdw_collection: "vdWCollection",
+    vdw_collection: vdWCollection,
     force: openmm.NonbondedForce,
 ):
     if not hasattr(force, "setUseSwitchingFunction"):
