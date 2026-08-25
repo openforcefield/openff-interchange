@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 if has_foyer:
     try:
-        pass
+        from foyer import Forcefield  # noqa
     except ModuleNotFoundError:
         pass
 
