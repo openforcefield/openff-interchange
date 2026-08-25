@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy
 from numpy.typing import ArrayLike
-from openff.toolkit import Quantity
 from openff.utilities.utilities import has_package, requires_package
 from pydantic import (
     Field,
@@ -29,6 +28,8 @@ from openff.interchange.models import (
 from openff.interchange.pydantic import _BaseModel
 
 if TYPE_CHECKING:
+    from openff.toolkit import Quantity
+
     if has_package("jax"):
         from jax import Array
     else:

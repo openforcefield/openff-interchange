@@ -1,15 +1,14 @@
 import itertools
 import re
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 from openff.toolkit import Molecule, Quantity
-from openff.toolkit.topology import Atom
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.interchange import Interchange
 from openff.interchange._annotations import PositiveFloat
-from openff.interchange.components.potentials import Collection
 from openff.interchange.components.toolkit import _get_14_pairs
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.interop._virtual_sites import (
@@ -45,6 +44,11 @@ from openff.interchange.models import (
 from openff.interchange.smirnoff._virtual_sites import (
     _create_virtual_site_object,
 )
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Atom
+
+    from openff.interchange.components.potentials import Collection
 
 type MoleculeLike = Molecule | _SimpleMolecule
 

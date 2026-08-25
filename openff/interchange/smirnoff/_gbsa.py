@@ -1,5 +1,6 @@
-from collections.abc import Iterable
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 from openff.toolkit import Quantity, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import GBSAHandler
@@ -20,6 +21,9 @@ from openff.interchange.components.potentials import Potential
 from openff.interchange.constants import kcal_mol_a2
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.smirnoff._base import SMIRNOFFCollection
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 _KcalMolA2 = Annotated[
     Quantity,
@@ -85,7 +89,7 @@ class SMIRNOFFGBSACollection(SMIRNOFFCollection):
     def create(
         cls,
         parameter_handler: GBSAHandler,
-        topology: "Topology",
+        topology: Topology,
     ):
         """Instantiate a `SMIRNOFFGBSACollection` from a parameter handler and a topology."""
         if type(parameter_handler) not in cls.allowed_parameter_handlers():

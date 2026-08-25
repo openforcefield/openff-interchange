@@ -1,16 +1,19 @@
 """Export to LAMMPS."""
 
 from pathlib import Path
-from typing import IO
+from typing import IO, TYPE_CHECKING
 
 import numpy
 import packaging.version
-from openff.toolkit.topology import Atom
 
 from openff.interchange import Interchange
 from openff.interchange.exceptions import UnsupportedExportError
 from openff.interchange.interop.lammps.export.provenance import get_lammps_version
-from openff.interchange.models import PotentialKey
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Atom
+
+    from openff.interchange.models import PotentialKey
 
 
 def to_lammps(interchange: Interchange, file_path: Path | str, include_type_labels: bool = False):

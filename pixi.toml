@@ -43,6 +43,7 @@ openmm = "*"
 
 [feature.dev.pypi-dependencies]
 pre-commit = "*"
+ruff = "*"
 ipdb = "*"
 
 [feature.engines.dependencies]

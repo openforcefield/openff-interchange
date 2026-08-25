@@ -1,17 +1,22 @@
 """Functions for running energy evluations with OpenMM."""
 
+from __future__ import annotations
+
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy
-from openff.toolkit import Quantity
 from openff.units import ensure_quantity
 from openff.utilities.utilities import has_package, requires_package
 
-from openff.interchange import Interchange
 from openff.interchange.drivers.report import EnergyReport
 from openff.interchange.exceptions import CannotInferNonbondedEnergyError
 from openff.interchange.interop.openmm._positions import to_openmm_positions
+
+if TYPE_CHECKING:
+    from openff.toolkit import Quantity
+
+    from openff.interchange import Interchange
 
 if has_package("openmm") or TYPE_CHECKING:
     import openmm
@@ -98,12 +103,12 @@ def get_openmm_energies(
 
 
 def _get_openmm_energies(
-    system: "openmm.System",
-    box_vectors: Optional["openmm.unit.Quantity"],
-    positions: "openmm.unit.Quantity",
+    system: openmm.System,
+    box_vectors: openmm.unit.Quantity | None,
+    positions: openmm.unit.Quantity,
     round_positions: int | None,
     platform: str,
-) -> dict[int, "openmm.unit.Quantity"]:
+) -> dict[int, openmm.unit.Quantity]:
     """Given prepared `openmm` objects, run a single-point energy calculation."""
     for index, force in enumerate(system.getForces()):
         force.setForceGroup(index)
@@ -141,8 +146,8 @@ def _get_openmm_energies(
 
 
 def _process(
-    raw_energies: dict[int, "openmm.unit.Quantity"],
-    system: "openmm.System",
+    raw_energies: dict[int, openmm.unit.Quantity],
+    system: openmm.System,
     combine_nonbonded_forces: bool,
     detailed: bool,
 ) -> EnergyReport:
