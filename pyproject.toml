@@ -111,6 +111,11 @@ markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
 
+[tool.coverage]
+[tool.coverage.run]
+omit = [
+  "*/*/_tests/*",
+]
 [tool.coverage.report]
 exclude_lines = [
   "@overload",
@@ -118,4 +123,3 @@ exclude_lines = [
   "pragma: no cover",
   "raise NotImplementedError",
 ]
-run.omit = [ "**/_tests/*" ]
