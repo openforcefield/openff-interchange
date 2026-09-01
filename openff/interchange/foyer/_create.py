@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy
-from numpy.typing import NDArray
 from openff.toolkit import Quantity, Topology
 
 from openff.interchange import Interchange
@@ -20,9 +23,13 @@ from openff.interchange.foyer._valence import (
 )
 from openff.interchange.models import TopologyKey
 
+if TYPE_CHECKING:
+    from foyer import Forcefield
+    from numpy.typing import NDArray
+
 if has_foyer:
     try:
-        from foyer import Forcefield
+        from foyer import Forcefield  # noqa
     except ModuleNotFoundError:
         pass
 
@@ -44,7 +51,7 @@ def get_handlers_callable() -> dict[str, _CollectionAlias]:
 
 
 def _create_interchange(
-    force_field: "Forcefield",
+    force_field: Forcefield,
     topology: Topology,
     box: Quantity | None = None,
     positions: Quantity | None = None,

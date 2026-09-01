@@ -2,6 +2,8 @@
 Common helpers for exporting virtual sites.
 """
 
+from __future__ import annotations
+
 import abc
 from collections import defaultdict
 from typing import TYPE_CHECKING
@@ -26,7 +28,7 @@ class _OpenMMVirtualSite(_BaseModel, abc.ABC):
     particles: list[int]
 
     @abc.abstractmethod
-    def to_openmm(self) -> "openmm.VirtualSite":
+    def to_openmm(self) -> openmm.VirtualSite:
         """Create a (subclass of) openmm.VirtualSite"""
         raise NotImplementedError()
 
@@ -63,7 +65,7 @@ class _ThreeParticleAverageSite(_OpenMMVirtualSite):
 
 
 def _virtual_site_parent_molecule_mapping(
-    interchange: "Interchange",
+    interchange: Interchange,
 ) -> dict[BaseVirtualSiteKey, int]:
     """
     Map `VirtualSiteKey`s the index of the molecule they belong to.
@@ -101,7 +103,7 @@ def _virtual_site_parent_molecule_mapping(
     return mapping
 
 
-def _get_molecule_virtual_site_map(interchange: "Interchange") -> defaultdict[int, list[BaseVirtualSiteKey]]:
+def _get_molecule_virtual_site_map(interchange: Interchange) -> defaultdict[int, list[BaseVirtualSiteKey]]:
     virtual_site_molecule_map = _virtual_site_parent_molecule_mapping(interchange)
 
     molecule_virtual_site_map = defaultdict(list)
@@ -113,7 +115,7 @@ def _get_molecule_virtual_site_map(interchange: "Interchange") -> defaultdict[in
 
 
 def get_positions_with_virtual_sites(
-    interchange: "Interchange",
+    interchange: Interchange,
     collate: bool = False,
     use_zeros: bool = False,
 ) -> Quantity:
@@ -219,7 +221,7 @@ def get_positions_with_virtual_sites(
 
 
 def _get_separation_by_atom_indices(
-    interchange: "Interchange",
+    interchange: Interchange,
     atom_indices: tuple[int, ...],
     prioritize_geometry: bool = False,
 ) -> Quantity:

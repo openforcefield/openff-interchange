@@ -1,7 +1,7 @@
 [workspace]
 name = "openff-interchange"
-channels = [ "conda-forge", "openeye" ]
-platforms = [ "linux-64", "osx-arm64" ]
+channels = ["conda-forge", "openeye"]
+platforms = ["linux-64", "osx-arm64"]
 
 [dependencies]
 uv = "*"
@@ -16,13 +16,13 @@ rdkit = ">=2024"
 openmm = "8.4.*"
 
 [environments]
-py312amber = [ "py312", "test", "typing", "ambertools", "mosdef" ]
-py312openeye = [ "py312", "openeye", "packmol", "test", "typing", "regression_tests", "engines" ]
-py312examples = [ "py312", "openeye", "packmol", "test", "engines", "examples" ]
-py313openeye = [ "py313", "openeye", "test", "typing", "regression_tests", "engines" ]
-py313examples = [ "py313", "openeye", "packmol", "test", "engines", "examples" ]
-dev = [ "py312", "openeye", "test", "typing", "dev", "engines", "packmol" ]
-betas = [ "py312", "test", "typing", "engines", "betas", "packmol" ]
+py312amber = ["py312", "test", "typing", "ambertools", "mosdef"]
+py312openeye = ["py312", "openeye", "packmol", "test", "typing", "regression_tests", "engines"]
+py312examples = ["py312", "openeye", "packmol", "test", "engines", "examples"]
+py313openeye = ["py313", "openeye", "test", "typing", "regression_tests", "engines"]
+py313examples = ["py313", "openeye", "packmol", "test", "engines", "examples"]
+dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
+betas = ["py312", "test", "typing", "engines", "betas", "packmol"]
 
 [tasks]
 postinstall = "uv pip install -e . plugins/"
@@ -35,7 +35,7 @@ run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", de
 ambertools = "24.*"
 
 [feature.betas]
-channels = [ "openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge" ]
+channels = ["openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge"]
 
 [feature.betas.dependencies]
 openeye-toolkits = "*"
@@ -43,6 +43,7 @@ openmm = "*"
 
 [feature.dev.pypi-dependencies]
 pre-commit = "*"
+ruff = "*"
 ipdb = "*"
 
 [feature.engines.dependencies]

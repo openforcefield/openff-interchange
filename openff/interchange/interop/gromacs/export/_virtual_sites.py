@@ -2,10 +2,13 @@
 Helper functions for exporting virutal sites to GROMACS.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy
 from openff.toolkit import Quantity
 
-from openff.interchange import Interchange
 from openff.interchange.interop._virtual_sites import _get_separation_by_atom_indices
 from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite,
@@ -13,7 +16,6 @@ from openff.interchange.interop.gromacs.models.models import (
     GROMACSVirtualSite3,
     GROMACSVirtualSite3fad,
 )
-from openff.interchange.models import BaseVirtualSiteKey
 from openff.interchange.smirnoff._virtual_sites import (
     _BondChargeVirtualSite,
     _DivalentLonePairVirtualSite,
@@ -21,10 +23,14 @@ from openff.interchange.smirnoff._virtual_sites import (
     _VirtualSite,
 )
 
+if TYPE_CHECKING:
+    from openff.interchange import Interchange
+    from openff.interchange.models import BaseVirtualSiteKey
+
 
 def _create_gromacs_virtual_site(
     interchange: Interchange,
-    virtual_site: "_VirtualSite",
+    virtual_site: _VirtualSite,
     virtual_site_key: BaseVirtualSiteKey,
     particle_map: dict[int | BaseVirtualSiteKey, int],
 ) -> GROMACSVirtualSite:

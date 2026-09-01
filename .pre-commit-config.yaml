@@ -12,16 +12,11 @@ repos:
   hooks:
   - id: add-trailing-comma
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.4
+  rev: v0.16.5
   hooks:
     - id: ruff-check
       args: ["--fix"]
     - id: ruff-format
-- repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.20.0
-  hooks:
-  - id: blacken-docs
-    files: ^docs/
 - repo: https://github.com/igorshubovych/markdownlint-cli
   rev: v0.49.1
   hooks:
@@ -33,6 +28,13 @@ repos:
     - id: nbstripout
       files: ^examples
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.28.0
+  rev: v2.29.0
   hooks:
     - id: pyproject-fmt
+- repo: https://github.com/tombi-toml/tombi-pre-commit
+  rev: v1.5.0
+  hooks:
+    - id: tombi-format
+      files: 'pixi.toml'
+    - id: tombi-lint
+      files: 'pixi.toml'

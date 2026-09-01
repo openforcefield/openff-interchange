@@ -1,5 +1,7 @@
 """The logic behind `Interchange.combine`."""
 
+from __future__ import annotations
+
 import copy
 import logging
 import warnings
@@ -34,8 +36,8 @@ def _are_almost_equal(
 
 
 def _check_nonbonded_compatibility(
-    interchange1: "Interchange",
-    interchange2: "Interchange",
+    interchange1: Interchange,
+    interchange2: Interchange,
 ):
     if not (
         "vdW" in interchange1.collections
@@ -98,9 +100,9 @@ def _check_nonbonded_compatibility(
 
 
 def _combine(
-    input1: "Interchange",
-    input2: "Interchange",
-) -> "Interchange":
+    input1: Interchange,
+    input2: Interchange,
+) -> Interchange:
     warnings.warn(
         "Interchange object combination is complex and may produce strange results outside "
         "of use cases it has been tested in. Use with caution and thoroughly validate results!",

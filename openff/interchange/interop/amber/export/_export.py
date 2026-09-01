@@ -1,15 +1,15 @@
 """Interfaces with Amber."""
 
+from __future__ import annotations
+
 import textwrap
 from collections import defaultdict
-from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy
-from openff.toolkit import Topology
 
-from openff.interchange import Interchange
 from openff.interchange.components.toolkit import _get_num_h_bonds
 from openff.interchange.constants import (
     _PME,
@@ -22,7 +22,14 @@ from openff.interchange.exceptions import (
     UnsupportedExportError,
     UnsupportedMixingRuleError,
 )
-from openff.interchange.models import PotentialKey
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from openff.toolkit import Topology
+
+    from openff.interchange import Interchange
+    from openff.interchange.models import PotentialKey
 
 
 def _write_text_blob(file, blob):
@@ -41,7 +48,7 @@ def _flatten(list_of_lists: Iterable[list[int]]) -> list[int]:
 
 
 def _get_per_atom_exclusion_lists(
-    topology: "Topology",
+    topology: Topology,
 ) -> dict[int, defaultdict[int, list[int]]]:
     """
     Get the excluded atoms of each atom in this topology.
@@ -140,7 +147,7 @@ def _get_exclusion_lists(
 
 
 def _get_bond_lists(
-    interchange: "Interchange",
+    interchange: Interchange,
     atomic_numbers: tuple,
     potential_key_to_bond_type_mapping: dict[PotentialKey, int],
 ) -> tuple[list[int], list[int]]:
@@ -165,7 +172,7 @@ def _get_bond_lists(
 
 
 def _get_angle_lists(
-    interchange: "Interchange",
+    interchange: Interchange,
     atomic_numbers: tuple,
     potential_key_to_angle_type_mapping: dict[PotentialKey, int],
 ) -> tuple[list[int], list[int]]:
@@ -191,7 +198,7 @@ def _get_angle_lists(
 
 
 def _get_dihedral_lists(
-    interchange: "Interchange",
+    interchange: Interchange,
     atomic_numbers: tuple,
     potential_key_to_dihedral_type_mapping: dict[PotentialKey, int],
     already_counted: set[tuple[int, ...]],
@@ -277,7 +284,7 @@ def _get_dihedral_lists(
 
 
 # TODO: Split this mono-function into smaller functions
-def to_prmtop(interchange: "Interchange", file_path: Path | str):
+def to_prmtop(interchange: Interchange, file_path: Path | str):
     """
     Write a .prmtop file. See http://ambermd.org/prmtop.pdf for details.
 
@@ -763,7 +770,7 @@ def to_prmtop(interchange: "Interchange", file_path: Path | str):
         prmtop.write("       0\n")
 
 
-def to_inpcrd(interchange: "Interchange", file_path: Path | str):
+def to_inpcrd(interchange: Interchange, file_path: Path | str):
     """
     Write a .prmtop file. See https://ambermd.org/FileFormats.php#restart for details.
 

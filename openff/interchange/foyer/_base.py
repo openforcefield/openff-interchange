@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from copy import copy
 from typing import TYPE_CHECKING
@@ -5,10 +7,11 @@ from typing import TYPE_CHECKING
 from openff.toolkit import Quantity, Topology
 
 from openff.interchange.components.potentials import Collection, Potential
-from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.models import PotentialKey, TopologyKey
 
 if TYPE_CHECKING:
+    from openff.interchange.foyer._guard import has_foyer
+
     if has_foyer:
         try:
             from foyer import Forcefield
@@ -51,7 +54,7 @@ class FoyerConnectedAtomsHandler(Collection):
     def store_matches(
         self,
         atom_slots: dict[TopologyKey, PotentialKey],
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         for connection in getattr(topology, self.connection_attribute):
@@ -68,7 +71,7 @@ class FoyerConnectedAtomsHandler(Collection):
                 id=POTENTIAL_KEY_SEPARATOR.join(pot_key_ids),
             )
 
-    def store_potentials(self, force_field: "Forcefield") -> None:
+    def store_potentials(self, force_field: Forcefield) -> None:
         """Populate self.potentials with key-val pairs of [PotentialKey, Potential]."""
         from foyer.exceptions import MissingForceError, MissingParametersError
 

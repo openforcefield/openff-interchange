@@ -31,8 +31,10 @@ fallback_version = "0.0.0"
 [tool.ruff]
 line-length = 119
 namespace-packages = [ "openff/interchange/" ]
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [ "openff.interchange.pydantic._BaseModel" ]
 [tool.ruff.lint]
-select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+select = [ "E", "F", "I", "NPY", "RUF", "TC", "UP", "W" ]
 per-file-ignores."plugins/*" = [ "INP001" ]
 isort.known-first-party = [ "openff.interchange" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
@@ -97,25 +99,22 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-markers = [
-  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
 addopts = [
   "-W error::FutureWarning",
   "--cov=openff/interchange",
   "--cov-report=xml",
+  "--cov-append",
   "--ignore=examples/experimental",
   "--ignore=examples/amber",
 ]
-
-[tool.coverage.run]
-omit = [
-  "*/*/_tests/*",
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
 [tool.coverage.report]
 exclude_lines = [
-  "pragma: no cover",
-  "if TYPE_CHECKING:",
-  "raise NotImplementedError",
   "@overload",
+  "if TYPE_CHECKING:",
+  "pragma: no cover",
+  "raise NotImplementedError",
 ]

@@ -1,5 +1,7 @@
 """Storing and processing results of energy evaluations."""
 
+from __future__ import annotations
+
 import warnings
 from typing import Annotated
 
@@ -98,7 +100,7 @@ class EnergyReport(_BaseModel):
 
     def compare(
         self,
-        other: "EnergyReport",
+        other: EnergyReport,
         tolerances: dict[str, Quantity] | None = None,
     ):
         """
@@ -146,7 +148,7 @@ class EnergyReport(_BaseModel):
 
     def diff(
         self,
-        other: "EnergyReport",
+        other: EnergyReport,
     ) -> dict[str, Quantity]:
         """
         Return the per-key energy differences between these reports.
@@ -198,7 +200,7 @@ class EnergyReport(_BaseModel):
 
         return energy_differences
 
-    def __sub__(self, other: "EnergyReport") -> dict[str, Quantity]:
+    def __sub__(self, other: EnergyReport) -> dict[str, Quantity]:
         diff = dict()
         for key in self.energies:
             if key not in other.energies:

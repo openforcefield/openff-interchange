@@ -79,26 +79,20 @@ Construct a simple `Interchange`
 The [`Interchange.collections`] attribute maps names to the corresponding collection:
 
 ```pycon
->>> interchange.collections.keys()  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions',
-    'ImproperTorsions', 'vdW', 'Electrostatics'])
+>>> interchange.collections.keys()
+dict_keys(['Bonds', 'Constraints', 'Angles', 'ProperTorsions', 'ImproperTorsions', 'vdW', 'Electrostatics'])
 >>> # Ethane has no improper torsions, so both maps will be empty
->>> interchange.collections["ImproperTorsions"]  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
-    expression='k*(1+cos(periodicity*theta-phase))',
-    key_map={},
-    potentials={})
+>>> interchange.collections["ImproperTorsions"]
+Handler 'ImproperTorsions' with expression 'k*(1+cos(periodicity*theta-phase))', 0 mapping keys, and 0 potentials
 
 ```
 
 We can also access a collection by indexing directly into the Interchange itself:
 
 ```pycon
->>> interchange["ImproperTorsions"]  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-SMIRNOFFImproperTorsionCollection(type='ImproperTorsions',
-    expression='k*(1+cos(periodicity*theta-phase))',
-    key_map={},
-    potentials={})
+>>> interchange["ImproperTorsions"]
+Handler 'ImproperTorsions' with expression 'k*(1+cos(periodicity*theta-phase))', 0 mapping keys, and 0 potentials
+
 ```
 
 In the bond collection for example, each pair of bonded atoms maps to one of two
@@ -107,14 +101,8 @@ carbon-hydrogen bonds. It's clear from the SMIRKS codes that atoms 0 and 1 are
 the carbon atoms, and atoms 2 through 7 are the hydrogens:
 
 ```pycon
->>> interchange["Bonds"].key_map  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-{TopologyKey(atom_indices=(0, 1), ...): PotentialKey(id='[#6X4:1]-[#6X4:2]', ...),
- TopologyKey(atom_indices=(0, 2), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
- TopologyKey(atom_indices=(0, 3), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
- TopologyKey(atom_indices=(0, 4), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
- TopologyKey(atom_indices=(1, 5), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
- TopologyKey(atom_indices=(1, 6), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...),
- TopologyKey(atom_indices=(1, 7), ...): PotentialKey(id='[#6X4:1]-[#1:2]', ...)}
+>>> interchange["Bonds"].key_map
+{BondKey with atom indices (0, 1): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#6X4:2]', BondKey with atom indices (0, 2): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]', BondKey with atom indices (0, 3): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]', BondKey with atom indices (0, 4): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]', BondKey with atom indices (1, 5): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]', BondKey with atom indices (1, 6): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]', BondKey with atom indices (1, 7): PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]'}
 
 ```
 
@@ -127,20 +115,15 @@ The bond collection also maps the two potential keys to the appropriate `Potenti
 Here we can read off the force constant and length:
 
 ```pycon
->>> interchange["Bonds"].potentials  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-{PotentialKey(id='[#6X4:1]-[#6X4:2]', ...):
-     Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>,
-                           'length': <Quantity(1.52190126, 'angstrom')>}, ...),
- PotentialKey(id='[#6X4:1]-[#1:2]', ...):
-     Potential(parameters={'k': <Quantity(740.093414, 'kilocalorie / angstrom ** 2 / mole')>,
-                           'length': <Quantity(1.09389949, 'angstrom')>}, ...)}
+>>> interchange["Bonds"].potentials
+{PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#6X4:2]': Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.52190126, 'angstrom')>}, map_key=None), PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]': Potential(parameters={'k': <Quantity(740.093414, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.09389949, 'angstrom')>}, map_key=None)}
 
 ```
 
 Any `TopologyKey` that only specifies atom indices can be accessed by indexing directly into the `Collection` with those atom indices:
 
 ```pycon
->>> interchange["Bonds"][0, 1]  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
+>>> interchange["Bonds"][0, 1]
 Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.52190126, 'angstrom')>}, map_key=None)
 
 ```
@@ -156,21 +139,6 @@ We can even modify a value here, export the new interchange, and see that all of
 >>> potential.parameters["length"] = 3.1415926 * unit.nanometer
 >>> # Write out the modified interchange to a GROMACS .top file
 >>> interchange.to_top("out.top")
->>> with open("out.top") as f:
-...     print(f.read())  # doctest: +NORMALIZE_WHITESPACE,+ELLIPSIS
-...
-; Generated by Interchange
-    ...
-[ bonds ]
-;     ai      aj  func  r              k
-      1       2   1     0.152190126495 221435.2592902858
-      1       3   1     3.1415926      309655.084322414
-      1       4   1     3.1415926      309655.084322414
-      1       5   1     3.1415926      309655.084322414
-      2       6   1     3.1415926      309655.084322414
-      2       7   1     3.1415926      309655.084322414
-      2       8   1     3.1415926      309655.084322414
-    ...
 
 ```
 
