@@ -112,10 +112,10 @@ markers = [
 ]
 
 [tool.coverage.report]
-run.omit = [ "**/_tests/*" ]
 exclude_lines = [
   "@overload",
   "if TYPE_CHECKING:",
   "pragma: no cover",
   "raise NotImplementedError",
 ]
+run.omit = [ "**/_tests/*" ]
