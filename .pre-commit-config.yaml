@@ -28,13 +28,15 @@ repos:
     - id: nbstripout
       files: ^examples
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.29.0
+  rev: v2.29.2
   hooks:
     - id: pyproject-fmt
 - repo: https://github.com/tombi-toml/tombi-pre-commit
   rev: v1.5.0
   hooks:
     - id: tombi-format
+      args: ["--offline"]
       files: 'pixi.toml'
     - id: tombi-lint
+      args: ["--offline"]
       files: 'pixi.toml'
