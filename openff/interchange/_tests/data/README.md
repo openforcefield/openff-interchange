@@ -10,9 +10,10 @@ Below documents how some of these files were generated
 
 ```python3
 import mbuild as mb
-ar = mb.Compound(name='Ar')
+
+ar = mb.Compound(name="Ar")
 mol = mb.fill_box(ar, 10, box=[2, 2, 2])
-mol.to_parmed().save('10_ar.pdb')
+mol.to_parmed().save("10_ar.pdb")
 ```
 
 `water-dimer.pdb`:
@@ -36,14 +37,15 @@ mol.to_parmed().save('10_ar.pdb')
 
 ```python
 import mbuild as mb
-argon = mb.Compound(name='Ar')
+
+argon = mb.Compound(name="Ar")
 packed_box = mb.fill_box(
     compound=[argon],
     box=mb.Box(lengths=[3, 3, 3]),  # nm
     density=1417,  # kg/m3
 )
-struct = packed_box.to_parmed(residues=['Ar'])
-struct.save('packed-argon.pdb')
+struct = packed_box.to_parmed(residues=["Ar"])
+struct.save("packed-argon.pdb")
 ```
 
 `benzene.sdf`
@@ -82,13 +84,9 @@ struct.save('packed-argon.pdb')
 import openmm.app, openmm.unit, pdbfixer
 
 for arg in ["cube", "dodecahedron", "octahedron"]:
-   pdb_file = pdbfixer.PDBFixer(
-       "../openff-toolkit/openff/toolkit/data/proteins/ace-ala-nh2.pdb"
-   )
-   pdb_file.addSolvent(padding=1.5 * openmm.unit.nanometer, boxShape=arg)
-   openmm.app.PDBFile.writeFile(
-       pdb_file.topology, pdb_file.positions, open(f"{arg}.pdb", "w")
-   )
+    pdb_file = pdbfixer.PDBFixer("../openff-toolkit/openff/toolkit/data/proteins/ace-ala-nh2.pdb")
+    pdb_file.addSolvent(padding=1.5 * openmm.unit.nanometer, boxShape=arg)
+    openmm.app.PDBFile.writeFile(pdb_file.topology, pdb_file.positions, open(f"{arg}.pdb", "w"))
 ```
 
 `de-force-1.0.1.offxml`
@@ -110,9 +108,7 @@ topology.box_vectors = Quantity([2.5, 2.5, 2.5], unit.nanometer)
 
 
 open("system.xml", "w").write(
-    openmm.XmlSerializer.serialize(
-        ForceField("openff-2.1.0.offxml").create_openmm_system(topology)
-    )
+    openmm.XmlSerializer.serialize(ForceField("openff-2.1.0.offxml").create_openmm_system(topology))
 )
 ```
 

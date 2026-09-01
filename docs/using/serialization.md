@@ -30,9 +30,7 @@ open("benzene_interchange.json", "w").write(my_interchange.model_dump_json())
 # read the same file back in
 from openff.interchange import Interchange
 
-my_interchange2 = Interchange.model_validate_json(
-    open("benzene_interchange.json").read()
-)
+my_interchange2 = Interchange.model_validate_json(open("benzene_interchange.json").read())
 ```
 
 ## Caveats
