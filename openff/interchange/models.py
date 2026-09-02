@@ -118,11 +118,11 @@ class BondKey(TopologyKey):
 
     def _tuple(self) -> tuple[int, int] | tuple[tuple[int, int], float]:
         if self.bond_order is None:
-            return cast(tuple[int, int], self.atom_indices)
+            return cast("tuple[int, int]", self.atom_indices)
         else:
             return (
                 cast(
-                    tuple[int, int],
+                    "tuple[int, int]",
                     self.atom_indices,
                 ),
                 float(self.bond_order),
@@ -156,7 +156,7 @@ class AngleKey(TopologyKey):
     )
 
     def _tuple(self) -> tuple[int, int, int]:
-        return cast(tuple[int, int, int], self.atom_indices)
+        return cast("tuple[int, int, int]", self.atom_indices)
 
 
 class ProperTorsionKey(TopologyKey):
@@ -220,11 +220,11 @@ class ProperTorsionKey(TopologyKey):
         ]
     ):
         if self.mult is None and self.phase is None and self.bond_order is None:
-            return cast(tuple[int, int, int, int], self.atom_indices)
+            return cast("tuple[int, int, int, int]", self.atom_indices)
         else:
             return (
                 cast(
-                    tuple[int, int, int, int],
+                    "tuple[int, int, int, int]",
                     self.atom_indices,
                 ),
                 self.mult,

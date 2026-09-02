@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from openff.toolkit import Quantity, Topology
 from pydantic import Field, PrivateAttr
@@ -10,9 +10,11 @@ from openff.interchange.foyer._base import _copy_params
 from openff.interchange.foyer._guard import has_foyer
 from openff.interchange.models import PotentialKey, TopologyKey
 
+if TYPE_CHECKING:
+    from foyer import Forcefield
+
 if has_foyer:
     try:
-        from foyer import Forcefield
         from foyer.atomtyper import find_atomtypes
         from foyer.topology_graph import TopologyGraph
     except ModuleNotFoundError:

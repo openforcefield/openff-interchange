@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import warnings
 from collections import defaultdict
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from openff.toolkit import Quantity, Topology
 from openff.units import ensure_quantity
 from openff.units.openmm import from_openmm as from_openmm_
-from openff.utilities.utilities import has_package, requires_package
+from openff.utilities.utilities import requires_package
 from pydantic import ValidationError
 
 from openff.interchange.common._nonbonded import ElectrostaticsCollection, vdWCollection
@@ -19,31 +21,28 @@ from openff.interchange.common._valence import (
 from openff.interchange.exceptions import NoPositionsError, UnsupportedImportError
 from openff.interchange.interop.openmm._import._virtual_sites import _convert_virtual_sites
 from openff.interchange.interop.openmm._import.compat import _check_compatible_inputs
-from openff.interchange.models import ImportedVirtualSiteKey
 from openff.interchange.warnings import MissingPositionsWarning
-
-if has_package("openmm"):
-    import openmm
-    import openmm.app
-    import openmm.unit
 
 if TYPE_CHECKING:
     import openmm
     import openmm.app
-    import openmm.unit
 
     from openff.interchange import Interchange
+    from openff.interchange.models import ImportedVirtualSiteKey
 
 
 @requires_package("openmm")
 def from_openmm(
     *,
-    system: "openmm.System",
-    topology: Union["openmm.app.Topology", Topology],
+    system: openmm.System,
+    topology: openmm.app.Topology | Topology,
     positions: Quantity | None = None,
     box_vectors: Quantity | None = None,
-) -> "Interchange":
+) -> Interchange:
     """Create an Interchange object from OpenMM data."""
+    import openmm
+    import openmm.app
+
     from openff.interchange import Interchange
 
     _check_compatible_inputs(system=system, topology=topology)
@@ -158,9 +157,11 @@ def from_openmm(
 
 
 def _convert_constraints(
-    system: "openmm.System",
+    system: openmm.System,
     particle_map: dict[int, int | ImportedVirtualSiteKey],
 ) -> ConstraintCollection | None:
+    import openmm.unit
+
     from openff.interchange.components.potentials import Potential
     from openff.interchange.models import BondKey, PotentialKey
 
@@ -202,7 +203,7 @@ def _convert_constraints(
 
 
 def _convert_nonbonded_force(
-    force: "openmm.NonbondedForce",
+    force: openmm.NonbondedForce,
     particle_map: dict[int, int | ImportedVirtualSiteKey],
 ) -> tuple[vdWCollection, ElectrostaticsCollection]:
     from openff.units.openmm import from_openmm as from_openmm_quantity
@@ -266,7 +267,7 @@ def _convert_nonbonded_force(
 
 
 def _convert_harmonic_bond_force(
-    force: "openmm.HarmonicBondForce",
+    force: openmm.HarmonicBondForce,
 ) -> BondCollection:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
@@ -296,7 +297,7 @@ def _convert_harmonic_bond_force(
 
 
 def _convert_harmonic_angle_force(
-    force: "openmm.HarmonicAngleForce",
+    force: openmm.HarmonicAngleForce,
 ) -> AngleCollection:
     from openff.units.openmm import from_openmm as from_openmm_quantity
 
@@ -329,7 +330,7 @@ def _convert_harmonic_angle_force(
 
 
 def _convert_periodic_torsion_force(
-    force: "openmm.PeriodicTorsionForce",
+    force: openmm.PeriodicTorsionForce,
 ) -> ProperTorsionCollection:
     # TODO: Can impropers be separated out from a PeriodicTorsionForce?
     # Maybe by seeing if a quartet is in mol/top.propers or .impropers
@@ -371,7 +372,7 @@ def _convert_periodic_torsion_force(
     return proper_torsions
 
 
-def _fill_in_rigid_water_bonds(interchange: "Interchange"):
+def _fill_in_rigid_water_bonds(interchange: Interchange):
     from openff.toolkit.topology._mm_molecule import Molecule, _SimpleMolecule
 
     from openff.interchange.components.potentials import Potential

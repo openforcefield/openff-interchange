@@ -1,16 +1,20 @@
 """Utilities for processing and interfacing with mBuild models."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Molecule, Topology
 from openff.utilities.utilities import has_package, requires_package
+
+if TYPE_CHECKING:
+    from openff.toolkit import Molecule, Topology
 
 if has_package("mbuild") or TYPE_CHECKING:
     import mbuild
 
 
 @requires_package("mbuild")
-def offmol_to_compound(off_mol: "Molecule") -> "mbuild.Compound":
+def offmol_to_compound(off_mol: Molecule) -> mbuild.Compound:
     """
     Convert an OpenFF Molecule into an mBuild Compound.
 
@@ -48,7 +52,7 @@ def offmol_to_compound(off_mol: "Molecule") -> "mbuild.Compound":
 
 
 @requires_package("mbuild")
-def offtop_to_compound(off_top: "Topology") -> "mbuild.Compound":
+def offtop_to_compound(off_top: Topology) -> mbuild.Compound:
     """
     Convert an OpenFF Topology into an mBuild Compound.
 

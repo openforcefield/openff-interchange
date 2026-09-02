@@ -155,7 +155,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
     def store_matches(
         self,
         parameter_handler: ParameterHandler,
-        topology: "Topology",
+        topology: Topology,
     ) -> None:
         """Populate self.key_map with key-val pairs of [TopologyKey, PotentialKey]."""
         if self.key_map:
@@ -199,7 +199,7 @@ class SMIRNOFFCollection(Collection, abc.ABC):
     def create(
         cls,
         parameter_handler: TP,
-        topology: "Topology",
+        topology: Topology,
     ) -> Self:
         """
         Create a SMIRNOFFCOllection from toolkit data.

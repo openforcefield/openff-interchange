@@ -1,16 +1,19 @@
-from openff.utilities.utilities import has_package
+from __future__ import annotations
 
-from openff.interchange import Interchange
+from typing import TYPE_CHECKING
+
 from openff.interchange.exceptions import UnsupportedExportError
-from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 
-if has_package("openmm"):
+if TYPE_CHECKING:
     import openmm
+
+    from openff.interchange import Interchange
+    from openff.interchange.smirnoff._gbsa import SMIRNOFFGBSACollection
 
 
 def _process_gbsa(
-    interchange: "Interchange",
-    system: "openmm.System",
+    interchange: Interchange,
+    system: openmm.System,
 ):
     import openmm.app
 

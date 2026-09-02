@@ -1,5 +1,7 @@
 """Utilities for processing and interfacing with the OpenFF Toolkit."""
 
+from __future__ import annotations
+
 from collections import defaultdict
 from functools import lru_cache
 from typing import TYPE_CHECKING
@@ -9,14 +11,12 @@ import numpy
 from openff.toolkit import ForceField, Molecule, Quantity, Topology
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler, VirtualSiteHandler
-from openff.toolkit.utils.collections import ValidatedList
-from openff.utilities.utilities import has_package
 
 from openff.interchange.models import ImportedVirtualSiteKey, PotentialKey
 
-if has_package("openmm") or TYPE_CHECKING:
-    import openmm.app
-
+if TYPE_CHECKING:
+    import openmm
+    from openff.toolkit.utils.collections import ValidatedList
 
 _IDIVF_1 = Quantity(1.0, "dimensionless")
 _PERIODICITIES = {
@@ -29,7 +29,7 @@ _PERIODICITIES = {
 }
 
 
-def _get_num_h_bonds(topology: "Topology") -> int:
+def _get_num_h_bonds(topology: Topology) -> int:
     """Get the number of (covalent) bonds containing a hydrogen atom."""
     n_bonds_containing_hydrogen = 0
 
@@ -76,7 +76,7 @@ def _get_14_pairs(topology_or_molecule: Topology | Molecule):
                         yield (atom_i_partner, atom_j_partner)
 
 
-def _validated_list_to_array(validated_list: "ValidatedList") -> Quantity:
+def _validated_list_to_array(validated_list: ValidatedList) -> Quantity:
     unit_ = validated_list[0].units
     return Quantity(numpy.asarray([val.m for val in validated_list]), unit_)
 
@@ -91,7 +91,7 @@ def _combine_topologies(topology1: Topology, topology2: Topology) -> Topology:
     return topology1_
 
 
-def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
+def _check_electrostatics_handlers(force_field: ForceField) -> bool:
     """
     Return whether or not this ForceField should have an Electrostatics tag.
     """
@@ -121,7 +121,7 @@ def _check_electrostatics_handlers(force_field: "ForceField") -> bool:
 
 
 def _simple_topology_from_openmm(
-    openmm_topology: "openmm.app.Topology",
+    openmm_topology: openmm.app.Topology,
     system: openmm.System | None = None,
 ) -> Topology:
     """
@@ -134,6 +134,8 @@ def _simple_topology_from_openmm(
     system
         The OpenMM System associated with the topology. Only needed if there are virtual sites in the topology.
     """
+    import openmm
+
     # TODO: Splice in fully-defined OpenFF `Molecule`s?
 
     graph = networkx.Graph()
