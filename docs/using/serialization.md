@@ -19,7 +19,7 @@ from openff.toolkit import ForceField, Molecule
 
 # prepare an Interchange object like normal
 my_topology = Molecule.from_smiles("c1ccccc1").to_topology()
-my_interchange = ForceField("openff-2.2.1.offxml").create_interchange(my_topology)
+my_interchange = ForceField("openff-2.3.0.offxml").create_interchange(my_topology)
 
 # see what the JSON string looks like - output will be large!
 print(my_interchange.model_dump_json())

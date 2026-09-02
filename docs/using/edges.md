@@ -18,7 +18,7 @@ my_topology = Topology.from_pdb("my_system.pdb")
 # ... and then set box vectors before `Interchange` creation
 my_topology.box_vectors = Quantity([10, 10, 10], "nanometer")
 
-my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topology)
+my_interchange = ForceField("openff-2.3.0.offxml").create_interchange(my_topology)
 ```
 
 or the created `Interchange` object:
@@ -26,7 +26,7 @@ or the created `Interchange` object:
 ```python
 # do normal `Interchange` preparation ...
 my_topology = Topology.from_pdb("my_system.pdb")
-my_interchange = ForceField("openff-2.0.0.offxml").create_interchange(my_topology)
+my_interchange = ForceField("openff-2.3.0.offxml").create_interchange(my_topology)
 
 # ... and then set the box after creating an `Interchange` object:
 my_interchange.box = Quantity([10, 10, 10], "nanometer")

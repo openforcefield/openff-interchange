@@ -70,7 +70,7 @@ Construct a simple `Interchange`
 >>> from openff.toolkit import Molecule, ForceField
 >>>
 >>> ethane = Molecule.from_smiles("CC")
->>> sage = ForceField("openff-2.0.0.offxml")
+>>> sage = ForceField("openff-2.3.0.offxml")
 >>> box = box = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 >>> interchange = Interchange.from_smirnoff(sage, [ethane], box=box)
 
@@ -116,7 +116,7 @@ Here we can read off the force constant and length:
 
 ```pycon
 >>> interchange["Bonds"].potentials
-{PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#6X4:2]': Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.52190126, 'angstrom')>}, map_key=None), PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]': Potential(parameters={'k': <Quantity(740.093414, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.09389949, 'angstrom')>}, map_key=None)}
+{PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#6X4:2]': Potential(parameters={'k': <Quantity(457.92582, 'kilocalorie_per_mole / angstrom ** 2')>, 'length': <Quantity(1.52597001, 'angstrom')>}, map_key=None), PotentialKey associated with handler 'Bonds' with id '[#6X4:1]-[#1:2]': Potential(parameters={'k': <Quantity(680.766445, 'kilocalorie_per_mole / angstrom ** 2')>, 'length': <Quantity(1.09244581, 'angstrom')>}, map_key=None)}
 
 ```
 
@@ -124,7 +124,7 @@ Any `TopologyKey` that only specifies atom indices can be accessed by indexing d
 
 ```pycon
 >>> interchange["Bonds"][0, 1]
-Potential(parameters={'k': <Quantity(529.242972, 'kilocalorie / angstrom ** 2 / mole')>, 'length': <Quantity(1.52190126, 'angstrom')>}, map_key=None)
+Potential(parameters={'k': <Quantity(457.92582, 'kilocalorie_per_mole / angstrom ** 2')>, 'length': <Quantity(1.52597001, 'angstrom')>}, map_key=None)
 
 ```
 

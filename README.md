@@ -45,8 +45,8 @@ topology = molecule.to_topology()
 # Define periodicity via box vectors
 topology.box_vectors = Quantity([4, 4, 4], "nanometer")
 
-# Load OpenFF 2.0.0 "Sage"
-sage = ForceField("openff-2.0.0.offxml")
+# Load OpenFF 2.3.0 "Sage"
+sage = ForceField("openff-2.3.0.offxml")
 
 # Create an Interchange object - can also use Interchange.from_smirnoff()
 out = sage.create_interchange(force_field=sage, topology=topology)

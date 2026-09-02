@@ -42,7 +42,7 @@ sdf_file_path = get_data_file_path("molecules/ethanol.sdf")
 molecule: Molecule = Molecule.from_file(sdf_file_path)
 topology: Topology = molecule.to_topology()
 
-sage = ForceField("openff-2.0.0.offxml")
+sage = ForceField("openff-2.3.0.offxml")
 
 interchange = Interchange.from_smirnoff(force_field=sage, topology=topology)
 interchange.positions = molecule.conformers[0]
