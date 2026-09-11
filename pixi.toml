@@ -24,9 +24,7 @@ py312examples = ["py312", "openeye", "packmol", "test", "engines", "examples"]
 py313amber = ["py313", "test", "typing", "ambertools", "mosdef"]
 py313openeye = ["py313", "openeye", "test", "typing", "regression_tests", "engines"]
 py313examples = ["py313", "openeye", "packmol", "test", "engines", "examples"]
-# funky stuff upstream, but not an important environment anyway
-# https://github.com/conda-forge/foyer-feedstock/pull/25#issuecomment-5640051994
-# py314amber = ["py314", "test", "typing", "ambertools", "engines", "mosdef"]
+py314amber = ["py314", "test", "typing", "ambertools", "mosdef"]
 py314openeye = ["py314", "openeye", "test", "typing", "regression_tests", "engines"]
 py314examples = ["py314", "openeye", "packmol", "test", "engines", "examples"]
 dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
@@ -40,7 +38,7 @@ run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --n
 run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
 
 [feature.ambertools.dependencies]
-ambertools = "24.*"
+ambertools = ">=24.8"
 
 [feature.betas]
 channels = ["openeye/label/rc", "conda-forge/label/openmm_rc", "openeye", "conda-forge"]
@@ -58,7 +56,7 @@ ipython = "*"
 
 [feature.engines.dependencies]
 gromacs = "*"
-lammps = ">=2024.08.29"
+lammps = ">=2024"  # many conflicts with AmberTools
 numpy = ">=2.3"
 
 [feature.packmol.dependencies]
@@ -68,7 +66,6 @@ packmol = "*"
 [feature.examples.dependencies]
 nbval = "*"
 mdtraj = "*"
-packmol = "*"
 nglview = "*"
 jax = "*"
 
