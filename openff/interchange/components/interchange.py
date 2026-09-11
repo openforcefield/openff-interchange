@@ -77,7 +77,7 @@ class Interchange(_BaseModel):
     Create an ``Interchange`` from an OpenFF ``ForceField`` and ``Molecule``
 
     >>> from openff.toolkit import ForceField, Molecule
-    >>> sage = ForceField("openff-2.2.0.offxml")
+    >>> sage = ForceField("openff-2.3.0.offxml")
     >>> top = Molecule.from_smiles("CCC").to_topology()
     >>> interchange = sage.create_interchange(top)
 
@@ -156,7 +156,7 @@ class Interchange(_BaseModel):
             >>> from openff.toolkit import ForceField, Molecule
             >>> mol = Molecule.from_smiles("CC")
             >>> mol.generate_conformers(n_conformers=1)
-            >>> sage = ForceField("openff-2.0.0.offxml")
+            >>> sage = ForceField("openff-2.3.0.offxml")
             >>> interchange = sage.create_interchange(mol.to_topology())
             >>> interchange
             Interchange with 7 collections, non-periodic topology with 8 atoms.
