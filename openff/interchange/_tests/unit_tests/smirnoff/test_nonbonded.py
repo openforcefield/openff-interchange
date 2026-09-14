@@ -373,7 +373,7 @@ class TestNAGLChargesPrecedence:
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not AM1BCC
-        numpy.testing.assert_allclose(assigned_charges, nagl_charges)
+        numpy.testing.assert_allclose(assigned_charges.m, nagl_charges)
 
     def test_library_charges_precedence_over_nagl(self, sage, methane):
         """Test that LibraryCharges takes precedence over NAGLCharges."""
@@ -391,7 +391,7 @@ class TestNAGLChargesPrecedence:
 
         # Should match library charges
         expected_charges = [-0.2, 0.05, 0.05, 0.05, 0.05]
-        numpy.testing.assert_allclose(assigned_charges, expected_charges)
+        numpy.testing.assert_allclose(assigned_charges.m, expected_charges)
 
     def test_nagl_charges_precedence_over_charge_increments(self, sage, hexane_diol):
         """Test that NAGLCharges takes precedence over ChargeIncrementModel as base charges."""
@@ -411,7 +411,7 @@ class TestNAGLChargesPrecedence:
         assigned_charges = interchange["Electrostatics"].get_charge_array()
 
         # Should match NAGL charges, not formal charges
-        numpy.testing.assert_allclose(assigned_charges, nagl_charges)
+        numpy.testing.assert_allclose(assigned_charges.m, nagl_charges)
 
 
 @skip_if_missing("openff.nagl")
@@ -512,7 +512,7 @@ class TestNAGLChargesIntegration:
         mol2_charges = assigned_charges[molecule1.n_atoms :]
 
         # Should be identical
-        numpy.testing.assert_allclose(mol1_charges, mol2_charges)
+        numpy.testing.assert_allclose(mol1_charges.m, mol2_charges.m)
 
     def test_nagl_charges_with_charge_from_molecules(self, sage, hexane_diol):
         """Test that charge_from_molecules takes precedence over NAGLCharges."""

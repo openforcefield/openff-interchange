@@ -348,8 +348,8 @@ class TestCombine:
                     ic2["Electrostatics"].get_charge_array(),
                     ic3["Electrostatics"].get_charge_array(),
                 ],
-            ),
-            ic4["Electrostatics"].get_charge_array(),
+            ).m,
+            ic4["Electrostatics"].get_charge_array().m,
         )
 
     def test_combine_from_openmm_add_nagl_to_openmm(self, sage, ethanol):
