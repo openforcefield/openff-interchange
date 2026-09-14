@@ -455,6 +455,8 @@ class TestCreateWithPlugins:
         assert _PLUGIN_CLASS_MAPPING[BuckinghamHandler] == SMIRNOFFBuckinghamCollection
 
     def test_create_buckingham(self, water):
+        pytest.importorskip("nonbonded_plugins")
+
         force_field = ForceField(
             get_test_file_path("buckingham.offxml"),
             load_plugins=True,

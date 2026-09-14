@@ -102,6 +102,7 @@ class TestReportWithPlugins:
     @pytest.fixture
     def de_force_field(self) -> ForceField:
         pytest.importorskip("smirnoff_plugins")
+        pytest.importorskip("nonbonded_plugins")
         pytest.importorskip("openeye")
         return ForceField(
             get_test_file_path("de-force-1.0.1.offxml"),
