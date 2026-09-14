@@ -31,6 +31,8 @@ jobs:
           - py312examples
           - py313openeye
           - py313examples
+          - py314openeye
+          - py314examples
           - betas
 
     env:
