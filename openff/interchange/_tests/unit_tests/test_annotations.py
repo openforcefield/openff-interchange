@@ -48,7 +48,7 @@ class TestBoxQuantity:
         assert str(box.units) == "nanometer"
         assert box.shape == (3, 3)
 
-        numpy.testing.assert_allclose(box, box * numpy.eye(3))
+        numpy.testing.assert_allclose(box.m, (box * numpy.eye(3)).m)
 
     def test_ndarray_to_nanometer_quantity_array(self):
         class M(_BaseModel):
