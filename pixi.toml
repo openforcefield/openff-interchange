@@ -31,7 +31,7 @@ dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
 betas = ["py312", "test", "typing", "engines", "betas", "packmol"]
 
 [tasks]
-postinstall = "uv pip install -e ."
+postinstall = "uv pip install -e . plugins/"
 run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
 run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical", depends-on = "postinstall" }
 run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
