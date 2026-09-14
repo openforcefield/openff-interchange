@@ -443,6 +443,8 @@ class TestPartialBondOrdersFromMolecules:
 
 class TestCreateWithPlugins:
     def test_setup_plugins(self):
+        pytest.importorskip("nonbonded_plugins")
+
         from nonbonded_plugins.nonbonded import (
             BuckinghamHandler,
             SMIRNOFFBuckinghamCollection,

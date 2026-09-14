@@ -1,4 +1,7 @@
 import pytest
+
+pytest.importorskip("nonbonded_plugins")
+
 from nonbonded_plugins.nonbonded import (
     BuckinghamHandler,
     DoubleExponentialHandler,
