@@ -112,12 +112,13 @@ interchange.to_crd("out.to_crd")
  -->
 [`Interchange`]: openff.interchange.components.interchange.Interchange
 [`Interchange.to_pdb()`]: openff.interchange.components.interchange.Interchange.to_pdb
-[`Interchange.to_top()`]: openff.interchange.components.interchange.Interchange.to_top
-[`Interchange.to_gro()`]: openff.interchange.components.interchange.Interchange.to_top
-[`Interchange.to_mdp()`]: openff.interchange.components.interchange.Interchange.to_mdp
 [`Interchange.to_gromacs()`]: openff.interchange.components.interchange.Interchange.to_gromacs
+[`Interchange.to_mdp()`]: openff.interchange.components.interchange.Interchange.to_mdp
+[`Interchange.to_top()`]: openff.interchange.components.interchange.Interchange.to_top
+[`Interchange.to_gro()`]: openff.interchange.components.interchange.Interchange.to_gro
 [`Interchange.to_lammps()`]: openff.interchange.components.interchange.Interchange.to_lammps
 [`Interchange.to_openmm()`]: openff.interchange.components.interchange.Interchange.to_openmm
+[`Interchange.to_amber()`]: openff.interchange.components.interchange.Interchange.to_amber
 [`Interchange.to_prmtop()`]: openff.interchange.components.interchange.Interchange.to_prmtop
 [`Interchange.to_inpcrd()`]: openff.interchange.components.interchange.Interchange.to_inpcrd
 [`Interchange.to_sander_input()`]: openff.interchange.components.interchange.Interchange.to_sander_input

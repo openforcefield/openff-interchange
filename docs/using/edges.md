@@ -56,14 +56,14 @@ The same charge method is always used for all atoms in a molecule. If charges ar
 * If a variant of AM1-BCC (i.e. using something other than AM1 and/or using custom BCCs) is encoded in a `<ChargeIncrementModel>` section, other AM1-BCC implementations will not be called.
 * If preset charges are not provided, OpenFF's Parsley or Sage force fields prior to 2.3.0 will attempt an expensive AM1-BCC calculation on all molecules except water and monoatomic ions, as these force fields include very few library charges and no charge increments.
 
-After all of these steps are complete and all heavy atoms given partial charges, virtual sites are assigned charges using the values of `charge_increment`s in the virtual site parameters. Because virtual site charge are only described by the force field, using preset charges with virtual sites is discouraged.
+After all of these steps are complete and all heavy atoms given partial charges, virtual sites are assigned charges using the values of `charge_increment`s in the virtual site parameters. Because virtual site charges are only described by the force field, using preset charges with virtual sites is discouraged.
 
 ### Preset charges
 
 The charges specified by the force field can be overridden by providing molecules with partial charges to the `charge_from_molecules` argument. This may be used to make use of alternate implementations of the appropriate charge generation method, or to provide different charges to the force field. Charges provided via `charge_from_molecules` are called "preset charges" because they are pre-set by the user, rather than computed by the force field. The following restrictions are in place when using preset charges:
 
-* All molecules in the the `charge_from_molecules` list must be non-isomorphic with each other.
-* All molecules in the the `charge_from_molecules` list must have partial charges.
+* All molecules in the `charge_from_molecules` list must be non-isomorphic with each other.
+* All molecules in the `charge_from_molecules` list must have partial charges.
 * All copies of a molecule in the topology will be parametrized with the charges from an isomorphic molecule from the `charge_from_molecules` list.
 
 Using preset charges with virtual sites is discouraged as it can provide surprising results.
@@ -87,7 +87,7 @@ For example, `Interchange.topology.get_positions()` will never include positions
 
 ### Electrostatics 1-4 scaling factors may be slightly modified
 
-Amber family force fields historically use a 1-4 scaling factor of 1 / 1.2 (or 5/6). Some older OpenFF force field releases round this to 6 digits (0.833333) but more recent releases round this to 10 digits (0.8333333333). These are not strictly equal and arguably should not be combined, but (in this case only) for easier compatibility this difference is ignored and combination proceeds as if they were both 0.833333333 from the start. If value differ significantly, i.e. 0.5 vs 0.833333, an error is raised as this difference is non-trivial.
+Amber family force fields historically use a 1-4 scaling factor of 1 / 1.2 (or 5/6). Some older OpenFF force field releases round this to 6 digits (0.833333) but more recent releases round this to 10 digits (0.8333333333). These are not strictly equal and arguably should not be combined, but (in this case only) for easier compatibility this difference is ignored and combination proceeds as if they were both 0.8333333333 from the start. If values differ significantly, i.e. 0.5 vs 0.833333, an error is raised as this difference is non-trivial.
 
 ### Charges of isomorphic molecules may be overwritten
 
@@ -97,13 +97,13 @@ When isomorphic molecules are found on the `Interchange` objects used in `.combi
 
 ### Modified masses are ignored
 
-The OpenFF Toolkit does not support isotopes or atomic masses other than the values defined in the periodic table. In the `Topology` and `Molecule` classes, particles masses are defined only by their atomic number. When topologies are read from OpenMM, the particle mass is ignored and the atomic number of the element is read and used to define the atomic properties.
+The OpenFF Toolkit does not support isotopes or atomic masses other than the values defined in the periodic table. In the `Topology` and `Molecule` classes, particle masses are defined only by their atomic number. When topologies are read from OpenMM, the particle mass is ignored and the atomic number of the element is read and used to define the atomic properties.
 
 As a consequence, any hydrogen mass repartitioning (HMR) applied to a system is "un-done" upon import --- mass is shifted back from hydrogens to their heavy atoms. To re-apply HMR (shift masses back to hydrogens), use the appropriate API at export time, typically with an export method's `hydrogen_mass` argument.
 
 For updates, [search "HMR" in the issue tracker](https://github.com/search?q=repo%3Aopenforcefield%2Fopenff-interchange+hmr&type=issues&s=updated&o=desc) or raise a [new issue](https://github.com/openforcefield/openff-interchange/issues/new/choose).
 
-Keywords: OpenMM, HMR, hydrogen mass repartioning
+Keywords: OpenMM, HMR, hydrogen mass repartitioning
 
 ### Force constants of constrained bonds may be lost in conversions
 
@@ -128,7 +128,7 @@ virtual sites and virtual sites) are not processed. Instead, they are later re-g
 
 Combining interchanges with virtual sites from multiple sources is not fully-featured. For example, this refers to importing a box of TIP4P-containing solvent from OpenMM with a ligand prepared with SMIRNOFF virtual sites parameters.
 
-### Virtual sites must be listed after heavy atoms each molecule
+### Virtual sites must be listed after heavy atoms in each molecule
 
 It's assumed that, in each molecule in an OpenMM topology, all heavy atoms are listed before any virtual sites. This includes the case of all virtual sites being listed after all heavy atoms, i.e. not collated into molecules/residues. There are no community standards around particle ordering, but virtual sites are typically listed after heavy atoms in each molecule or residue.
 

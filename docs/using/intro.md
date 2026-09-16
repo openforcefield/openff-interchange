@@ -80,9 +80,8 @@ Force Field software stack. Interchange aims to support systems created with
 the [OpenFF Toolkit], which can be converted to `Interchange` objects by
 applying a SMIRNOFF force field from the Toolkit or a [Foyer] force field. The
 `Interchange` object can then produce input files for downstream molecular
-mechanics software suites. At present, it supports Amber and OpenMM. GROMACS,
-and LAMMPS support is in place but experimental, and support for CHARMM is
-planned.
+mechanics software suites. At present, it supports OpenMM, GROMACS, Amber,
+and LAMMPS.
 
 By design, Interchange supports extensive chemical information about the target
 system. Downstream MM software generally requires only the atoms present in the
