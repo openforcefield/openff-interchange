@@ -7,3 +7,4 @@ Provide a brief description of the PR's purpose here.
 - [ ] Add tests
 - [ ] Lint
 - [ ] Update docstrings
+- [ ] [AI disclosure](../AI_POLICY.md)
