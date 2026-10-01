@@ -21,3 +21,7 @@ Please include the output, including full tracebacks of any errors, resulting fr
 - Which operating system and version are you using?
 - How did you install Interchange?
 - What is the output of running `conda list`?
+
+**AI disclosure**
+
+See (this project's policy on AI use)[../AI_POLICY.md]
