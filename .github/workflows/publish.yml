@@ -1,0 +1,153 @@
+name: Build and publish package
+
+on:
+  pull_request:
+  release:
+    # Stable GitHub Releases only.
+    types: [released]  # need another thing to make pre-releases work
+
+# Deny permissions by default. Each job gets only what it needs.
+permissions: {}
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Important for projects using setuptools-scm.
+          fetch-depth: 0
+          # We don't need the token for more git operations
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          # Recommend using min python version supported 
+          python-version: "3.12"
+
+      - name: Install build frontend
+        run: python -m pip install build
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Show distributions
+        run: ls -lh dist/
+
+      # archive: false means the wheel itself is stored directly rather
+      # than being wrapped in an additional GitHub artifact ZIP.
+      #
+      # This requires the glob to resolve to exactly one file.
+      - name: Upload wheel
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/*.whl
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: dist/*.tar.gz
+          archive: false
+          if-no-files-found: error
+
+  test-package:
+    name: Test built package
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      # We need the checkout for the test suite, but we do NOT install
+      # the package from this checkout.
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Download wheel
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: "*.whl"
+          path: dist
+          merge-multiple: true
+
+      - name: Install built wheel
+        run: python -m pip install dist/*.whl
+
+      # Since all the testing deps are not on PyPI yet,
+      # I've commented out the steps below
+
+    # - name: Install test dependencies
+    #   run: python -m pip install -r requirements-test.txt
+
+    # - name: Check installed dependencies
+    #   run: python -m pip check
+
+      # Run from outside the source checkout so the checkout cannot
+      # accidentally satisfy imports that should come from the wheel.
+      #
+    # --import-mode=importlib also prevents pytest from modifying
+    # sys.path in ways that could mask packaging errors.
+    #   - name: Test installed wheel
+    #  working-directory: /tmp
+    #  run: >
+    #    python -m pytest
+    #    --import-mode=importlib
+    #    "$GITHUB_WORKSPACE/tests"
+
+  publish:
+    name: Publish to PyPI
+
+    # The publish job exists only for an actual GitHub Release.
+    if: github.event_name == 'release'
+
+    # We only publish if both building and testing the built artifact succeeded.
+    needs:
+      - build
+      - test-package
+
+    runs-on: ubuntu-latest
+
+    environment:
+      # This should be pypi in production (or something else)
+      name: testpypi
+
+    # This is the only job that can request an OIDC identity.
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download wheel
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: "*.whl"
+          path: dist
+          merge-multiple: true
+
+      - name: Download sdist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: "*.tar.gz"
+          path: dist
+          merge-multiple: true
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: https://test.pypi.org/legacy/

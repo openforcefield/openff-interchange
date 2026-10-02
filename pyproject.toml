@@ -18,6 +18,15 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dynamic = [ "version" ]
+dependencies = [
+  "setuptools-scm",
+  "pydantic >=2.13",
+  # below this line are mostly in common with toolkit - declare here too, probably?
+  "numpy",
+  "openff-utilities",
+  "openff-units",
+  "openmm",
+]
 [[project.authors]]
 name = "Open Force Field Initiative"
 email = "info@openforcefield.org"
