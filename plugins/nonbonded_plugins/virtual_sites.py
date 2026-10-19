@@ -1,7 +1,10 @@
 """Plugins handling virtual sites."""
 
 from openff.interchange.components.potentials import Potential
-from openff.interchange.components.toolkit import _validated_list_to_array
+from openff.interchange.components.toolkit import (
+    _lookup_virtual_site_parameter,
+    _validated_list_to_array,
+)
 from openff.interchange.exceptions import InvalidParameterHandlerError
 from openff.interchange.models import PotentialKey
 from openff.interchange.smirnoff._nonbonded import SMIRNOFFElectrostaticsCollection
@@ -76,8 +79,13 @@ class SMIRNOFFBuckinghamVirtualSiteCollection(SMIRNOFFVirtualSiteCollection):
             self.potentials = dict()
         for virtual_site_key, potential_key in self.key_map.items():
             # TODO: This logic assumes no spaces in the SMIRKS pattern, name or `match` attribute
-            smirks, _, _ = potential_key.id.split(" ")
-            parameter = parameter_handler.parameters[smirks]
+            smirks, name, match = potential_key.id.split(" ")
+            parameter = _lookup_virtual_site_parameter(
+                parameter_handler=parameter_handler,
+                smirks=smirks,
+                name=name,
+                match=match,
+            )
 
             virtual_site_potential = Potential(
                 parameters={
