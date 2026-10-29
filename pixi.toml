@@ -64,6 +64,7 @@ numpy = ">=2.3"
 packmol = "*"
 
 [feature.examples.dependencies]
+rich = "*"
 nbval = "*"
 mdtraj = "*"
 nglview = "*"
