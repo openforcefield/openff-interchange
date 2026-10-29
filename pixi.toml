@@ -29,6 +29,7 @@ py314openeye = ["py314", "openeye", "test", "typing", "regression_tests", "engin
 py314examples = ["py314", "openeye", "packmol", "test", "engines", "examples"]
 dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
 betas = ["py312", "test", "typing", "engines", "betas", "packmol"]
+docs = ["py312", "docs"]
 
 [tasks]
 postinstall = "uv pip install -e . plugins/"
@@ -63,6 +64,7 @@ numpy = ">=2.3"
 packmol = "*"
 
 [feature.examples.dependencies]
+rich = "*"
 nbval = "*"
 mdtraj = "*"
 nglview = "*"
@@ -106,3 +108,14 @@ pyedr = "*"
 [feature.typing.dependencies]
 mypy = "=2"
 pandas-stubs = "*"
+
+[feature.docs.dependencies]
+myst-parser = "*"
+numpydoc = "*"
+autodoc-pydantic = "2.*"
+sphinx = "==6.1.3"
+sphinxcontrib-mermaid = "*"
+sphinx-notfound-page = "*"
+
+[feature.docs.pypi-dependencies]
+openff-sphinx-theme = { git = "https://github.com/openforcefield/openff-sphinx-theme", rev = "main" }
