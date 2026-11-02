@@ -1,6 +1,10 @@
 import os.path
 import tempfile
+import urllib.request
+
 import time
+import urllib.request
+
 
 import openmm.app
 import openmm.unit
@@ -16,6 +20,11 @@ if os.path.exists(data_frame_file):
     exit("CSV file already exists, exiting")
 
 protein_force_field = ForceField("openff_no_water-3.0.0-alpha0.offxml", "tip3p.offxml")
+
+urllib.request.urlretrieve(
+    "https://raw.githubusercontent.com/openforcefield/proteinbenchmark/eb89f8407b09b54b8cc32f688f8efe806942d95c/proteinbenchmark/data/pdbs/ctr148a-2KO1-model-1.pdb",
+    "ctr148a-2KO1-model-1.pdb",
+)
 
 pdb_topology = Topology.from_pdb("ctr148a-2KO1-model-1.pdb")
 

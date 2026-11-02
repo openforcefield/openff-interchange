@@ -29,6 +29,8 @@ py314openeye = ["py314", "openeye", "test", "typing", "regression_tests", "engin
 py314examples = ["py314", "openeye", "packmol", "test", "engines", "examples"]
 dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
 betas = ["py312", "test", "typing", "engines", "betas", "packmol"]
+benchmarks = ["py312", "benchmarks" ]
+latest-release = ["py312", "latest-release", "benchmarks" ]
 
 [tasks]
 postinstall = "uv pip install -e . plugins/"
@@ -36,6 +38,13 @@ run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "posti
 run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical", depends-on = "postinstall" }
 run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
 run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
+benchmark_head = {
+    cmd = "cd benchmarks && sh run.sh && cd ../",
+    depends-on="postinstall",
+}
+benchmark_latest_release = {
+    cmd = "cd benchmarks && sh run.sh && cd ../",
+}
 
 [feature.ambertools.dependencies]
 ambertools = ">=24.8"
@@ -106,3 +115,9 @@ pyedr = "*"
 [feature.typing.dependencies]
 mypy = "=2"
 pandas-stubs = "*"
+
+[feature.benchmarks.pypi-dependencies]
+polars = "*"
+
+[feature.latest-release.dependencies]
+openff-interchange = ">=0.5.5"
