@@ -66,16 +66,13 @@ The remaining parts of the documentation are written in [MyST Markdown](https://
 
 ### Building the docs locally
 
-Dependencies for building the documentation can be found in `docs/environment.yml`. This is the Conda environment used by ReadTheDocs to build the docs. To build the docs locally, first create the environment, then invoke Sphinx via the makefile:
+The docs are built using the project’s Pixi environment. Install Pixi, then create the docs environment and build the docs with Sphinx:
 
 ```shell
-# Create the environment
-mamba env create --file devtools/conda-envs/docs_env.yaml
-# Prepare the current shell session
-mamba activate interchange-docs
-cd docs
+# Create the docs environment
+pixi install --frozen -e docs
 # Build the docs
-make html
+pixi run --frozen -e docs sphinx-build -T -W -b html docs docs/_build/html
 ```
 
 ## Pixi

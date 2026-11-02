@@ -1,23 +1,16 @@
 version: 2
 
 build:
-  os: ubuntu-24.04
-  tools:
-    python: "miniforge3-latest"
-  jobs:
-    pre_build:
-      - mamba list
-
-sphinx:
-  configuration: docs/conf.py
-  # Interchange's docs should not produce warnings; if they start,
-  # something is broken (most likely automatic API doc generation)
-  fail_on_warning: true
-
-conda:
-  environment: devtools/conda-envs/docs_env.yaml
-
-python:
-  install:
-    - method: pip
-      path: .
+    os: ubuntu-26.04
+    tools:
+         python: "latest"
+    jobs:
+        create_environment:
+            - asdf plugin add pixi
+            - asdf install pixi latest
+            - asdf global pixi latest
+        install:
+            - pixi install --frozen -e docs
+        build:
+            html:
+                - pixi run --frozen -e docs sphinx-build -T -W -b html docs $READTHEDOCS_OUTPUT/html
