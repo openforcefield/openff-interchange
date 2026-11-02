@@ -1,21 +1,16 @@
 version: 2
 
 build:
-   os: ubuntu-26.04
-   tools:
-       python: "latest"
-   jobs:
-      create_environment:
-         - asdf plugin add pixi
-         - asdf install pixi latest
-         - asdf global pixi latest
-      install:
-         # assuming you have an environment called "docs"
-         - pixi install -e docs
-      build:
-         html:
-            - pixi run -e docs sphinx-build -T -b html docs $READTHEDOCS_OUTPUT/html
-
-
-sphinx:
-  configuration: docs/conf.py
+    os: ubuntu-26.04
+    tools:
+         python: "latest"
+    jobs:
+        create_environment:
+            - asdf plugin add pixi
+            - asdf install pixi latest
+            - asdf global pixi latest
+        install:
+            - pixi install --frozen -e docs
+        build:
+            html:
+                - pixi run --frozen -e docs sphinx-build -T -b html docs $READTHEDOCS_OUTPUT/html
