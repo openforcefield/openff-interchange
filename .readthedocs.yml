@@ -16,5 +16,6 @@ build:
          html:
             - pixi run -e docs sphinx-build -T -b html docs $READTHEDOCS_OUTPUT/html
 
+
 sphinx:
   configuration: docs/conf.py
