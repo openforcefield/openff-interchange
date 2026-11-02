@@ -32,7 +32,7 @@ repos:
   hooks:
     - id: pyproject-fmt
 - repo: https://github.com/tombi-toml/tombi-pre-commit
-  rev: v1.9.7
+  rev: v1.9.8
   hooks:
     - id: tombi-format
       args: ["--offline"]
