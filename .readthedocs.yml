@@ -13,4 +13,4 @@ build:
             - pixi install --frozen -e docs
         build:
             html:
-                - pixi run --frozen -e docs sphinx-build -T -b html docs $READTHEDOCS_OUTPUT/html
+                - pixi run --frozen -e docs sphinx-build -T -W -b html docs $READTHEDOCS_OUTPUT/html
