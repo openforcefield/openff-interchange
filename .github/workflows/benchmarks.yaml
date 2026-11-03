@@ -29,3 +29,12 @@ jobs:
 
       - name: Benchmark HEAD
         run: pixi run -e benchmarks benchmark_head
+
+      - name: Compare HEAD against latest release
+        run: |
+          pixi run -e benchmarks python devtools/scripts/compare_benchmarks.py \
+            --baseline benchmarks/results/latest_release.csv \
+            --current benchmarks/results/head.csv \
+            --key-column name \
+            --value-column time \
+            --threshold 0.20
