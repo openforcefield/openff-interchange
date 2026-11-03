@@ -12,15 +12,20 @@ concurrency:
 
 jobs:
   benchmark:
+    name: Performance benchmarks on ${{ matrix.os }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: prefix-dev/setup-pixi@v0.11.3
         with:
-          environments:
-            - latest-release
-            - benchmarks
           locked: true
           cache: true
 
@@ -31,10 +36,4 @@ jobs:
         run: pixi run -e benchmarks benchmark_head
 
       - name: Compare HEAD against latest release
-        run: |
-          pixi run -e benchmarks python devtools/scripts/compare_benchmarks.py \
-            --baseline benchmarks/results/latest_release.csv \
-            --current benchmarks/results/head.csv \
-            --key-column name \
-            --value-column time \
-            --threshold 0.20
+        run: pixi run -e benchmarks compare_benchmarks

@@ -41,6 +41,7 @@ run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --n
 run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
 benchmark_head = { cmd = "cd benchmarks && sh run.sh && cd ../", depends-on = "postinstall" }
 benchmark_latest_release = { cmd = "cd benchmarks && sh run.sh && cd ../" }
+compare_benchmarks = { cmd = "python devtools/scripts/compare_benchmarks.py --threshold 0.5", depends-on = "postinstall" }
 
 [feature.ambertools.dependencies]
 ambertools = ">=24.8"
