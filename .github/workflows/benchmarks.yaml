@@ -1,0 +1,31 @@
+name: Performance benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          environments:
+            - latest-release
+            - benchmarks
+          locked: true
+          cache: true
+
+      - name: Benchmark latest release
+        run: pixi run -e latest-release benchmark_latest_release
+
+      - name: Benchmark HEAD
+        run: pixi run -e benchmarks benchmark_head

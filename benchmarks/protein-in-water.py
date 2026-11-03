@@ -1,10 +1,7 @@
 import os.path
 import tempfile
-import urllib.request
-
 import time
 import urllib.request
-
 
 import openmm.app
 import openmm.unit
