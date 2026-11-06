@@ -27,7 +27,12 @@ class GROMACSWriter(_BaseModel):
     top_file: pathlib.Path | str
     gro_file: pathlib.Path | str
 
-    def to_top(self, monolithic: bool = True, _merge_atom_types: bool = False):
+    def to_top(
+        self,
+        monolithic: bool = True,
+        _merge_atom_types: bool = False,
+        _normalize_charges: bool = False,
+    ):
         """Write a GROMACS topology file."""
         with open(self.top_file, "w") as top:
             self._write_defaults(top)
@@ -52,6 +57,7 @@ class GROMACSWriter(_BaseModel):
                 monolithic=monolithic,
                 mapping_to_reduced_atom_types=mapping_to_reduced_atom_types,
                 merge_atom_types=_merge_atom_types,
+                normalize_charges=_normalize_charges,
             )
 
             self._write_system(top)
@@ -171,6 +177,7 @@ class GROMACSWriter(_BaseModel):
         monolithic: bool,
         mapping_to_reduced_atom_types,
         merge_atom_types: bool,
+        normalize_charges: bool,
     ):
         for molecule_name, molecule_type in self.system.molecule_types.items():
             # this string needs to be something that plays nicely in file paths
@@ -196,6 +203,7 @@ class GROMACSWriter(_BaseModel):
                 molecule_type,
                 mapping_to_reduced_atom_types,
                 merge_atom_types,
+                normalize_charges,
             )
             self._write_pairs(molecule_file, molecule_type)
             self._write_bonds(molecule_file, molecule_type)
@@ -216,11 +224,51 @@ class GROMACSWriter(_BaseModel):
         molecule_type,
         mapping_to_reduced_atom_types,
         merge_atom_types: bool,
+        normalize_charges: bool,
     ):
         top.write("[ atoms ]\n")
         top.write(";index, atom type, resnum, resname, name, cgnr, charge, mass\n")
 
-        for atom in molecule_type.atoms:
+        def _adjust_charges(charges: numpy.array, tolerance=8) -> numpy.array:
+            """
+            Adjust charges so that written charge for a molecule type is integer.
+
+            We first get the initial charges and round them.
+            Note, that charges that are exactly equal to zero are never touched.
+            """
+            # placeholder for output charges
+            rounded_charges = numpy.round(charges, tolerance)
+            # integer total charge
+            total_charge = numpy.round(numpy.sum(charges), 0)
+            # non-zero charge indices
+            indices = numpy.where(rounded_charges != 0)[0]
+
+            def _rounding_error(_arr, _sum, _tolerance):
+                return numpy.round(numpy.sum(_arr) - _sum, _tolerance)
+
+            # Initial error due to rounding
+            rounding_error = _rounding_error(rounded_charges, total_charge, tolerance)
+
+            # We correct rounded_charges to achieve tolerance
+            if rounding_error != 0:
+                rounded_charges[indices] += numpy.round(
+                    -rounding_error / len(indices),
+                    tolerance,
+                )
+                diff = _rounding_error(rounded_charges, total_charge, tolerance)
+
+                # If there's a remainder of a charge after spreading everything out evenly,
+                # dump the remainder on the first nonzero atom.
+                rounded_charges[indices[0]] = numpy.round(
+                    rounded_charges[indices[0]] - diff,
+                    tolerance,
+                )
+            return rounded_charges
+
+        charges_to_write = numpy.array([atom.charge.m for atom in molecule_type.atoms])
+        rounded_charges = _adjust_charges(charges_to_write) if normalize_charges else charges_to_write
+
+        for atom, charge in zip(molecule_type.atoms, rounded_charges):
             if merge_atom_types:
                 top.write(
                     f"{atom.index:6d} "
@@ -229,7 +277,7 @@ class GROMACSWriter(_BaseModel):
                     f"{atom.residue_name:8s} "
                     f"{atom.name:6s}"
                     f"{atom.charge_group_number:6d}"
-                    f"{atom.charge.m:20.12f}"
+                    f"{charge:20.12f}"
                     f"{atom.mass.m:20.12f}\n",
                 )
             else:
@@ -240,7 +288,7 @@ class GROMACSWriter(_BaseModel):
                     f"{atom.residue_name:8s} "
                     f"{atom.name:6s}"
                     f"{atom.charge_group_number:6d}"
-                    f"{atom.charge.m:20.12f}"
+                    f"{charge:20.12f}"
                     f"{atom.mass.m:20.12f}\n",
                 )
 
