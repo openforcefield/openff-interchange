@@ -1,0 +1,41 @@
+name: Performance benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Performance benchmarks on ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          locked: true
+          cache: true
+
+      - name: Benchmark latest release
+        run: pixi run -e latest-release benchmark_latest_release
+
+      - name: Benchmark HEAD
+        run: pixi run -e benchmarks benchmark_head
+
+      - name: Compare HEAD against latest release
+        run: pixi run -e benchmarks compare_benchmarks
