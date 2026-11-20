@@ -18,9 +18,26 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dynamic = [ "version" ]
+dependencies = [
+  "numpy",
+  "openff-toolkit>=0.18",
+  "openff-units>=0.4",
+  "openff-utilities>=0.1.5",
+  "openmm",
+  "pydantic",
+  "pydantic>=2.13",
+  "pyedr",
+]
 [[project.authors]]
 name = "Open Force Field Initiative"
 email = "info@openforcefield.org"
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-cov",
+  "pytest-randomly",
+  "pytest-xdist",
+]
 
 [tool.setuptools.packages.find]
 include = [ "openff.interchange*" ]
