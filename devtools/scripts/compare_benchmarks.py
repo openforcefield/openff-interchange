@@ -8,7 +8,7 @@ import argparse
 import pathlib
 import sys
 
-import pandas
+import polars
 from openff.utilities.provenance import _get_conda_list_package_versions
 from packaging.version import Version
 
@@ -26,12 +26,12 @@ def compare(
     threshold: float,
 ):
     try:
-        released_mean = pandas.read_csv(file1).mean()[column_name]
+        released_mean = polars.read_csv(file1).mean()[column_name]
     except FileNotFoundError:
         sys.exit(f"Released benchmark file not found: {file1}")
 
     try:
-        current_mean = pandas.read_csv(file2).mean()[column_name]
+        current_mean = polars.read_csv(file2).mean()[column_name]
     except FileNotFoundError:
         sys.exit(f"Current benchmark file not found: {file2}")
 
