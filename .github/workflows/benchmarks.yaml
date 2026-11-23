@@ -27,8 +27,6 @@ jobs:
           fetch-depth: 0
 
       - uses: prefix-dev/setup-pixi@v0.11.3
-        with:
-          cache: true
 
       - name: Benchmark latest commit on default branch
         run: pixi run -e main benchmark_main
