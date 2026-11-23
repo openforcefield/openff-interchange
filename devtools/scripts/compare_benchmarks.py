@@ -71,8 +71,8 @@ def main():
         ("protein_in_water", "gromacs_time"),
     ]:
         compare(
-            pathlib.Path("benchmarks") / str(RELEASED) / f"{case}.csv",
-            pathlib.Path("benchmarks") / str(HEAD) / f"{case}.csv",
+            pathlib.Path("/tmp/benchmarks") / str(RELEASED) / f"{case}.csv",
+            pathlib.Path("/tmp/benchmarks") / str(HEAD) / f"{case}.csv",
             column,
             args.threshold,
         )
