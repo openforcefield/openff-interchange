@@ -6,9 +6,9 @@ platforms = ["linux-64", "osx-arm64"]
 [feature.main.pypi-options.dependency-overrides]
 openff-interchange = ">=0.5.5"
 
-[feature.main.pypi-dependencies]
+# [feature.main.pypi-dependencies]
 # pin to latest development head, not latest releasemain
-openff-interchange = { git = "https://github.com/openforcefield/openff-interchange", rev = "main" }
+# openff-interchange = { git = "https://github.com/openforcefield/openff-interchange", rev = "main" }
 
 [feature.ambertools.dependencies]
 ambertools = ">=24.8"
