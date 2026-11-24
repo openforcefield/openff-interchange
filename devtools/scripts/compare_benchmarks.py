@@ -37,7 +37,7 @@ def compare(
 
     print(f"Comparing benchmarks for column '{column_name}' in case '{file1.stem}'")
 
-    if current_mean > released_mean * (1 + threshold):
+    if (current_mean > released_mean * (1 + threshold)).any():
         raise Exception(
             f"Benchmark regression detected: current mean {current_mean:.2f} exceeds "
             f"released mean {released_mean:.2f} by more than {threshold:.0%}",
