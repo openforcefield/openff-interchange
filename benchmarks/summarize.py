@@ -23,10 +23,10 @@ for header, version in zip(
 ):
     print(f"\n=== {header} ({version}) ===")
     systems = {
-        "Mixed solvent": f"/tmp/{version}/mixed_solvent.csv",
-        "Ligand in water": f"/tmp/{version}/ligand_in_water.csv",
-        "Protein in water": f"/tmp/{version}/protein_in_water.csv",
-        "500-mer PEG": f"/tmp/{version}/large_peg.csv",
+        "Mixed solvent": f"/tmp/benchmarks/{version}/mixed_solvent.csv",
+        "Ligand in water": f"/tmp/benchmarks/{version}/ligand_in_water.csv",
+        "Protein in water": f"/tmp/benchmarks/{version}/protein_in_water.csv",
+        "500-mer PEG": f"/tmp/benchmarks/{version}/large_peg.csv",
     }
 
     for system_name, file_path in systems.items():
