@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from openff.interchange import __version__
 
-data_frame_file = f"{__version__}/mixed_solvent.csv"
+data_frame_file = f"/tmp/benchmarks/{__version__}/mixed_solvent.csv"
 
 if os.path.exists(data_frame_file):
     exit("CSV file already exists, exiting")

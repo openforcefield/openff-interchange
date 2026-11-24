@@ -3,40 +3,12 @@ name = "openff-interchange"
 channels = ["conda-forge", "openeye"]
 platforms = ["linux-64", "osx-arm64"]
 
-[dependencies]
-uv = "*"
-numpy = ">=2.2"
-setuptools_scm = "*"
-pydantic = ">=2.13"
-openff-toolkit-base = ">=0.18"
-openff-nagl-base = ">=0.6.1"
-openff-nagl-models = "*"
-openff-units = ">=0.4"
-openff-interchange-base = ">=0.5"
-openff-packmol = "*"
-rdkit = ">=2024"
-openmm = ">=8.4"  # unclear what the lower bound should be
+[feature.main.pypi-options.dependency-overrides]
+openff-interchange = ">=0.5.5"
 
-[environments]
-py312amber = ["py312", "test", "typing", "ambertools", "mosdef"]
-py312openeye = ["py312", "openeye", "packmol", "test", "typing", "regression_tests", "engines"]
-py312examples = ["py312", "openeye", "packmol", "test", "engines", "examples"]
-py313amber = ["py313", "test", "typing", "ambertools", "mosdef"]
-py313openeye = ["py313", "openeye", "test", "typing", "regression_tests", "engines"]
-py313examples = ["py313", "openeye", "packmol", "test", "engines", "examples"]
-py314amber = ["py314", "test", "typing", "ambertools", "mosdef"]
-py314openeye = ["py314", "openeye", "test", "typing", "regression_tests", "engines"]
-py314examples = ["py314", "openeye", "packmol", "test", "engines", "examples"]
-dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
-betas = ["py312", "test", "typing", "engines", "betas", "packmol"]
-docs = ["py312", "docs"]
-
-[tasks]
-postinstall = "uv pip install -e . plugins/"
-run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
-run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical", depends-on = "postinstall" }
-run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
-run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
+# [feature.main.pypi-dependencies]
+# pin to latest development head, not latest releasemain
+# openff-interchange = { git = "https://github.com/openforcefield/openff-interchange", rev = "main" }
 
 [feature.ambertools.dependencies]
 ambertools = ">=24.8"
@@ -109,6 +81,9 @@ pyedr = "*"
 mypy = "=2"
 pandas-stubs = "*"
 
+[feature.benchmarks.pypi-dependencies]
+polars = "*"
+
 [feature.docs.dependencies]
 myst-parser = "*"
 numpydoc = "*"
@@ -119,3 +94,43 @@ sphinx-notfound-page = "*"
 
 [feature.docs.pypi-dependencies]
 openff-sphinx-theme = { git = "https://github.com/openforcefield/openff-sphinx-theme", rev = "main" }
+
+[dependencies]
+uv = "*"
+numpy = ">=2.2"
+setuptools_scm = "*"
+pydantic = ">=2.13"
+openff-toolkit-base = ">=0.18"
+openff-nagl-base = ">=0.6.1"
+openff-nagl-models = "*"
+openff-units = ">=0.4"
+openff-interchange-base = ">=0.5"
+openff-packmol = "*"
+rdkit = ">=2024"
+openmm = ">=8.4"  # unclear what the lower bound should be
+
+[environments]
+py312amber = ["py312", "test", "typing", "ambertools", "mosdef"]
+py312openeye = ["py312", "openeye", "packmol", "test", "typing", "regression_tests", "engines"]
+py312examples = ["py312", "openeye", "packmol", "test", "engines", "examples"]
+py313amber = ["py313", "test", "typing", "ambertools", "mosdef"]
+py313openeye = ["py313", "openeye", "test", "typing", "regression_tests", "engines"]
+py313examples = ["py313", "openeye", "packmol", "test", "engines", "examples"]
+py314amber = ["py314", "test", "typing", "ambertools", "mosdef"]
+py314openeye = ["py314", "openeye", "test", "typing", "regression_tests", "engines"]
+py314examples = ["py314", "openeye", "packmol", "test", "engines", "examples"]
+dev = ["py312", "openeye", "test", "typing", "dev", "engines", "packmol"]
+betas = ["py312", "test", "typing", "engines", "betas", "packmol"]
+benchmarks = ["py312", "benchmarks"]
+main = ["py312", "main", "benchmarks"]
+docs = ["py312", "docs"]
+
+[tasks]
+postinstall = "uv pip install -e . plugins/"
+run_mypy = { cmd = "python -m mypy -p 'openff.interchange'", depends-on = "postinstall" }
+run_tests = { cmd = "python -m pytest openff/interchange/ --durations=20 -n logical", depends-on = "postinstall" }
+run_examples = { cmd = "python -m pytest examples/ -n logical --durations=20 --nbval-lax --dist loadscope -p no:randomly", depends-on = "postinstall" }
+run_regression_tests = { cmd = "sh devtools/scripts/run_regression_tests.sh", depends-on = "postinstall" }
+benchmark_head = { cmd = "cd benchmarks && sh run.sh && cd ../", depends-on = "postinstall" }
+benchmark_main = { cmd = "cd benchmarks && sh run.sh && cd ../" }
+compare_benchmarks = { cmd = "python devtools/scripts/compare_benchmarks.py --threshold 0.2", depends-on = "postinstall" }
