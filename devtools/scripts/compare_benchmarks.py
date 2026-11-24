@@ -19,25 +19,25 @@ RELEASED = Version(_get_conda_list_package_versions()["openff-interchange-base"]
 HEAD = Version(openff.interchange.__version__)
 
 
+def _column_mean(path: pathlib.Path, column_name: str, label: str) -> float:
+    try:
+        return float(polars.read_csv(path)[column_name].mean())
+    except FileNotFoundError:
+        sys.exit(f"{label} benchmark file not found: {path}")
+
+
 def compare(
     file1: pathlib.Path,
     file2: pathlib.Path,
     column_name: str,
     threshold: float,
 ):
-    try:
-        released_mean = polars.read_csv(file1).mean()[column_name]
-    except FileNotFoundError:
-        sys.exit(f"Released benchmark file not found: {file1}")
-
-    try:
-        current_mean = polars.read_csv(file2).mean()[column_name]
-    except FileNotFoundError:
-        sys.exit(f"Current benchmark file not found: {file2}")
+    released_mean = _column_mean(file1, column_name, "Released")
+    current_mean = _column_mean(file2, column_name, "Current")
 
     print(f"Comparing benchmarks for column '{column_name}' in case '{file1.stem}'")
 
-    if (current_mean > released_mean * (1 + threshold)).any():
+    if current_mean > released_mean * (1 + threshold):
         raise Exception(
             f"Benchmark regression detected: current mean {current_mean:.2f} exceeds "
             f"released mean {released_mean:.2f} by more than {threshold:.0%}",
