@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from openff.interchange import __version__
 
-data_frame_file = f"{__version__}/large_peg.csv"
+data_frame_file = f"/tmp/{__version__}/large_peg.csv"
 
 if os.path.exists(data_frame_file):
     exit("CSV file already exists, exiting")
