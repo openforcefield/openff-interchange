@@ -5,12 +5,12 @@ import polars
 
 from openff.interchange import __version__
 
+# strip post-release tags (.post1, etc.) but not pre-release tags (beta0, etc.)
 most_recent_release = packaging.version.Version(
     subprocess.check_output(
         ["git", "describe", "--abbrev=0", "--tags"],
     ).decode(),
-)
-
+).__replace__(post=None)
 
 try:
     current_version = f"Current version (commit {__version__.split('+g')[1].split('.')[0]})"
