@@ -1,4 +1,19 @@
+import os
 from pathlib import Path
+from typing import IO
+
+
+def get_included_path(path: str) -> IO:
+    if Path(path).exists():
+        return open(path)
+
+    path_from_gmxdata = Path(os.environ["GMXDATA"]) / "top" / path
+
+    if path_from_gmxdata.exists():
+        return open(path_from_gmxdata)
+
+    else:
+        raise ValueError(f"File {path} not found in current directory or GMXDATA top directory.")
 
 
 def make_monolithic(topology_file: str, keep_file: bool = False) -> list[str]:
@@ -25,7 +40,7 @@ def make_monolithic(topology_file: str, keep_file: bool = False) -> list[str]:
             if stripped[0].startswith("#include"):
                 itp_file = stripped[1].strip('"')
 
-                with open(itp_file) as itp_obj:
+                with get_included_path(itp_file) as itp_obj:
                     for itp_line in itp_obj:
                         if len(itp_line) == 0:
                             continue
